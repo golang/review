@@ -28,6 +28,9 @@ import (
 	"path/filepath"
 )
 
+// TODO(adg): detect repo path from context
+const repo = "https://go.googlesource.com/go/"
+
 var hookFile = filepath.FromSlash(".git/hooks/commit-msg")
 
 func main() {
@@ -96,7 +99,7 @@ func checkHook() {
 
 func gitPush() {
 	cmd := exec.Command("git",
-		[]string{"push", "https://camlistore.googlesource.com/camlistore", "HEAD:refs/for/master"}...)
+		[]string{"push", repo, "HEAD:refs/for/master"}...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
