@@ -1,9 +1,10 @@
-// DO NOT EDIT ** This file was generated with the bake tool ** DO NOT EDIT //
+// Copyright 2014 The Go Authors.  All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 package main
 
-var baked = map[string]string{
-	"commit-msg.githook": `#!/bin/sh
+var commitMsgHook = `#!/bin/sh
 # From Gerrit Code Review 2.2.1
 #
 # Part of Gerrit Code Review (http://code.google.com/p/gerrit/)
@@ -29,14 +30,14 @@ MSG="$1"
 # Check for, and add if missing, a unique Change-Id
 #
 add_ChangeId() {
-	clean_message=`+"`"+`sed -e '
+	clean_message=` + "`" + `sed -e '
 		/^diff --git a\/.*/{
 			s///
 			q
 		}
 		/^Signed-off-by:/d
 		/^#/d
-	' "$MSG" | git stripspace`+"`"+`
+	' "$MSG" | git stripspace` + "`" + `
 	if test -z "$clean_message"
 	then
 		return
@@ -47,7 +48,7 @@ add_ChangeId() {
 		return
 	fi
 
-	id=`+"`"+`_gen_ChangeId`+"`"+`
+	id=` + "`" + `_gen_ChangeId` + "`" + `
 	perl -e '
 		$MSG = shift;
 		$id = shift;
@@ -90,13 +91,13 @@ add_ChangeId() {
 	' "$MSG" "$id" "$CHANGE_ID_AFTER"
 }
 _gen_ChangeIdInput() {
-	echo "tree `+"`"+`git write-tree`+"`"+`"
-	if parent=`+"`"+`git rev-parse HEAD^0 2>/dev/null`+"`"+`
+	echo "tree ` + "`" + `git write-tree` + "`" + `"
+	if parent=` + "`" + `git rev-parse HEAD^0 2>/dev/null` + "`" + `
 	then
 		echo "parent $parent"
 	fi
-	echo "author `+"`"+`git var GIT_AUTHOR_IDENT`+"`"+`"
-	echo "committer `+"`"+`git var GIT_COMMITTER_IDENT`+"`"+`"
+	echo "author ` + "`" + `git var GIT_AUTHOR_IDENT` + "`" + `"
+	echo "committer ` + "`" + `git var GIT_COMMITTER_IDENT` + "`" + `"
 	echo
 	printf '%s' "$clean_message"
 }
@@ -107,6 +108,4 @@ _gen_ChangeId() {
 
 
 add_ChangeId
-`,
-
-}
+`

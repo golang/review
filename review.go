@@ -4,8 +4,6 @@
 
 package main
 
-//go:generate go run bake.go commit-msg.githook
-
 import (
 	"flag"
 	"fmt"
@@ -199,7 +197,7 @@ func installHook() {
 		dief("checking for hook file: %v\n", err)
 	}
 	fmt.Printf("Presubmit hook to add Change-Id to commit messages is missing.\nNow automatically creating it at %v.\n\n", hookFile)
-	hookContent := []byte(baked["commit-msg.githook"])
+	hookContent := []byte(commitMsgHook)
 	if err := ioutil.WriteFile(hookFile, hookContent, 0700); err != nil {
 		dief("writing hook file: %v\n", err)
 	}
