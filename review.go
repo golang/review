@@ -1,50 +1,170 @@
-/*
-Copyright 2014 The Camlistore Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2014 The Go Authors.  All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 package main
 
 //go:generate go run bake.go commit-msg.githook
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
-
-// TODO(adg): detect repo path from context
-const repo = "https://go.googlesource.com/go/"
 
 var hookFile = filepath.FromSlash(".git/hooks/commit-msg")
 
+const usage = `Usage: %s [command]
+
+The review command is a wrapper for the git command that provides a simple
+interface to the "single-commit feature branch" development model.
+
+Available comands:
+
+	create <name>
+
+		Create a local feature branch with the provided name
+		and commit the staged changes to it.
+
+	commit
+
+		Amend feature branch HEAD with the staged changes.
+
+	diff
+
+		View differences between remote branch HEAD and
+		the feature branch HEAD.
+		(The differences introduced by this change.)
+
+	upload
+
+		Upload HEAD commit to the code review server.
+
+	sync
+
+		Fetch changes from the remote repository and merge them to the
+		current branch, rebasing the HEAD commit (if any) on top of
+		them.
+
+	pending 
+
+		Show local feature branches and their head commits.
+
+`
+
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: go-review\n")
+		fmt.Fprintf(os.Stderr, usage, os.Args[0])
 		os.Exit(2)
 	}
 	flag.Parse()
-	if len(flag.Args()) > 0 {
+
+	goToRepoRoot()
+	installHook()
+
+	switch flag.Arg(0) {
+	case "create":
+		name := flag.Arg(1)
+		if name == "" {
+			flag.Usage()
+		}
+		create(name)
+	case "commit":
+		commit()
+	case "diff":
+		diff()
+	case "upload":
+		upload()
+	case "sync":
+		sync()
+	case "pending":
+		pending()
+	default:
 		flag.Usage()
 	}
-	goToRepoRoot()
-	checkHook()
-	gitPush()
+}
+
+func create(name string) {
+	if !hasStagedChanges() {
+		dief(`No staged changes. Did you forget to "git add" your files?\n`)
+	}
+	if !isOnMaster() {
+		dief("You must run create from the master branch.\n")
+	}
+	fmt.Printf("Creating and checking out branch: %v\n", name)
+	run("git", "checkout", "-b", name)
+	fmt.Printf("Committing staged changes to branch.\n")
+	run("git", "commit")
+}
+
+func commit() {
+	if !hasStagedChanges() {
+		dief(`No staged changes. Did you forget to "git add" your files?\n`)
+	}
+	if isOnMaster() {
+		dief("Can't commit to master branch.\n")
+	}
+	fmt.Printf("Amending head commit with staged changes.\n")
+	run("git", "commit", "--amend", "-C", "HEAD")
+}
+
+func diff() {
+	run("git", "diff", "HEAD^", "HEAD")
+}
+
+func upload() {
+	if isOnMaster() {
+		dief("Can't upload from master branch.\n")
+	}
+	fmt.Printf("Pushing commit to Gerrit code review server.\n")
+	run("git", "push", "origin", "HEAD:refs/for/master")
+}
+
+func sync() {
+	fmt.Printf("Fetching changes from remote repo.\n")
+	run("git", "fetch")
+	if isOnMaster() {
+		run("git", "pull", "--ff-only")
+		return
+	}
+	fmt.Printf("Rebasing head commit atop origin/master.\n")
+	run("git", "rebase", "origin/master")
+}
+
+func pending() {
+	dief("not implemented\n")
+}
+
+func hasStagedChanges() bool {
+	status, err := exec.Command("git", "status", "-s").CombinedOutput()
+	if err != nil {
+		dief("%s\nchecking for staged changes: %v\n", status, err)
+	}
+	for _, s := range strings.Split(string(status), "\n") {
+		if strings.HasPrefix(s, "A  ") ||
+			strings.HasPrefix(s, "M  ") ||
+			strings.HasPrefix(s, "D  ") {
+			return true
+		}
+	}
+	return false
+}
+
+func isOnMaster() bool {
+	branch, err := exec.Command("git", "branch").CombinedOutput()
+	if err != nil {
+		dief("%s\nchecking current branch: %v\n", branch, err)
+	}
+	for _, s := range strings.Split(string(branch), "\n") {
+		if strings.HasPrefix(s, "* ") {
+			return s == "* master"
+		}
+	}
+	return false
 }
 
 func goToRepoRoot() {
@@ -70,7 +190,7 @@ func goToRepoRoot() {
 	}
 }
 
-func checkHook() {
+func installHook() {
 	_, err := os.Stat(hookFile)
 	if err == nil {
 		return
@@ -83,31 +203,18 @@ func checkHook() {
 	if err := ioutil.WriteFile(hookFile, hookContent, 0700); err != nil {
 		dief("writing hook file: %v\n", err)
 	}
-	fmt.Printf("Amending last commit to add Change-Id.\nPlease re-save description without making changes.\n\n")
-	fmt.Printf("Press Enter to continue.\n")
-	if _, _, err := bufio.NewReader(os.Stdin).ReadLine(); err != nil {
-		dief("waiting for user input: %v\n", err)
-	}
-
-	cmd := exec.Command("git", []string{"commit", "--amend"}...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		dief("amending commit: %v\n", err)
-	}
-}
-
-func gitPush() {
-	cmd := exec.Command("git",
-		[]string{"push", repo, "HEAD:refs/for/master"}...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		dief("Could not git push: %v\n", err)
-	}
 }
 
 func dief(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, args...)
 	os.Exit(1)
+}
+
+func run(command string, args ...string) {
+	cmd := exec.Command(command, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		dief("%v\n", err)
+	}
 }
