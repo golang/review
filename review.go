@@ -65,21 +65,21 @@ func main() {
 	installHook()
 
 	switch flag.Arg(0) {
-	case "create":
+	case "create", "cr":
 		name := flag.Arg(1)
 		if name == "" {
 			flag.Usage()
 		}
 		create(name)
-	case "commit":
+	case "commit", "co":
 		commit()
-	case "diff":
+	case "diff", "d":
 		diff()
-	case "upload":
+	case "upload", "u":
 		upload()
-	case "sync":
+	case "sync", "s":
 		sync()
-	case "pending":
+	case "pending", "p":
 		pending()
 	default:
 		flag.Usage()
@@ -196,7 +196,8 @@ func installHook() {
 	if !os.IsNotExist(err) {
 		dief("checking for hook file: %v\n", err)
 	}
-	fmt.Printf("Presubmit hook to add Change-Id to commit messages is missing.\nNow automatically creating it at %v.\n\n", hookFile)
+	fmt.Printf("Presubmit hook to add Change-Id to commit messages is missing.\n"+
+		"Now automatically creating it at %v.\n\n", hookFile)
 	hookContent := []byte(commitMsgHook)
 	if err := ioutil.WriteFile(hookFile, hookContent, 0700); err != nil {
 		dief("writing hook file: %v\n", err)
