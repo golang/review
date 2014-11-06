@@ -88,10 +88,11 @@ func main() {
 
 func create(name string) {
 	if !hasStagedChanges() {
-		dief(`No staged changes. Did you forget to "git add" your files?\n`)
+		dief("No staged changes. Did you forget to \"git add\" your files?\n")
 	}
 	if !isOnMaster() {
-		dief("You must run create from the master branch.\n")
+		dief("You must run create from the master branch. " +
+			"(\"git checkout master\".)")
 	}
 	fmt.Printf("Creating and checking out branch: %v\n", name)
 	run("git", "checkout", "-b", name)
