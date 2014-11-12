@@ -17,6 +17,10 @@ import (
 var hookFile = filepath.FromSlash(".git/hooks/commit-msg")
 
 const usage = `Usage: %s [command]
+Type "%s help" for more information.
+`
+
+const help = `Usage: %s [command]
 
 The review command is a wrapper for the git command that provides a simple
 interface to the "single-commit feature branch" development model.
@@ -24,39 +28,33 @@ interface to the "single-commit feature branch" development model.
 Available comands:
 
 	create <name>
-
-		Create a local feature branch with the provided name
+		Create a local branch with the provided name
 		and commit the staged changes to it.
 
 	commit
-
-		Amend feature branch HEAD with the staged changes.
+		Amend local branch HEAD commit with the staged changes.
 
 	diff
-
 		View differences between remote branch HEAD and
-		the feature branch HEAD.
+		the local branch HEAD.
 		(The differences introduced by this change.)
 
 	upload
-
 		Upload HEAD commit to the code review server.
 
 	sync
-
 		Fetch changes from the remote repository and merge them to the
 		current branch, rebasing the HEAD commit (if any) on top of
 		them.
 
 	pending 
-
-		Show local feature branches and their head commits.
+		Show local branches and their head commits.
 
 `
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, usage, os.Args[0])
+		fmt.Fprintf(os.Stderr, usage, os.Args[0], os.Args[0])
 		os.Exit(2)
 	}
 	flag.Parse()
@@ -65,6 +63,8 @@ func main() {
 	installHook()
 
 	switch flag.Arg(0) {
+	case "help":
+		fmt.Fprintf(os.Stdout, help, os.Args[0])
 	case "create", "cr":
 		name := flag.Arg(1)
 		if name == "" {
