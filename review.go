@@ -95,7 +95,7 @@ func create(name string) {
 	if !hasStagedChanges() {
 		dief("No staged changes. Did you forget to \"git add\" your files?\n")
 	}
-	if !isOnMaster() {
+	if currentBranch() != "master" {
 		dief("You must run create from the master branch.\n" +
 			"(Try \"review sync\" or \"git checkout master\" first.)\n")
 	}
@@ -105,13 +105,14 @@ func create(name string) {
 		run("git", "checkout", "-q", "master")
 		run("git", "branch", "-q", "-d", name)
 	}
+	// TODO(adg): check style of commit message
 }
 
 func commit() {
 	if !hasStagedChanges() {
 		dief("No staged changes. Did you forget to \"git add\" your files?\n")
 	}
-	if isOnMaster() {
+	if currentBranch() == "master" {
 		dief("Can't commit to master branch.\n")
 	}
 	run("git", "commit", "-q", "--amend", "-C", "HEAD")
@@ -122,7 +123,7 @@ func diff() {
 }
 
 func upload() {
-	if isOnMaster() {
+	if currentBranch() == "master" {
 		dief("Can't upload from master branch.\n")
 	}
 	run("git", "push", "-q", "origin", "HEAD:refs/for/master")
@@ -130,29 +131,52 @@ func upload() {
 
 func sync() {
 	run("git", "fetch", "-q")
-	if isOnMaster() {
+
+	// If we're on master, just fast-forward.
+	branch := currentBranch()
+	if branch == "master" {
 		run("git", "merge", "-q", "--ff-only", "origin/master")
 		return
 	}
+
+	// Check that exactly this commit was submitted to master. If so,
+	// switch back to master, fast-forward, delete the feature branch.
 	if branchContains("origin/master", "HEAD") {
-		b := currentBranch()
 		run("git", "checkout", "-q", "master")
 		run("git", "merge", "-q", "--ff-only", "origin/master")
-		run("git", "branch", "-q", "-d", b)
+		run("git", "branch", "-q", "-d", branch)
 		return
 	}
+
+	// Check whether a rebased version of this commit was submitted to
+	// master. If so, switch back to master, fast-forward, and
+	// provide instructions for deleting the feature branch.
+	// (We're not 100% sure that the feature branch HEAD was submitted,
+	// so be cautious.)
+	if headSubmitted() {
+		run("git", "checkout", "-q", "master")
+		run("git", "merge", "-q", "--ff-only", "origin/master")
+		fmt.Fprintf(os.Stderr, "Switched back to master from %q, "+
+			"which I think has been submitted.\n"+
+			"If you agree, and no longer need branch %q, run:\n"+
+			"\tgit branch -D %v\n",
+			branch, branch, branch)
+		return
+	}
+
+	// Bump master HEAD to that of origin/master, just in case the user
+	// switches back to master with "git checkout master" later.
 	if !branchContains("origin/master", "master") {
-		// Bump master HEAD to that of origin/master.
 		run("git", "branch", "-f", "master", "origin/master")
 	}
+
+	// We have un-submitted changes on this feature branch; rebase.
 	run("git", "rebase", "-q", "origin/master")
 }
 
 func pending() {
 	dief("not implemented\n")
 }
-
-var stagedRe = regexp.MustCompile(`^[ACDMR]  `)
 
 func branchContains(branch, rev string) bool {
 	b, err := exec.Command("git", "branch", "-r", "--contains", rev).CombinedOutput()
@@ -166,6 +190,8 @@ func branchContains(branch, rev string) bool {
 	}
 	return false
 }
+
+var stagedRe = regexp.MustCompile(`^[ACDMR]  `)
 
 func hasStagedChanges() bool {
 	for _, s := range gitStatus() {
@@ -195,17 +221,28 @@ func gitStatus() []string {
 	return strings.Split(string(b), "\n")
 }
 
-func isOnMaster() bool {
-	branch, err := exec.Command("git", "branch").CombinedOutput()
+func headSubmitted() bool {
+	s := "Change-Id: " + headChangeId()
+	b, err := exec.Command("git", "log", "--grep", s).CombinedOutput()
 	if err != nil {
-		dief("%s\nchecking current branch: %v\n", branch, err)
+		dief("%s\ngit log failed: %v\n", b, err)
 	}
-	for _, s := range strings.Split(string(branch), "\n") {
-		if strings.HasPrefix(s, "* ") {
-			return s == "* master"
+	return len(b) > 0
+}
+
+func headChangeId() string {
+	b, err := exec.Command("git", "log", "-n", "1", "--format=format:%b").CombinedOutput()
+	if err != nil {
+		dief("%s\ngit log failed: %v\n", b, err)
+	}
+	const p = "Change-Id: "
+	for _, s := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(s, p) {
+			return strings.TrimSpace(strings.TrimPrefix(s, p))
 		}
 	}
-	return false
+	dief("No Change-Id line found in HEAD commit.\n")
+	panic("unreachable")
 }
 
 func goToRepoRoot() {
