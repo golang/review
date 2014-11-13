@@ -177,8 +177,14 @@ func doSync() {
 }
 
 func pending() {
-	var wg sync.WaitGroup
-	origin := originURL()
+	var (
+		wg      sync.WaitGroup
+		origin  = originURL()
+		current = currentBranch()
+	)
+	if current == "master" {
+		fmt.Println("On master branch.")
+	}
 	for _, branch := range localBranches() {
 		if branch == "master" {
 			// TODO(adg): check if it's remote tracking instead
@@ -187,14 +193,32 @@ func pending() {
 		wg.Add(1)
 		go func(branch string) {
 			defer wg.Done()
+			p := ""
+			if branch == current {
+				p = "* "
+			}
 			id := headChangeId(branch)
 			c, err := getChange(origin, id)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error fetching change for %q: %v\n", branch, err)
-				return
+			switch err {
+			case notFound:
+				// TODO(adg): read local commit msg
+				var msg string
+				fmt.Printf("%v%v:\n\t%v\n\t(not uploaded)\n",
+					p, branch, msg)
+			case nil:
+				status := ""
+				switch c.Status {
+				case "MERGED":
+					status += " [submitted]"
+				case "ABANDONED":
+					status += " [abandoned]"
+				}
+				fmt.Printf("%v%v%v:\n\t%v\n\t%v\n",
+					p, branch, status, c.Subject, c.URL)
+				// TODO(adg): print votes
+			default:
+				fmt.Fprintf(os.Stderr, "fetching change for %q: %v\n", branch, err)
 			}
-			fmt.Printf("%v:\n\t%v\n\t%v\n", branch, c.Subject, c.URL)
-			// TODO(adg): print votes
 		}(branch)
 	}
 	wg.Wait()
@@ -288,7 +312,7 @@ func headSubmitted(branch string) bool {
 }
 
 func headChangeId(branch string) string {
-	b, err := exec.Command("git", "log", "-n", "1", "--format=format:%b", branch).CombinedOutput()
+	b, err := exec.Command("git", "log", "-n", "1", "--format=format:%b", branch, "--").CombinedOutput()
 	if err != nil {
 		dief("%s\ngit log failed: %v\n", b, err)
 	}

@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -17,6 +18,8 @@ const (
 	sourceHost   = ".googlesource.com"
 	reviewSuffix = "-review"
 )
+
+var notFound = errors.New("not found")
 
 func getChange(origin, id string) (*Change, error) {
 	u, err := url.Parse(origin)
@@ -33,6 +36,9 @@ func getChange(origin, id string) (*Change, error) {
 		return nil, err
 	}
 	defer r.Body.Close()
+	if r.StatusCode == http.StatusNotFound {
+		return nil, notFound
+	}
 	if r.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status: %v", r.Status)
 	}
