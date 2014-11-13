@@ -15,13 +15,16 @@ import (
 	"strings"
 )
 
-var hookFile = filepath.FromSlash(".git/hooks/commit-msg")
+var (
+	hookFile = filepath.FromSlash(".git/hooks/commit-msg")
+	verbose  = flag.Bool("v", false, "verbose output")
+)
 
-const usage = `Usage: %s <command>
+const usage = `Usage: %s [-v] <command>
 Type "%s help" for more information.
 `
 
-const help = `Usage: %s <command>
+const help = `Usage: %s [-v] <command>
 
 The review command is a wrapper for the git command that provides a simple
 interface to the "single-commit feature branch" development model.
@@ -95,15 +98,15 @@ func create(name string) {
 		dief("You must run create from the master branch. " +
 			"(\"git checkout master\".)\n")
 	}
-	fmt.Printf("Creating and checking out branch %q.\n", name)
-	run("git", "checkout", "-b", name)
-	fmt.Printf("Committing staged changes to branch.\n")
-	if err := runErr("git", "commit"); err != nil {
-		fmt.Printf("Commit failed: %v\n", err)
-		fmt.Printf("Switching back to master.\n")
-		run("git", "checkout", "master")
-		fmt.Printf("Deleting branch %q.\n", name)
-		run("git", "branch", "-d", name)
+	verbosef("Creating and checking out branch %q.\n", name)
+	run("git", "checkout", "-q", "-b", name)
+	verbosef("Committing staged changes to branch.\n")
+	if err := runErr("git", "commit", "-q"); err != nil {
+		verbosef("Commit failed: %v\n", err)
+		verbosef("Switching back to master.\n")
+		run("git", "checkout", "-q", "master")
+		verbosef("Deleting branch %q.\n", name)
+		run("git", "branch", "-q", "-d", name)
 	}
 }
 
@@ -114,8 +117,8 @@ func commit() {
 	if isOnMaster() {
 		dief("Can't commit to master branch.\n")
 	}
-	fmt.Printf("Amending head commit with staged changes.\n")
-	run("git", "commit", "--amend", "-C", "HEAD")
+	verbosef("Amending head commit with staged changes.\n")
+	run("git", "commit", "-q", "--amend", "-C", "HEAD")
 }
 
 func diff() {
@@ -126,18 +129,18 @@ func upload() {
 	if isOnMaster() {
 		dief("Can't upload from master branch.\n")
 	}
-	fmt.Printf("Pushing commit to Gerrit code review server.\n")
+	verbosef("Pushing commit to Gerrit code review server.\n")
 	run("git", "push", "origin", "HEAD:refs/for/master")
 }
 
 func sync() {
-	fmt.Printf("Fetching changes from remote repo.\n")
-	run("git", "fetch")
+	verbosef("Fetching changes from remote repo.\n")
+	run("git", "fetch", "-q")
 	if isOnMaster() {
-		run("git", "pull", "--ff-only")
+		run("git", "pull", "-q", "--ff-only")
 		return
 	}
-	fmt.Printf("Rebasing head commit atop origin/master.\n")
+	verbosef("Rebasing head commit atop origin/master.\n")
 	run("git", "rebase", "origin/master")
 }
 
@@ -204,8 +207,8 @@ func installHook() {
 	if !os.IsNotExist(err) {
 		dief("checking for hook file: %v\n", err)
 	}
-	fmt.Printf("Presubmit hook to add Change-Id to commit messages is missing.\n"+
-		"Now automatically creating it at %v.\n\n", hookFile)
+	verbosef("Presubmit hook to add Change-Id to commit messages is missing.\n"+
+		"Automatically creating it at %v.\n", hookFile)
 	hookContent := []byte(commitMsgHook)
 	if err := ioutil.WriteFile(hookFile, hookContent, 0700); err != nil {
 		dief("writing hook file: %v\n", err)
@@ -219,14 +222,32 @@ func dief(format string, args ...interface{}) {
 
 func run(command string, args ...string) {
 	if err := runErr(command, args...); err != nil {
+		if !*verbose {
+			// If we're not in verbose mode, print the command
+			// before dying to give context to the failure.
+			fmt.Fprintln(os.Stderr, commandString(command, args))
+		}
 		dief("%v\n", err)
 	}
 }
 
 func runErr(command string, args ...string) error {
+	if *verbose {
+		fmt.Fprintln(os.Stderr, commandString(command, args))
+	}
 	cmd := exec.Command(command, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func verbosef(format string, args ...interface{}) {
+	if *verbose {
+		fmt.Fprintf(os.Stderr, format, args...)
+	}
+}
+
+func commandString(command string, args []string) string {
+	return strings.Join(append([]string{command}, args...), " ")
 }
