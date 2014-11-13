@@ -11,16 +11,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
 var hookFile = filepath.FromSlash(".git/hooks/commit-msg")
 
-const usage = `Usage: %s [command]
+const usage = `Usage: %s <command>
 Type "%s help" for more information.
 `
 
-const help = `Usage: %s [command]
+const help = `Usage: %s <command>
 
 The review command is a wrapper for the git command that provides a simple
 interface to the "single-commit feature branch" development model.
@@ -92,17 +93,23 @@ func create(name string) {
 	}
 	if !isOnMaster() {
 		dief("You must run create from the master branch. " +
-			"(\"git checkout master\".)")
+			"(\"git checkout master\".)\n")
 	}
-	fmt.Printf("Creating and checking out branch: %v\n", name)
+	fmt.Printf("Creating and checking out branch %q.\n", name)
 	run("git", "checkout", "-b", name)
 	fmt.Printf("Committing staged changes to branch.\n")
-	run("git", "commit")
+	if err := runErr("git", "commit"); err != nil {
+		fmt.Printf("Commit failed: %v\n", err)
+		fmt.Printf("Switching back to master.\n")
+		run("git", "checkout", "master")
+		fmt.Printf("Deleting branch %q.\n", name)
+		run("git", "branch", "-d", name)
+	}
 }
 
 func commit() {
 	if !hasStagedChanges() {
-		dief(`No staged changes. Did you forget to "git add" your files?\n`)
+		dief("No staged changes. Did you forget to \"git add\" your files?\n")
 	}
 	if isOnMaster() {
 		dief("Can't commit to master branch.\n")
@@ -138,15 +145,15 @@ func pending() {
 	dief("not implemented\n")
 }
 
+var stagedRe = regexp.MustCompile(`^[ACDMR]  `)
+
 func hasStagedChanges() bool {
 	status, err := exec.Command("git", "status", "-s").CombinedOutput()
 	if err != nil {
 		dief("%s\nchecking for staged changes: %v\n", status, err)
 	}
 	for _, s := range strings.Split(string(status), "\n") {
-		if strings.HasPrefix(s, "A  ") ||
-			strings.HasPrefix(s, "M  ") ||
-			strings.HasPrefix(s, "D  ") {
+		if stagedRe.MatchString(s) {
 			return true
 		}
 	}
@@ -211,10 +218,15 @@ func dief(format string, args ...interface{}) {
 }
 
 func run(command string, args ...string) {
-	cmd := exec.Command(command, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	if err := runErr(command, args...); err != nil {
 		dief("%v\n", err)
 	}
+}
+
+func runErr(command string, args ...string) error {
+	cmd := exec.Command(command, args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
