@@ -225,11 +225,7 @@ func pending() {
 }
 
 func originURL() string {
-	b, err := exec.Command("git", "remote", "-v").CombinedOutput()
-	if err != nil {
-		dief("%s\nerror running 'git remote': %v\n", b, err)
-	}
-	for _, s := range strings.Split(string(b), "\n") {
+	for _, s := range runLines("git", "remote", "-v") {
 		f := strings.Fields(s)
 		if f[0] != "origin" || len(f) < 2 {
 			continue
@@ -244,13 +240,8 @@ func originURL() string {
 	panic("unreachable")
 }
 
-func localBranches() []string {
-	b, err := exec.Command("git", "branch", "-l", "-q").CombinedOutput()
-	if err != nil {
-		dief("%s\nerror running 'git branch': %v\n", b, err)
-	}
-	var branches []string
-	for _, s := range strings.Split(string(b), "\n") {
+func localBranches() (branches []string) {
+	for _, s := range runLines("git", "branch", "-l", "-q") {
 		s = strings.TrimSpace(strings.TrimPrefix(s, "* "))
 		if s != "" {
 			branches = append(branches, s)
@@ -260,11 +251,7 @@ func localBranches() []string {
 }
 
 func branchContains(branch, rev string) bool {
-	b, err := exec.Command("git", "branch", "-r", "--contains", rev).CombinedOutput()
-	if err != nil {
-		dief("%s\nchecking for %q on origin/master: %v\n", b, rev, err)
-	}
-	for _, s := range strings.Split(string(b), "\n") {
+	for _, s := range runLines("git", "branch", "-r", "--contains", rev) {
 		if strings.TrimSpace(s) == branch {
 			return true
 		}
@@ -295,29 +282,20 @@ func currentBranch() string {
 }
 
 func gitStatus() []string {
-	b, err := exec.Command("git", "status", "-b", "--porcelain").CombinedOutput()
-	if err != nil {
-		dief("%s\ngit status failed: %v\n", b, err)
-	}
-	return strings.Split(string(b), "\n")
+	return runLines("git", "status", "-b", "--porcelain")
 }
 
 func headSubmitted(branch string) bool {
 	s := "Change-Id: " + headChangeId(branch)
-	b, err := exec.Command("git", "log", "--grep", s, "origin/master").CombinedOutput()
-	if err != nil {
-		dief("%s\ngit log failed: %v\n", b, err)
-	}
-	return len(b) > 0
+	return len(runOutput("git", "log", "--grep", s, "origin/master")) > 0
 }
 
 func headChangeId(branch string) string {
-	b, err := exec.Command("git", "log", "-n", "1", "--format=format:%b", branch, "--").CombinedOutput()
-	if err != nil {
-		dief("%s\ngit log failed: %v\n", b, err)
-	}
-	const p = "Change-Id: "
-	for _, s := range strings.Split(string(b), "\n") {
+	const (
+		p = "Change-Id: "
+		f = "--format=format:%b"
+	)
+	for _, s := range runLines("git", "log", "-n", "1", f, branch, "--") {
 		if strings.HasPrefix(s, p) {
 			return strings.TrimSpace(strings.TrimPrefix(s, p))
 		}
@@ -396,6 +374,18 @@ func verbosef(format string, args ...interface{}) {
 	if *verbose {
 		fmt.Fprintf(os.Stderr, format, args...)
 	}
+}
+
+func runOutput(command string, args ...string) string {
+	b, err := exec.Command(command, args...).CombinedOutput()
+	if err != nil {
+		dief("%v\n%s\nerror: %v\n", b, commandString(command, args), err)
+	}
+	return string(b)
+}
+
+func runLines(command string, args ...string) []string {
+	return strings.Split(runOutput(command, args...), "\n")
 }
 
 func commandString(command string, args []string) string {
