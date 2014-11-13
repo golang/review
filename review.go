@@ -101,7 +101,7 @@ func create(name string) {
 	}
 	run("git", "checkout", "-q", "-b", name)
 	if err := runErr("git", "commit", "-q"); err != nil {
-		verbosef("Commit failed: %v\nSwitching back to master.", err)
+		verbosef("Commit failed: %v\nSwitching back to master.\n", err)
 		run("git", "checkout", "-q", "master")
 		run("git", "branch", "-q", "-d", name)
 	}
@@ -134,11 +134,16 @@ func sync() {
 		run("git", "merge", "-q", "--ff-only", "origin/master")
 		return
 	}
-	if commitSubmitted() {
+	if branchContains("origin/master", "HEAD") {
 		b := currentBranch()
 		run("git", "checkout", "-q", "master")
 		run("git", "merge", "-q", "--ff-only", "origin/master")
 		run("git", "branch", "-q", "-d", b)
+		return
+	}
+	if !branchContains("origin/master", "master") {
+		// Bump master HEAD to that of origin/master.
+		run("git", "branch", "-f", "master", "origin/master")
 	}
 	run("git", "rebase", "-q", "origin/master")
 }
@@ -149,13 +154,13 @@ func pending() {
 
 var stagedRe = regexp.MustCompile(`^[ACDMR]  `)
 
-func commitSubmitted() bool {
-	b, err := exec.Command("git", "branch", "-r", "--contains").CombinedOutput()
+func branchContains(branch, rev string) bool {
+	b, err := exec.Command("git", "branch", "-r", "--contains", rev).CombinedOutput()
 	if err != nil {
-		dief("%s\nchecking for HEAD on remote branch: %v\n", b, err)
+		dief("%s\nchecking for %q on origin/master: %v\n", b, rev, err)
 	}
 	for _, s := range strings.Split(string(b), "\n") {
-		if strings.TrimSpace(s) == "origin/master" {
+		if strings.TrimSpace(s) == branch {
 			return true
 		}
 	}
