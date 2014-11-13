@@ -49,7 +49,8 @@ Available comands:
 	sync
 		Fetch changes from the remote repository and merge them to the
 		current branch, rebasing the HEAD commit (if any) on top of
-		them.
+		them. If the HEAD commit has been submitted, switch back to the
+		master branch and delete the feature branch.
 
 	pending 
 		Show local branches and their head commits.
@@ -95,17 +96,13 @@ func create(name string) {
 		dief("No staged changes. Did you forget to \"git add\" your files?\n")
 	}
 	if !isOnMaster() {
-		dief("You must run create from the master branch. " +
-			"(\"git checkout master\".)\n")
+		dief("You must run create from the master branch.\n" +
+			"(Try \"review sync\" or \"git checkout master\" first.)\n")
 	}
-	verbosef("Creating and checking out branch %q.\n", name)
 	run("git", "checkout", "-q", "-b", name)
-	verbosef("Committing staged changes to branch.\n")
 	if err := runErr("git", "commit", "-q"); err != nil {
-		verbosef("Commit failed: %v\n", err)
-		verbosef("Switching back to master.\n")
+		verbosef("Commit failed: %v\nSwitching back to master.", err)
 		run("git", "checkout", "-q", "master")
-		verbosef("Deleting branch %q.\n", name)
 		run("git", "branch", "-q", "-d", name)
 	}
 }
@@ -117,7 +114,6 @@ func commit() {
 	if isOnMaster() {
 		dief("Can't commit to master branch.\n")
 	}
-	verbosef("Amending head commit with staged changes.\n")
 	run("git", "commit", "-q", "--amend", "-C", "HEAD")
 }
 
@@ -129,19 +125,22 @@ func upload() {
 	if isOnMaster() {
 		dief("Can't upload from master branch.\n")
 	}
-	verbosef("Pushing commit to Gerrit code review server.\n")
-	run("git", "push", "origin", "HEAD:refs/for/master")
+	run("git", "push", "-q", "origin", "HEAD:refs/for/master")
 }
 
 func sync() {
-	verbosef("Fetching changes from remote repo.\n")
 	run("git", "fetch", "-q")
 	if isOnMaster() {
-		run("git", "pull", "-q", "--ff-only")
+		run("git", "merge", "-q", "--ff-only", "origin/master")
 		return
 	}
-	verbosef("Rebasing head commit atop origin/master.\n")
-	run("git", "rebase", "origin/master")
+	if commitSubmitted() {
+		b := currentBranch()
+		run("git", "checkout", "-q", "master")
+		run("git", "merge", "-q", "--ff-only", "origin/master")
+		run("git", "branch", "-q", "-d", b)
+	}
+	run("git", "rebase", "-q", "origin/master")
 }
 
 func pending() {
@@ -150,17 +149,45 @@ func pending() {
 
 var stagedRe = regexp.MustCompile(`^[ACDMR]  `)
 
-func hasStagedChanges() bool {
-	status, err := exec.Command("git", "status", "-s").CombinedOutput()
+func commitSubmitted() bool {
+	b, err := exec.Command("git", "branch", "-r", "--contains").CombinedOutput()
 	if err != nil {
-		dief("%s\nchecking for staged changes: %v\n", status, err)
+		dief("%s\nchecking for HEAD on remote branch: %v\n", b, err)
 	}
-	for _, s := range strings.Split(string(status), "\n") {
+	for _, s := range strings.Split(string(b), "\n") {
+		if strings.TrimSpace(s) == "origin/master" {
+			return true
+		}
+	}
+	return false
+}
+
+func hasStagedChanges() bool {
+	for _, s := range gitStatus() {
 		if stagedRe.MatchString(s) {
 			return true
 		}
 	}
 	return false
+}
+
+func currentBranch() string {
+	const p = "## "
+	for _, s := range gitStatus() {
+		if strings.HasPrefix(s, p) {
+			return strings.TrimPrefix(s, p)
+		}
+	}
+	dief("Could not find current branch with 'git status'.\n")
+	panic("unreachable")
+}
+
+func gitStatus() []string {
+	b, err := exec.Command("git", "status", "-b", "--porcelain").CombinedOutput()
+	if err != nil {
+		dief("%s\ngit status failed: %v\n", b, err)
+	}
+	return strings.Split(string(b), "\n")
 }
 
 func isOnMaster() bool {
