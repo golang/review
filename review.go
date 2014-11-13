@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 var (
@@ -83,7 +84,7 @@ func main() {
 	case "upload", "u":
 		upload()
 	case "sync", "s":
-		sync()
+		doSync()
 	case "pending", "p":
 		pending()
 	default:
@@ -129,7 +130,7 @@ func upload() {
 	run("git", "push", "-q", "origin", "HEAD:refs/for/master")
 }
 
-func sync() {
+func doSync() {
 	run("git", "fetch", "-q")
 
 	// If we're on master, just fast-forward.
@@ -153,7 +154,7 @@ func sync() {
 	// provide instructions for deleting the feature branch.
 	// (We're not 100% sure that the feature branch HEAD was submitted,
 	// so be cautious.)
-	if headSubmitted() {
+	if headSubmitted(branch) {
 		run("git", "checkout", "-q", "master")
 		run("git", "merge", "-q", "--ff-only", "origin/master")
 		fmt.Fprintf(os.Stderr, "Switched back to master from %q, "+
@@ -166,6 +167,7 @@ func sync() {
 
 	// Bump master HEAD to that of origin/master, just in case the user
 	// switches back to master with "git checkout master" later.
+	// TODO(adg): maybe we shouldn't do this at all?
 	if !branchContains("origin/master", "master") {
 		run("git", "branch", "-f", "master", "origin/master")
 	}
@@ -175,7 +177,62 @@ func sync() {
 }
 
 func pending() {
-	dief("not implemented\n")
+	var wg sync.WaitGroup
+	origin := originURL()
+	for _, branch := range localBranches() {
+		if branch == "master" {
+			// TODO(adg): check if it's remote tracking instead
+			continue
+		}
+		wg.Add(1)
+		go func(branch string) {
+			defer wg.Done()
+			id := headChangeId(branch)
+			c, err := getChange(origin, id)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error fetching change for %q: %v\n", branch, err)
+				return
+			}
+			fmt.Printf("%v:\n\t%v\n\t%v\n", branch, c.Subject, c.URL)
+			// TODO(adg): print votes
+		}(branch)
+	}
+	wg.Wait()
+}
+
+func originURL() string {
+	b, err := exec.Command("git", "remote", "-v").CombinedOutput()
+	if err != nil {
+		dief("%s\nerror running 'git remote': %v\n", b, err)
+	}
+	for _, s := range strings.Split(string(b), "\n") {
+		f := strings.Fields(s)
+		if f[0] != "origin" || len(f) < 2 {
+			continue
+		}
+		if !strings.HasPrefix(f[1], "https://") {
+			continue
+		}
+		return f[1]
+	}
+	dief("Could not find URL for 'origin' remote.\n" +
+		"Did you check out from the right place?\n")
+	panic("unreachable")
+}
+
+func localBranches() []string {
+	b, err := exec.Command("git", "branch", "-l", "-q").CombinedOutput()
+	if err != nil {
+		dief("%s\nerror running 'git branch': %v\n", b, err)
+	}
+	var branches []string
+	for _, s := range strings.Split(string(b), "\n") {
+		s = strings.TrimSpace(strings.TrimPrefix(s, "* "))
+		if s != "" {
+			branches = append(branches, s)
+		}
+	}
+	return branches
 }
 
 func branchContains(branch, rev string) bool {
@@ -221,17 +278,17 @@ func gitStatus() []string {
 	return strings.Split(string(b), "\n")
 }
 
-func headSubmitted() bool {
-	s := "Change-Id: " + headChangeId()
-	b, err := exec.Command("git", "log", "--grep", s).CombinedOutput()
+func headSubmitted(branch string) bool {
+	s := "Change-Id: " + headChangeId(branch)
+	b, err := exec.Command("git", "log", "--grep", s, "origin/master").CombinedOutput()
 	if err != nil {
 		dief("%s\ngit log failed: %v\n", b, err)
 	}
 	return len(b) > 0
 }
 
-func headChangeId() string {
-	b, err := exec.Command("git", "log", "-n", "1", "--format=format:%b").CombinedOutput()
+func headChangeId(branch string) string {
+	b, err := exec.Command("git", "log", "-n", "1", "--format=format:%b", branch).CombinedOutput()
 	if err != nil {
 		dief("%s\ngit log failed: %v\n", b, err)
 	}
