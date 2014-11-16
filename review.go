@@ -53,7 +53,7 @@ Available comands:
 		them. If the HEAD commit has been submitted, switch back to the
 		master branch and delete the feature branch.
 
-	pending 
+	pending
 		Show local branches and their head commits.
 
 `
@@ -225,15 +225,9 @@ func pending() {
 }
 
 func originURL() string {
-	for _, s := range runLines("git", "remote", "-v") {
-		f := strings.Fields(s)
-		if f[0] != "origin" || len(f) < 2 {
-			continue
-		}
-		if !strings.HasPrefix(f[1], "https://") {
-			continue
-		}
-		return f[1]
+	out, err := runOutput("git", "config", "remote.origin.url")
+	if err == nil {
+		return out
 	}
 	dief("Could not find URL for 'origin' remote.\n" +
 		"Did you check out from the right place?\n")
@@ -287,7 +281,12 @@ func gitStatus() []string {
 
 func headSubmitted(branch string) bool {
 	s := "Change-Id: " + headChangeId(branch)
-	return len(runOutput("git", "log", "--grep", s, "origin/master")) > 0
+	args := []string{"log", "--grep", s, "origin/master"}
+	out, err := runOutput("git", args...)
+	if err != nil {
+		dief("%s\nerror: %v\n", commandString("git", args), err)
+	}
+	return len(out) > 0
 }
 
 func headChangeId(branch string) string {
@@ -376,16 +375,20 @@ func verbosef(format string, args ...interface{}) {
 	}
 }
 
-func runOutput(command string, args ...string) string {
+func runOutput(command string, args ...string) (string, error) {
 	b, err := exec.Command(command, args...).CombinedOutput()
 	if err != nil {
-		dief("%v\n%s\nerror: %v\n", b, commandString(command, args), err)
+		return "", err
 	}
-	return string(b)
+	return string(b), nil
 }
 
 func runLines(command string, args ...string) []string {
-	return strings.Split(runOutput(command, args...), "\n")
+	out, err := runOutput(command, args...)
+	if err != nil {
+		dief("%s\nerror: %v\n", commandString(command, args), err)
+	}
+	return strings.Split(out, "\n")
 }
 
 func commandString(command string, args []string) string {
