@@ -94,11 +94,11 @@ func main() {
 
 func create(name string) {
 	if !hasStagedChanges() {
-		dief("No staged changes. Did you forget to \"git add\" your files?\n")
+		dief("no staged changes.\nDid you forget to 'git add'?")
 	}
 	if currentBranch() != "master" {
-		dief("You must run create from the master branch.\n" +
-			"(Try \"review sync\" or \"git checkout master\" first.)\n")
+		dief("must run 'create' from the master branch.\n" +
+			"(Try 'review sync' or 'git checkout master' first.)")
 	}
 	run("git", "checkout", "-q", "-b", name)
 	if err := runErr("git", "commit", "-q"); err != nil {
@@ -111,10 +111,10 @@ func create(name string) {
 
 func commit() {
 	if !hasStagedChanges() {
-		dief("No staged changes. Did you forget to \"git add\" your files?\n")
+		dief("no staged changes. Did you forget to 'git add'?")
 	}
 	if currentBranch() == "master" {
-		dief("Can't commit to master branch.\n")
+		dief("can't commit to master branch.")
 	}
 	run("git", "commit", "-q", "--amend", "-C", "HEAD")
 }
@@ -124,8 +124,9 @@ func diff() {
 }
 
 func upload() {
+	// TODO(adg): support flag to specify reviewer
 	if currentBranch() == "master" {
-		dief("Can't upload from master branch.\n")
+		dief("can't upload from master branch.")
 	}
 	run("git", "push", "-q", "origin", "HEAD:refs/for/master")
 }
@@ -227,27 +228,24 @@ func pending() {
 func originURL() string {
 	out, err := exec.Command("git", "config", "remote.origin.url").CombinedOutput()
 	if err != nil {
-		dief("Could not find URL for 'origin' remote.\n"+
+		dief("could not find URL for 'origin' remote.\n"+
 			"Did you check out from the right place?\n"+
-			"git config remote.origin.url output: %v\n"+
-			"%v\n", string(out), err)
+			"git config remote.origin.url: %v\n"+
+			"%s", err, out)
 	}
 	return string(out)
 }
 
 func localBranches() (branches []string) {
 	for _, s := range runLines("git", "branch", "-l", "-q") {
-		s = strings.TrimSpace(strings.TrimPrefix(s, "* "))
-		if s != "" {
-			branches = append(branches, s)
-		}
+		branches = append(branches, strings.TrimPrefix(s, "* "))
 	}
 	return branches
 }
 
 func branchContains(branch, rev string) bool {
 	for _, s := range runLines("git", "branch", "-r", "--contains", rev) {
-		if strings.TrimSpace(s) == branch {
+		if s == branch {
 			return true
 		}
 	}
@@ -272,7 +270,7 @@ func currentBranch() string {
 			return strings.TrimPrefix(s, p)
 		}
 	}
-	dief("Could not find current branch with 'git status'.\n")
+	dief("could not find current branch with 'git status'.")
 	panic("unreachable")
 }
 
@@ -282,8 +280,7 @@ func gitStatus() []string {
 
 func headSubmitted(branch string) bool {
 	s := "Change-Id: " + headChangeId(branch)
-	args := []string{"log", "--grep", s, "origin/master"}
-	return len(runOutput("git", args...)) > 0
+	return len(runOutput("git", "log", "--grep", s, "origin/master")) > 0
 }
 
 func headChangeId(branch string) string {
@@ -296,28 +293,29 @@ func headChangeId(branch string) string {
 			return strings.TrimSpace(strings.TrimPrefix(s, p))
 		}
 	}
-	dief("No Change-Id line found in HEAD commit.\n")
+	dief("no Change-Id line found in HEAD commit on branch %s.", branch)
 	panic("unreachable")
 }
 
 func goToRepoRoot() {
 	prevDir, err := os.Getwd()
 	if err != nil {
-		dief("could not get current directory: %v\n", err)
+		dief("could not get current directory: %v", err)
 	}
 	for {
 		if _, err := os.Stat(".git"); err == nil {
 			return
 		}
 		if err := os.Chdir(".."); err != nil {
-			dief("could not chdir: %v\n", err)
+			dief("could not chdir: %v", err)
 		}
 		currentDir, err := os.Getwd()
 		if err != nil {
-			dief("could not get current directory: %v\n", err)
+			dief("could not get current directory: %v", err)
 		}
 		if currentDir == prevDir {
-			dief("Git root not found. Run from within the Git tree please.\n")
+			dief("git root not found.\n" +
+				"Run from within the Git tree please.")
 		}
 		prevDir = currentDir
 	}
@@ -329,18 +327,18 @@ func installHook() {
 		return
 	}
 	if !os.IsNotExist(err) {
-		dief("checking for hook file: %v\n", err)
+		dief("error checking for hook file: %v", err)
 	}
 	verbosef("Presubmit hook to add Change-Id to commit messages is missing.\n"+
 		"Automatically creating it at %v.\n", hookFile)
 	hookContent := []byte(commitMsgHook)
 	if err := ioutil.WriteFile(hookFile, hookContent, 0700); err != nil {
-		dief("writing hook file: %v\n", err)
+		dief("error writing hook file: %v", err)
 	}
 }
 
 func dief(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, format, args...)
+	fmt.Fprintf(os.Stderr, "review: "+format+"\n", args...)
 	os.Exit(1)
 }
 
@@ -351,7 +349,7 @@ func run(command string, args ...string) {
 			// before dying to give context to the failure.
 			fmt.Fprintln(os.Stderr, commandString(command, args))
 		}
-		dief("%v\n", err)
+		dief("%v", err)
 	}
 }
 
@@ -375,13 +373,21 @@ func verbosef(format string, args ...interface{}) {
 func runOutput(command string, args ...string) string {
 	b, err := exec.Command(command, args...).CombinedOutput()
 	if err != nil {
-		dief("%v\n%s\nerror: %v\n", commandString(command, args), b, err)
+		fmt.Fprintf(os.Stderr, "%v\n%s\n", commandString(command, args), b)
+		dief("%v", err)
 	}
 	return string(b)
 }
 
 func runLines(command string, args ...string) []string {
-	return strings.Split(runOutput(command, args...), "\n")
+	var s []string
+	for _, l := range strings.Split(runOutput(command, args...), "\n") {
+		l = strings.TrimSpace(l)
+		if l != "" {
+			s = append(s, l)
+		}
+	}
+	return s
 }
 
 func commandString(command string, args []string) string {
