@@ -8,6 +8,8 @@
 // TODO(adg): check style of commit message
 // TODO(adg): write doc comment
 // TOOD(adg): print gerrit votes on 'pending'
+// TODO(adg): add gofmt commit hook
+// TODO(adg): 'upload' warn about uncommitted changes (maybe commit/create too?)
 
 package main
 
@@ -262,7 +264,7 @@ func branchContains(branch, rev string) bool {
 var stagedRe = regexp.MustCompile(`^[ACDMR]  `)
 
 func hasStagedChanges() bool {
-	for _, s := range gitStatus() {
+	for _, s := range runLines("git", "status", "-b", "--porcelain") {
 		if stagedRe.MatchString(s) {
 			return true
 		}
@@ -272,10 +274,6 @@ func hasStagedChanges() bool {
 
 func currentBranch() string {
 	return strings.TrimSpace(runOutput("git", "rev-parse", "--abbrev-ref", "HEAD"))
-}
-
-func gitStatus() []string {
-	return runLines("git", "status", "-b", "--porcelain")
 }
 
 func headSubmitted(branch string) bool {
@@ -337,11 +335,6 @@ func installHook() {
 	}
 }
 
-func dief(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "review: "+format+"\n", args...)
-	os.Exit(1)
-}
-
 func run(command string, args ...string) {
 	if err := runErr(command, args...); err != nil {
 		if !*verbose {
@@ -362,12 +355,6 @@ func runErr(command string, args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
-}
-
-func verbosef(format string, args ...interface{}) {
-	if *verbose {
-		fmt.Fprintf(os.Stderr, format, args...)
-	}
 }
 
 func runOutput(command string, args ...string) string {
@@ -392,4 +379,15 @@ func runLines(command string, args ...string) []string {
 
 func commandString(command string, args []string) string {
 	return strings.Join(append([]string{command}, args...), " ")
+}
+
+func dief(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "review: "+format+"\n", args...)
+	os.Exit(1)
+}
+
+func verbosef(format string, args ...interface{}) {
+	if *verbose {
+		fmt.Fprintf(os.Stderr, format, args...)
+	}
 }
