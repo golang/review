@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// TODO(adg): accept -a flag on 'create' and 'commit' (like git commit -a)
+// TODO(adg): accept -r flag on 'upload' to nominate reviewer
+// TODO(adg): support 'create' from non-master branches
+// TODO(adg): check style of commit message
+// TODO(adg): write doc comment
+// TOOD(adg): print gerrit votes on 'pending'
+
 package main
 
 import (
@@ -106,7 +113,6 @@ func create(name string) {
 		run("git", "checkout", "-q", "master")
 		run("git", "branch", "-q", "-d", name)
 	}
-	// TODO(adg): check style of commit message
 }
 
 func commit() {
@@ -124,7 +130,6 @@ func diff() {
 }
 
 func upload() {
-	// TODO(adg): support flag to specify reviewer
 	if currentBranch() == "master" {
 		dief("can't upload from master branch.")
 	}
@@ -188,7 +193,6 @@ func pending() {
 	}
 	for _, branch := range localBranches() {
 		if branch == "master" {
-			// TODO(adg): check if it's remote tracking instead
 			continue
 		}
 		wg.Add(1)
@@ -216,7 +220,6 @@ func pending() {
 				}
 				fmt.Printf("%v%v%v:\n\t%v\n\t%v\n",
 					p, branch, status, c.Subject, c.URL)
-				// TODO(adg): print votes
 			default:
 				fmt.Fprintf(os.Stderr, "fetching change for %q: %v\n", branch, err)
 			}
