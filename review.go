@@ -103,9 +103,10 @@ func create(name string) {
 	if !hasStagedChanges() {
 		dief("no staged changes.\nDid you forget to 'git add'?")
 	}
-	if currentBranch() != "master" {
-		dief("must run 'create' from the master branch.\n" +
-			"(Try 'review sync' or 'git checkout master' first.)")
+	if b := currentBranch(); b != "master" {
+		dief("must run 'create' from the master branch (now on %q).\n"+
+			"(Try 'review sync' or 'git checkout master' first.)",
+			b)
 	}
 	run("git", "checkout", "-q", "-b", name)
 	if err := runErr("git", "commit", "-q"); err != nil {
@@ -152,6 +153,8 @@ func doSync() {
 		run("git", "checkout", "-q", "master")
 		run("git", "merge", "-q", "--ff-only", "origin/master")
 		run("git", "branch", "-q", "-d", branch)
+		fmt.Printf("Change on %q submitted; branch deleted.\n"+
+			"On master branch.\n", branch)
 		return
 	}
 
@@ -163,10 +166,11 @@ func doSync() {
 	if headSubmitted(branch) {
 		run("git", "checkout", "-q", "master")
 		run("git", "merge", "-q", "--ff-only", "origin/master")
-		fmt.Fprintf(os.Stderr, "Switched back to master from %q, "+
-			"which I think has been submitted.\n"+
-			"If you agree, and no longer need branch %q, run:\n"+
-			"\tgit branch -D %v\n",
+		fmt.Fprintf(os.Stderr,
+			"I think the change on %q has been submitted.\n"+
+				"If you agree, and no longer need branch %q, "+
+				"run:\n\tgit branch -D %v\n"+
+				"On master branch.\n",
 			branch, branch, branch)
 		return
 	}
@@ -267,14 +271,7 @@ func hasStagedChanges() bool {
 }
 
 func currentBranch() string {
-	const p = "## "
-	for _, s := range gitStatus() {
-		if strings.HasPrefix(s, p) {
-			return strings.TrimPrefix(s, p)
-		}
-	}
-	dief("could not find current branch with 'git status'.")
-	panic("unreachable")
+	return strings.TrimSpace(runOutput("git", "rev-parse", "--abbrev-ref", "HEAD"))
 }
 
 func gitStatus() []string {
