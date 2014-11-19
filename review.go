@@ -28,13 +28,14 @@ import (
 var (
 	hookFile = filepath.FromSlash(".git/hooks/commit-msg")
 	verbose  = flag.Bool("v", false, "verbose output")
+	noRun    = flag.Bool("n", false, "print but do not run commands")
 )
 
-const usage = `Usage: %s [-v] <command>
+const usage = `Usage: %s [-n] [-v] <command>
 Type "%s help" for more information.
 `
 
-const help = `Usage: %s [-v] <command>
+const help = `Usage: %s [-n] [-v] <command>
 
 The review command is a wrapper for the git command that provides a simple
 interface to the "single-commit feature branch" development model.
@@ -347,8 +348,11 @@ func run(command string, args ...string) {
 }
 
 func runErr(command string, args ...string) error {
-	if *verbose {
+	if *verbose || *noRun {
 		fmt.Fprintln(os.Stderr, commandString(command, args))
+	}
+	if *noRun {
+		return nil
 	}
 	cmd := exec.Command(command, args...)
 	cmd.Stdin = os.Stdin
