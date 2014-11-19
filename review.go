@@ -264,14 +264,14 @@ func originURL() string {
 }
 
 func localBranches() (branches []string) {
-	for _, s := range runLines("git", "branch", "-l", "-q") {
+	for _, s := range getLines("git", "branch", "-l", "-q") {
 		branches = append(branches, strings.TrimPrefix(s, "* "))
 	}
 	return branches
 }
 
 func branchContains(branch, rev string) bool {
-	for _, s := range runLines("git", "branch", "-r", "--contains", rev) {
+	for _, s := range getLines("git", "branch", "-r", "--contains", rev) {
 		if s == branch {
 			return true
 		}
@@ -282,7 +282,7 @@ func branchContains(branch, rev string) bool {
 var stagedRe = regexp.MustCompile(`^[ACDMR]  `)
 
 func hasStagedChanges() bool {
-	for _, s := range runLines("git", "status", "-b", "--porcelain") {
+	for _, s := range getLines("git", "status", "-b", "--porcelain") {
 		if stagedRe.MatchString(s) {
 			return true
 		}
@@ -291,12 +291,12 @@ func hasStagedChanges() bool {
 }
 
 func currentBranch() string {
-	return strings.TrimSpace(runOutput("git", "rev-parse", "--abbrev-ref", "HEAD"))
+	return strings.TrimSpace(getOutput("git", "rev-parse", "--abbrev-ref", "HEAD"))
 }
 
 func headSubmitted(branch string) bool {
 	s := "Change-Id: " + headChangeId(branch)
-	return len(runOutput("git", "log", "--grep", s, "origin/master")) > 0
+	return len(getOutput("git", "log", "--grep", s, "origin/master")) > 0
 }
 
 func headChangeId(branch string) string {
@@ -304,7 +304,7 @@ func headChangeId(branch string) string {
 		p = "Change-Id: "
 		f = "--format=format:%b"
 	)
-	for _, s := range runLines("git", "log", "-n", "1", f, branch, "--") {
+	for _, s := range getLines("git", "log", "-n", "1", f, branch, "--") {
 		if strings.HasPrefix(s, p) {
 			return strings.TrimSpace(strings.TrimPrefix(s, p))
 		}
@@ -378,7 +378,11 @@ func runErr(command string, args ...string) error {
 	return cmd.Run()
 }
 
-func runOutput(command string, args ...string) string {
+// getOutput runs the specified command and returns its combined standard
+// output and standard error outputs.
+// NOTE: It should only be used to run commands that return information,
+// **not** commands that make any actual changes.
+func getOutput(command string, args ...string) string {
 	b, err := exec.Command(command, args...).CombinedOutput()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n%s\n", commandString(command, args), b)
@@ -387,9 +391,12 @@ func runOutput(command string, args ...string) string {
 	return string(b)
 }
 
-func runLines(command string, args ...string) []string {
+// getLines is like getOutput but it returns non-empty output lines.
+// NOTE: It should only be used to run commands that return information,
+// **not** commands that make any actual changes.
+func getLines(command string, args ...string) []string {
 	var s []string
-	for _, l := range strings.Split(runOutput(command, args...), "\n") {
+	for _, l := range strings.Split(getOutput(command, args...), "\n") {
 		l = strings.TrimSpace(l)
 		if l != "" {
 			s = append(s, l)
