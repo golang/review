@@ -11,7 +11,7 @@
 // TODO(adg): add gofmt commit hook
 // TODO(adg): 'upload' warn about uncommitted changes (maybe commit/create too?)
 
-package main
+package main // import "golang.org/x/review"
 
 import (
 	"flag"
