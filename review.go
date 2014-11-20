@@ -11,6 +11,7 @@
 // TODO(adg): add gofmt commit hook
 // TODO(adg): 'upload' warn about uncommitted changes (maybe commit/create too?)
 // TODO(adg): ability to edit commit message
+// TODO(adg): print changed files on review sync
 
 package main // import "golang.org/x/review"
 
