@@ -10,6 +10,7 @@
 // TOOD(adg): print gerrit votes on 'pending'
 // TODO(adg): add gofmt commit hook
 // TODO(adg): 'upload' warn about uncommitted changes (maybe commit/create too?)
+// TODO(adg): ability to edit commit message
 
 package main // import "golang.org/x/review"
 
