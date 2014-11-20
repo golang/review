@@ -56,7 +56,7 @@ Available comands:
 		the local branch HEAD.
 		(The differences introduced by this change.)
 
-	upload
+	upload [-r reviewer,...] [-cc mail,...]
 		Upload HEAD commit to the code review server.
 
 	sync
@@ -144,13 +144,51 @@ func diff(args []string) {
 }
 
 func upload(args []string) {
-	if len(args) != 0 {
-		flag.Usage()
+	flags := flag.FlagSet{
+		Usage: func() {
+			fmt.Fprintf(os.Stderr, "Usage: review [-n] [-v] upload [-r reviewer,...] [-cc mail,...]\n")
+			os.Exit(2)
+		},
+	}
+	rList := flags.String("r", "", "comma-separated list of reviewers")
+	ccList := flags.String("cc", "", "comma-separated list of people to CC:")
+	if flags.Parse(args) != nil || len(flags.Args()) != 0 {
+		flags.Usage()
 	}
 	if currentBranch() == "master" {
 		dief("can't upload from master branch.")
 	}
-	run("git", "push", "-q", "origin", "HEAD:refs/for/master")
+	refSpec := "HEAD:refs/for/master"
+	start := "%"
+	if *rList != "" {
+		refSpec += mailList(start, "r", *rList)
+		start = ","
+	}
+	if *ccList != "" {
+		refSpec += mailList(start, "cc", *ccList)
+	}
+	run("git", "push", "-q", "origin", refSpec)
+}
+
+// mailAddressRE matches the mail addresses we admit. It's restrictive but admits
+// all the addresses in the Go CONTRIBUTORS file at time of writing (tested separately).
+var mailAddressRE = regexp.MustCompile(`^[a-zA-Z0-9][-_.a-zA-Z0-9]*@[-_.a-zA-Z0-9]+$`)
+
+// mailList turns the list of mail addresses from the flag value into the format
+// expected by gerrit. The start argument is a % or , depending on where we
+// are in the processing sequence.
+func mailList(start, tag string, flagList string) string {
+	spec := start
+	for i, addr := range strings.Split(flagList, ",") {
+		if !mailAddressRE.MatchString(addr) {
+			dief("%q is not a valid reviewer mail address", addr)
+		}
+		if i > 0 {
+			spec += ","
+		}
+		spec += tag + "=" + addr
+	}
+	return spec
 }
 
 func doSync(args []string) {
@@ -173,7 +211,7 @@ func doSync(args []string) {
 		run("git", "merge", "-q", "--ff-only", "origin/master")
 		run("git", "branch", "-q", "-d", branch)
 		fmt.Printf("Change on %q submitted; branch deleted.\n"+
-			"On master branch.\n", branch)
+			"Now on master branch.\n", branch)
 		return
 	}
 
@@ -189,7 +227,7 @@ func doSync(args []string) {
 			"I think the change on %q has been submitted.\n"+
 				"If you agree, and no longer need branch %q, "+
 				"run:\n\tgit branch -D %v\n"+
-				"On master branch.\n",
+				"\nNow on master branch.\n",
 			branch, branch, branch)
 		return
 	}
@@ -215,7 +253,7 @@ func pending(args []string) {
 		current = currentBranch()
 	)
 	if current == "master" {
-		fmt.Println("On master branch.")
+		fmt.Println("Now on master branch.")
 	}
 	for _, branch := range localBranches() {
 		if branch == "master" {
