@@ -78,31 +78,33 @@ func main() {
 	goToRepoRoot()
 	installHook()
 
-	switch flag.Arg(0) {
+	command, args := flag.Arg(0), flag.Args()[1:]
+
+	switch command {
 	case "help":
 		fmt.Fprintf(os.Stdout, help, os.Args[0])
 	case "create", "cr":
-		name := flag.Arg(1)
-		if name == "" {
-			flag.Usage()
-		}
-		create(name)
+		create(args)
 	case "commit", "co":
-		commit()
+		commit(args)
 	case "diff", "d":
-		diff()
+		diff(args)
 	case "upload", "u":
-		upload()
+		upload(args)
 	case "sync", "s":
-		doSync()
+		doSync(args)
 	case "pending", "p":
-		pending()
+		pending(args)
 	default:
 		flag.Usage()
 	}
 }
 
-func create(name string) {
+func create(args []string) {
+	if len(args) != 1 || args[0] == "" {
+		flag.Usage()
+	}
+	name := args[0]
 	if !hasStagedChanges() {
 		dief("no staged changes.\nDid you forget to 'git add'?")
 	}
@@ -119,7 +121,10 @@ func create(name string) {
 	}
 }
 
-func commit() {
+func commit(args []string) {
+	if len(args) != 0 {
+		flag.Usage()
+	}
 	if !hasStagedChanges() {
 		dief("no staged changes. Did you forget to 'git add'?")
 	}
@@ -129,18 +134,27 @@ func commit() {
 	run("git", "commit", "-q", "--amend", "-C", "HEAD")
 }
 
-func diff() {
+func diff(args []string) {
+	if len(args) != 0 {
+		flag.Usage()
+	}
 	run("git", "diff", "HEAD^", "HEAD")
 }
 
-func upload() {
+func upload(args []string) {
+	if len(args) != 0 {
+		flag.Usage()
+	}
 	if currentBranch() == "master" {
 		dief("can't upload from master branch.")
 	}
 	run("git", "push", "-q", "origin", "HEAD:refs/for/master")
 }
 
-func doSync() {
+func doSync(args []string) {
+	if len(args) != 0 {
+		flag.Usage()
+	}
 	run("git", "fetch", "-q")
 
 	// If we're on master, just fast-forward.
@@ -189,7 +203,10 @@ func doSync() {
 	run("git", "rebase", "-q", "origin/master")
 }
 
-func pending() {
+func pending(args []string) {
+	if len(args) != 0 {
+		flag.Usage()
+	}
 	var (
 		wg      sync.WaitGroup
 		origin  = originURL()
