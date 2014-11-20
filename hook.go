@@ -4,6 +4,47 @@
 
 package main
 
+import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+)
+
+var hookFile = filepath.FromSlash(".git/hooks/commit-msg")
+
+func installHook() {
+	filename := filepath.Join(repoRoot(), hookFile)
+	_, err := os.Stat(filename)
+	if err == nil {
+		return
+	}
+	if !os.IsNotExist(err) {
+		dief("error checking for hook file: %v", err)
+	}
+	verbosef("Presubmit hook to add Change-Id to commit messages is missing.")
+	verbosef("Automatically creating it at %v.", filename)
+	hookContent := []byte(commitMsgHook)
+	if err := ioutil.WriteFile(filename, hookContent, 0700); err != nil {
+		dief("error writing hook file: %v", err)
+	}
+}
+
+func repoRoot() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		dief("could not get current directory: %v", err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+			return dir
+		}
+		if len(dir) == 1 && dir[0] == filepath.Separator {
+			dief("git root not found. Rerun from within the Git tree.")
+		}
+		dir = filepath.Dir(dir)
+	}
+}
+
 var commitMsgHook = `#!/bin/sh
 # From Gerrit Code Review 2.2.1
 #
