@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// TODO(adg): change command-line parsing so this works as a git alias
 // TODO(adg): rename 'upload' to 'mail'
 // TODO(adg): recognize non-master remote branches
 // TODO(adg): accept -a flag on 'commit' (like git commit -a)
@@ -27,15 +26,24 @@ import (
 )
 
 var (
-	verbose = flag.Bool("v", false, "verbose output")
-	noRun   = flag.Bool("n", false, "print but do not run commands")
+	flags   = flag.NewFlagSet("", flag.ExitOnError)
+	verbose = flags.Bool("v", false, "verbose output")
+	noRun   = flags.Bool("n", false, "print but do not run commands")
 )
 
-const usage = `Usage: %s [-n] [-v] <command>
+const globalFlags = "[-n] [-v]"
+
+const usage = `Usage: %s <command> ` + globalFlags + `
 Type "%s help" for more information.
 `
 
-const help = `Usage: %s [-n] [-v] <command>
+func init() {
+	flags.Usage = func() {
+		fmt.Fprintf(os.Stderr, usage, os.Args[0], os.Args[0])
+	}
+}
+
+const help = `Usage: %s <command> ` + globalFlags + `
 
 The review command is a wrapper for the git command that provides a simple
 interface to the "single-commit feature branch" development model.
@@ -73,19 +81,13 @@ Available comands:
 `
 
 func main() {
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, usage, os.Args[0], os.Args[0])
-	}
-	flag.Parse()
-
 	installHook()
 
-	args := flag.Args()
-	if len(args) == 0 {
-		flag.Usage()
+	if len(os.Args) < 2 {
+		flags.Usage()
 		os.Exit(2)
 	}
-	command, args := args[0], args[1:]
+	command, args := os.Args[1], os.Args[2:]
 
 	switch command {
 	case "help":
@@ -103,7 +105,15 @@ func main() {
 	case "gofmt":
 		dief("gofmt not implemented")
 	default:
-		flag.Usage()
+		flags.Usage()
+	}
+}
+
+func expectZeroArgs(args []string, command string) {
+	flags.Parse(args)
+	if len(flags.Args()) > 0 {
+		fmt.Fprintf(os.Stderr, "Usage: %s %s %s\n", os.Args[0], command, globalFlags)
+		os.Exit(2)
 	}
 }
 

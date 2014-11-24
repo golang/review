@@ -5,37 +5,25 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
 )
 
-var uploadFlags struct {
-	flag.FlagSet
-	diff   bool
-	force  bool
-	rList  string
-	ccList string
-}
-
-func init() {
-	f := &uploadFlags
-	f.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [-n] [-v] upload [-r reviewer,...] [-cc mail,...]\n", os.Args[0])
-	}
-	f.BoolVar(&f.diff, "diff", false, "show change commit diff and don't upload")
-	f.BoolVar(&f.force, "f", false, "upload even if there are staged changes")
-	f.StringVar(&f.rList, "r", "", "comma-separated list of reviewers")
-	f.StringVar(&f.ccList, "cc", "", "comma-separated list of people to CC:")
-
-}
-
 func upload(args []string) {
-	f := &uploadFlags
-	if f.Parse(args) != nil || len(f.Args()) != 0 {
-		f.Usage()
+	var (
+		diff   = flags.Bool("diff", false, "show change commit diff and don't upload")
+		force  = flags.Bool("f", false, "upload even if there are staged changes")
+		rList  = flags.String("r", "", "comma-separated list of reviewers")
+		ccList = flags.String("cc", "", "comma-separated list of people to CC:")
+	)
+	flags.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s upload %s [-r reviewer,...] [-cc mail,...]\n", os.Args[0], globalFlags)
+	}
+	flags.Parse(args)
+	if len(flags.Args()) != 0 {
+		flags.Usage()
 		os.Exit(2)
 	}
 
@@ -47,24 +35,24 @@ func upload(args []string) {
 		dief("no pending change; can't upload.")
 	}
 
-	if f.diff {
+	if *diff {
 		run("git", "diff", "master..HEAD")
 		return
 	}
 
-	if !f.force && hasStagedChanges() {
+	if !*force && hasStagedChanges() {
 		dief("there are staged changes; aborting.\n" +
 			"Use 'review change' to include them or 'review upload -f' to force upload.")
 	}
 
 	refSpec := "HEAD:refs/for/master"
 	start := "%"
-	if f.rList != "" {
-		refSpec += mailList(start, "r", f.rList)
+	if *rList != "" {
+		refSpec += mailList(start, "r", *rList)
 		start = ","
 	}
-	if f.ccList != "" {
-		refSpec += mailList(start, "cc", f.ccList)
+	if *ccList != "" {
+		refSpec += mailList(start, "cc", *ccList)
 	}
 	run("git", "push", "-q", "origin", refSpec)
 }

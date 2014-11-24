@@ -4,15 +4,10 @@
 
 package main
 
-import (
-	"flag"
-	"fmt"
-)
+import "fmt"
 
 func pending(args []string) {
-	if len(args) != 0 {
-		flag.Usage()
-	}
+	expectZeroArgs(args, "pending")
 	// TODO(adg): implement -r
 
 	current := currentBranchName()

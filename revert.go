@@ -10,8 +10,10 @@ import (
 )
 
 func revert(args []string) {
-	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: %s [-n] [-v] revert files...\n", os.Args[0])
+	flags.Parse(args)
+	files := flags.Args()
+	if len(files) == 0 {
+		fmt.Fprintf(os.Stderr, "Usage: %s %s revert files...\n", os.Args[0], globalFlags)
 		os.Exit(2)
 	}
 	branch := CurrentBranch()
@@ -22,6 +24,6 @@ func revert(args []string) {
 		dief("no pending change; can't revert.")
 	}
 	// TODO(adg): make this work correctly before hooking it up
-	run("git", append([]string{"checkout", "HEAD^"}, args...)...)
-	run("git", append([]string{"add"}, args...)...)
+	run("git", append([]string{"checkout", "HEAD^"}, files...)...)
+	run("git", append([]string{"add"}, files...)...)
 }

@@ -4,12 +4,8 @@
 
 package main
 
-import "flag"
-
 func doSync(args []string) {
-	if len(args) != 0 {
-		flag.Usage()
-	}
+	expectZeroArgs(args, "sync")
 
 	// Fetch remote changes.
 	run("git", "fetch", "-q")

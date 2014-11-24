@@ -10,16 +10,17 @@ import (
 )
 
 func change(args []string) {
-	if len(args) > 1 {
-		fmt.Fprintf(os.Stderr, "Usage: review [-n] [-v] change [branch]\n")
+	flags.Parse(args)
+	if len(flags.Args()) > 1 {
+		fmt.Fprintf(os.Stderr, "Usage: %s change %s [branch]\n", os.Args[0], globalFlags)
 		os.Exit(2)
 
 	}
 
 	// Checkout or create branch, if specified.
 	checkedOut := false
-	if len(args) == 1 {
-		checkoutOrCreate(args[0])
+	if branch := flags.Arg(0); branch != "" {
+		checkoutOrCreate(branch)
 		checkedOut = true
 	}
 
