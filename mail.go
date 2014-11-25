@@ -11,15 +11,15 @@ import (
 	"strings"
 )
 
-func upload(args []string) {
+func mail(args []string) {
 	var (
-		diff   = flags.Bool("diff", false, "show change commit diff and don't upload")
-		force  = flags.Bool("f", false, "upload even if there are staged changes")
+		diff   = flags.Bool("diff", false, "show change commit diff and don't upload or mail")
+		force  = flags.Bool("f", false, "mail even if there are staged changes")
 		rList  = flags.String("r", "", "comma-separated list of reviewers")
 		ccList = flags.String("cc", "", "comma-separated list of people to CC:")
 	)
 	flags.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s upload %s [-r reviewer,...] [-cc mail,...]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(os.Stderr, "Usage: %s mail %s [-r reviewer,...] [-cc mail,...]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
 	if len(flags.Args()) != 0 {
@@ -29,10 +29,10 @@ func upload(args []string) {
 
 	branch := CurrentBranch()
 	if branch.Name == "master" {
-		dief("on master branch; can't upload.")
+		dief("on master branch; can't mail.")
 	}
 	if branch.ChangeID == "" {
-		dief("no pending change; can't upload.")
+		dief("no pending change; can't mail.")
 	}
 
 	if *diff {
@@ -42,7 +42,7 @@ func upload(args []string) {
 
 	if !*force && hasStagedChanges() {
 		dief("there are staged changes; aborting.\n" +
-			"Use 'review change' to include them or 'review upload -f' to force upload.")
+			"Use 'review change' to include them or 'review mail -f' to force it.")
 	}
 
 	refSpec := "HEAD:refs/for/master"

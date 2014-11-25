@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// TODO(adg): rename 'upload' to 'mail'
 // TODO(adg): recognize non-master remote branches
 // TODO(adg): accept -a flag on 'commit' (like git commit -a)
 // TODO(adg): check style of commit message
@@ -60,12 +59,13 @@ Available comands:
 		Show local branches and their head commits.
 		If -r is specified, show additional information from Gerrit.
 
-	upload [-f] [-r reviewer,...] [-cc mail,...]
-		Upload change commit to the code review server.
+	mail [-f] [-r reviewer,...] [-cc mail,...]
+		Upload change commit to the code review server and send mail
+		requesting a code review.
 		If -f is specified, upload even if there are staged changes.
 
-	upload -diff
-		Show the changes but do not upload.
+	mail -diff
+		Show the changes but do not send mail or upload.
 
 	sync
 		Fetch changes from the remote repository and merge them into
@@ -96,8 +96,8 @@ func main() {
 		change(args)
 	case "pending", "p":
 		pending(args)
-	case "upload", "up", "u":
-		upload(args)
+	case "mail", "m":
+		mail(args)
 	case "sync", "s":
 		doSync(args)
 	case "revert":
