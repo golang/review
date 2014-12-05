@@ -10,10 +10,10 @@
 // TODO(adg): print changed files on review sync
 // TODO(adg): translate email addresses without @ by looking up somewhere
 
-// Command review provides a simple command-line user interface for
+// Command git-review provides a simple command-line user interface for
 // working with git repositories and the Gerrit code review system.
-// See "review help" for details.
-package main // import "golang.org/x/review"
+// See "git-review help" for details.
+package main // import "golang.org/x/review/git-review"
 
 import (
 	"bytes"

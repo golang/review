@@ -1,3 +1,3 @@
 The review tool is a command-line tool for working with Gerrit.
 It wraps git and handles a lot of the mess.
-See "review help" for instruction.
+See "git-review help" for instruction.
