@@ -31,7 +31,7 @@ func change(args []string) {
 			// Permit "review change master".
 			return
 		}
-		dief("can't commit to master branch (use 'review change branchname').")
+		dief("can't commit to master branch (use '%s change branchname').", os.Args[0])
 	}
 	if branch.ChangeID == "" {
 		// No change commit on this branch, create one.

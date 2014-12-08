@@ -81,17 +81,20 @@ Available commands:
 `
 
 func main() {
-	installHook()
-
 	if len(os.Args) < 2 {
 		flags.Usage()
 		os.Exit(2)
 	}
 	command, args := os.Args[1], os.Args[2:]
 
-	switch command {
-	case "help":
+	if command == "help" {
 		fmt.Fprintf(os.Stdout, help, os.Args[0])
+		return
+	}
+
+	installHook()
+
+	switch command {
 	case "change", "c":
 		change(args)
 	case "pending", "p":
@@ -185,5 +188,5 @@ func verbosef(format string, args ...interface{}) {
 }
 
 func printf(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "review: "+format+"\n", args...)
+	fmt.Fprintf(os.Stderr, os.Args[0]+": "+format+"\n", args...)
 }
