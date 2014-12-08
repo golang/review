@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 var hookFile = filepath.FromSlash(".git/hooks/commit-msg")
@@ -34,11 +35,15 @@ func repoRoot() string {
 	if err != nil {
 		dief("could not get current directory: %v", err)
 	}
+	rootlen := 1
+	if runtime.GOOS == "windows" {
+		rootlen += len(filepath.VolumeName(dir))
+	}
 	for {
 		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
 			return dir
 		}
-		if len(dir) == 1 && dir[0] == filepath.Separator {
+		if len(dir) == rootlen && dir[rootlen-1] == filepath.Separator {
 			dief("git root not found. Rerun from within the Git tree.")
 		}
 		dir = filepath.Dir(dir)
