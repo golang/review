@@ -47,7 +47,7 @@ const help = `Usage: %s <command> ` + globalFlags + `
 The review command is a wrapper for the git command that provides a simple
 interface to the "single-commit feature branch" development model.
 
-Available comands:
+Available commands:
 
 	change [name]
 		Create a change commit, or amend an existing change commit,
