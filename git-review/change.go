@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 func change(args []string) {
@@ -18,27 +19,27 @@ func change(args []string) {
 	}
 
 	// Checkout or create branch, if specified.
-	checkedOut := false
-	if branch := flags.Arg(0); branch != "" {
-		checkoutOrCreate(branch)
-		checkedOut = true
+	target := flags.Arg(0)
+	if target != "" {
+		checkoutOrCreate(target)
 	}
 
 	// Create or amend change commit.
-	branch := CurrentBranch()
-	if branch.Name == "master" {
-		if checkedOut {
+	b := CurrentBranch()
+	if !b.IsLocalOnly() {
+		if target != "" {
 			// Permit "review change master".
 			return
 		}
-		dief("can't commit to master branch (use '%s change branchname').", os.Args[0])
+		dief("can't commit to %s branch (use '%s change branchname').", b.Name, os.Args[0])
 	}
-	if branch.ChangeID == "" {
+
+	if b.ChangeID() == "" {
 		// No change commit on this branch, create one.
 		commitChanges(false)
 		return
 	}
-	if checkedOut {
+	if target != "" {
 		// If we switched to an existing branch, don't amend the
 		// commit. (The user can run 'review change' to do that.)
 		return
@@ -47,32 +48,60 @@ func change(args []string) {
 	commitChanges(true)
 }
 
+var testCommitMsg string
+
 func commitChanges(amend bool) {
-	if !hasStagedChanges() {
+	if !HasStagedChanges() {
 		printf("no staged changes. Did you forget to 'git add'?")
 	}
 	args := []string{"commit", "-q", "--allow-empty"}
 	if amend {
 		args = append(args, "--amend")
 	}
+	if testCommitMsg != "" {
+		args = append(args, "-m", testCommitMsg)
+	}
 	run("git", args...)
 	printf("change updated.")
 }
 
-func checkoutOrCreate(branch string) {
-	// If branch exists, check it out.
-	for _, b := range localBranches() {
-		if b == branch {
-			run("git", "checkout", "-q", branch)
-			printf("changed to branch %v.", branch)
+func checkoutOrCreate(target string) {
+	// If local branch exists, check it out.
+	for _, b := range LocalBranches() {
+		if b.Name == target {
+			run("git", "checkout", "-q", target)
+			printf("changed to branch %v.", target)
 			return
 		}
 	}
 
-	// If it doesn't exist, create a new branch.
-	if currentBranchName() != "master" {
-		dief("can't create a new branch from non-master branch.")
+	// If origin branch exists, create local branch tracking it.
+	for _, name := range OriginBranches() {
+		if name == "origin/"+target {
+			run("git", "checkout", "-q", "-t", "-b", target, name)
+			printf("created branch %v tracking %s.", target, name)
+			return
+		}
 	}
-	run("git", "checkout", "-q", "-b", branch)
-	printf("changed to new branch %v.", branch)
+
+	// Otherwise, this is a request to create a local work branch.
+	// Check for reserved names. We take everything with a dot.
+	if strings.Contains(target, ".") {
+		dief("invalid branch name %v: branch names with dots are reserved for git-review.", target)
+	}
+
+	// If the current branch has a pending commit, building
+	// on top of it will not help. Don't allow that.
+	// Otherwise, inherit HEAD and upstream from the current branch.
+	b := CurrentBranch()
+	if b.HasPendingCommit() {
+		dief("cannot branch from work branch; change back to %v first.", strings.TrimPrefix(b.OriginBranch(), "origin/"))
+	}
+
+	origin := b.OriginBranch()
+
+	// NOTE: This is different from git checkout -q -t -b branch. It does not move HEAD.
+	run("git", "checkout", "-q", "-b", target)
+	run("git", "branch", "--set-upstream-to", origin)
+	printf("created branch %v tracking %s.", target, origin)
 }

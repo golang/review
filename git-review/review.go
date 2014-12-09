@@ -55,9 +55,16 @@ Available commands:
 		out that branch (creating it if it does not exist).
 		(Does not amend the existing commit when switching branches.)
 
-	pending [-r]
-		Show local branches and their head commits.
-		If -r is specified, show additional information from Gerrit.
+	gofmt
+		TBD
+
+	help
+		Show this help text.
+
+	hooks
+		Install Git commit hooks for Gerrit and gofmt.
+		Every other operation except help also does this, if they are not
+		already installed.
 
 	mail [-f] [-r reviewer,...] [-cc mail,...]
 		Upload change commit to the code review server and send mail
@@ -67,22 +74,23 @@ Available commands:
 	mail -diff
 		Show the changes but do not send mail or upload.
 
+	pending [-r]
+		Show local branches and their head commits.
+		If -r is specified, show additional information from Gerrit.
+
 	sync
 		Fetch changes from the remote repository and merge them into
 		the current branch, rebasing the change commit on top of them.
 
-	revert files...
-		Revert the specified files to their state before the change
-		commit. (Be careful! This will discard your changes!)
-
-	gofmt
-		TBD
 
 `
 
 func main() {
 	if len(os.Args) < 2 {
 		flags.Usage()
+		if dieTrap != nil {
+			dieTrap()
+		}
 		os.Exit(2)
 	}
 	command, args := os.Args[1], os.Args[2:]
@@ -97,16 +105,16 @@ func main() {
 	switch command {
 	case "change", "c":
 		change(args)
-	case "pending", "p":
-		pending(args)
-	case "mail", "m":
-		mail(args)
-	case "sync", "s":
-		doSync(args)
-	case "revert":
-		dief("revert not implemented")
 	case "gofmt":
 		dief("gofmt not implemented")
+	case "hooks":
+		// done - installHook already ran
+	case "mail", "m":
+		mail(args)
+	case "pending", "p":
+		pending(args)
+	case "sync", "s":
+		doSync(args)
 	default:
 		flags.Usage()
 	}
@@ -131,12 +139,17 @@ func run(command string, args ...string) {
 	}
 }
 
+var runLog []string
+
 func runErr(command string, args ...string) error {
 	if *verbose || *noRun {
 		fmt.Fprintln(os.Stderr, commandString(command, args))
 	}
 	if *noRun {
 		return nil
+	}
+	if runLog != nil {
+		runLog = append(runLog, strings.TrimSpace(command+" "+strings.Join(args, " ")))
 	}
 	cmd := exec.Command(command, args...)
 	cmd.Stdin = os.Stdin
@@ -176,8 +189,13 @@ func commandString(command string, args []string) string {
 	return strings.Join(append([]string{command}, args...), " ")
 }
 
+var dieTrap func()
+
 func dief(format string, args ...interface{}) {
 	printf(format, args...)
+	if dieTrap != nil {
+		dieTrap()
+	}
 	os.Exit(1)
 }
 
@@ -188,5 +206,5 @@ func verbosef(format string, args ...interface{}) {
 }
 
 func printf(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, os.Args[0]+": "+format+"\n", args...)
+	fmt.Fprintf(os.Stderr, "%s: %s\n", os.Args[0], fmt.Sprintf(format, args...))
 }

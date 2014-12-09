@@ -10,25 +10,26 @@ func doSync(args []string) {
 	// Fetch remote changes.
 	run("git", "fetch", "-q")
 
-	// If we're on master or there's no pending change, just fast-forward.
-	branch := CurrentBranch()
-	if branch.Name == "master" || branch.ChangeID == "" {
-		run("git", "merge", "-q", "--ff-only", "origin/master")
+	// If there's no pending change, just fast-forward.
+	b := CurrentBranch()
+	if !b.HasPendingCommit() {
+		run("git", "merge", "-q", "--ff-only", b.OriginBranch())
 		return
 	}
 
 	// Don't sync with staged changes.
 	// TODO(adg): should we handle unstaged changes also?
-	if hasStagedChanges() {
-		dief("you have staged changes. Run 'review change' before sync.")
+	if HasStagedChanges() {
+		dief("run 'git-review change' to commit staged changes before sync.")
 	}
 
-	// Sync current branch to master.
-	run("git", "rebase", "-q", "origin/master")
+	// Sync current branch to origin.
+	id := b.ChangeID()
+	run("git", "rebase", "-q", b.OriginBranch())
 
 	// If the change commit has been submitted,
 	// roll back change leaving any changes unstaged.
-	if branch.Submitted() && hasPendingCommit(branch.Name) {
+	if b.Submitted(id) && b.HasPendingCommit() {
 		run("git", "reset", "HEAD^")
 	}
 }

@@ -27,20 +27,17 @@ func mail(args []string) {
 		os.Exit(2)
 	}
 
-	branch := CurrentBranch()
-	if branch.Name == "master" {
-		dief("on master branch; can't mail.")
-	}
-	if branch.ChangeID == "" {
+	b := CurrentBranch()
+	if b.ChangeID() == "" {
 		dief("no pending change; can't mail.")
 	}
 
 	if *diff {
-		run("git", "diff", "master..HEAD")
+		run("git", "diff", "HEAD^..HEAD")
 		return
 	}
 
-	if !*force && hasStagedChanges() {
+	if !*force && HasStagedChanges() {
 		dief("there are staged changes; aborting.\n" +
 			"Use 'review change' to include them or 'review mail -f' to force it.")
 	}
