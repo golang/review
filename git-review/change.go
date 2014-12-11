@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -57,17 +58,27 @@ func commitChanges(amend bool) {
 	if !HasStagedChanges() {
 		printf("no staged changes. Did you forget to 'git add'?")
 	}
-	args := []string{"commit", "-q", "--allow-empty"}
-	if amend {
-		args = append(args, "--amend")
-		if changeQuick {
-			args = append(args, "--no-edit")
+	commit := func(amend bool) {
+		args := []string{"commit", "-q", "--allow-empty"}
+		if amend {
+			args = append(args, "--amend")
+			if changeQuick {
+				args = append(args, "--no-edit")
+			}
 		}
+		if testCommitMsg != "" {
+			args = append(args, "-m", testCommitMsg)
+		}
+		run("git", args...)
 	}
-	if testCommitMsg != "" {
-		args = append(args, "-m", testCommitMsg)
+	commit(amend)
+	for !commitMessageOK() {
+		fmt.Print("re-edit commit message (y/n)? ")
+		if !scanYes() {
+			break
+		}
+		commit(true)
 	}
-	run("git", args...)
 	printf("change updated.")
 }
 
@@ -110,4 +121,56 @@ func checkoutOrCreate(target string) {
 	run("git", "checkout", "-q", "-b", target)
 	run("git", "branch", "-q", "--set-upstream-to", origin)
 	printf("created branch %v tracking %s.", target, origin)
+}
+
+var (
+	messageRE  = regexp.MustCompile(`^(\[[a-zA-Z0-9.-]+\] )?[a-zA-Z0-9-/, ]+: `)
+	oldFixesRE = regexp.MustCompile(`Fixes +(issue +#?)?([0-9]+)`)
+)
+
+func commitMessageOK() bool {
+	body := getOutput("git", "log", "--format=format:%B", "-n", "1")
+	ok := true
+	if !messageRE.MatchString(body) {
+		fmt.Print(commitMessageWarning)
+		ok = false
+	}
+	if m := oldFixesRE.FindStringSubmatch(body); m != nil {
+		fmt.Printf(fixesIssueWarning, m[0], m[2])
+		ok = false
+	}
+	return ok
+}
+
+const commitMessageWarning = `
+Your CL description appears not to use the standard form.
+
+The first line of your change description is conventionally a one-line summary
+of the change, prefixed by the primary affected package, and is used as the
+subject for code review mail; the rest of the description elaborates.
+
+Examples:
+
+	encoding/rot13: new package
+
+	math: add IsInf, IsNaN
+
+	net: fix cname in LookupHost
+
+	unicode: update to Unicode 5.0.2
+
+`
+
+const fixesIssueWarning = `
+Your CL description contains the string %q, which is
+the old Google Code way of linking commits to issues.
+
+You should rewrite it to use the GitHub convention: "Fixes #%v".
+
+`
+
+func scanYes() bool {
+	var s string
+	fmt.Scan(&s)
+	return strings.HasPrefix(strings.ToLower(s), "y")
 }
