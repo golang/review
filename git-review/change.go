@@ -10,7 +10,10 @@ import (
 	"strings"
 )
 
+var changeQuick bool
+
 func change(args []string) {
+	flags.BoolVar(&changeQuick, "q", false, "do not edit commit msg when updating commit")
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
 		fmt.Fprintf(os.Stderr, "Usage: %s change %s [branch]\n", os.Args[0], globalFlags)
@@ -57,6 +60,9 @@ func commitChanges(amend bool) {
 	args := []string{"commit", "-q", "--allow-empty"}
 	if amend {
 		args = append(args, "--amend")
+		if changeQuick {
+			args = append(args, "--no-edit")
+		}
 	}
 	if testCommitMsg != "" {
 		args = append(args, "-m", testCommitMsg)
