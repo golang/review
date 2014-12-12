@@ -21,14 +21,19 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
 var (
 	flags   = flag.NewFlagSet("", flag.ExitOnError)
-	verbose = flags.Bool("v", false, "verbose output")
+	verbose = new(count) // installed as -v below
 	noRun   = flags.Bool("n", false, "print but do not run commands")
 )
+
+func init() {
+	flags.Var(verbose, "v", "report git commands")
+}
 
 const globalFlags = "[-n] [-v]"
 
@@ -130,7 +135,7 @@ func expectZeroArgs(args []string, command string) {
 
 func run(command string, args ...string) {
 	if err := runErr(command, args...); err != nil {
-		if !*verbose {
+		if *verbose == 0 {
 			// If we're not in verbose mode, print the command
 			// before dying to give context to the failure.
 			fmt.Fprintln(os.Stderr, commandString(command, args))
@@ -142,7 +147,7 @@ func run(command string, args ...string) {
 var runLog []string
 
 func runErr(command string, args ...string) error {
-	if *verbose || *noRun {
+	if *verbose > 0 || *noRun {
 		fmt.Fprintln(os.Stderr, commandString(command, args))
 	}
 	if *noRun {
@@ -163,7 +168,11 @@ func runErr(command string, args ...string) error {
 // NOTE: It should only be used to run commands that return information,
 // **not** commands that make any actual changes.
 func getOutput(command string, args ...string) string {
-	if *verbose {
+	// NOTE: We only show these non-state-modifying commands with -v -v.
+	// Otherwise things like 'git sync -v' show all our internal "find out about
+	// the git repo" commands, which is confusing if you are just trying to find
+	// out what git sync means.
+	if *verbose > 1 {
 		fmt.Fprintln(os.Stderr, commandString(command, args))
 	}
 	b, err := exec.Command(command, args...).CombinedOutput()
@@ -200,11 +209,40 @@ func dief(format string, args ...interface{}) {
 }
 
 func verbosef(format string, args ...interface{}) {
-	if *verbose {
+	if *verbose > 0 {
 		printf(format, args...)
 	}
 }
 
 func printf(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, "%s: %s\n", os.Args[0], fmt.Sprintf(format, args...))
+}
+
+// count is a flag.Value that is like a flag.Bool and a flag.Int.
+// If used as -name, it increments the count, but -name=x sets the count.
+// Used for verbose flag -v.
+type count int
+
+func (c *count) String() string {
+	return fmt.Sprint(int(*c))
+}
+
+func (c *count) Set(s string) error {
+	switch s {
+	case "true":
+		*c++
+	case "false":
+		*c = 0
+	default:
+		n, err := strconv.Atoi(s)
+		if err != nil {
+			return fmt.Errorf("invalid count %q", s)
+		}
+		*c = count(n)
+	}
+	return nil
+}
+
+func (c *count) IsBoolFlag() bool {
+	return true
 }
