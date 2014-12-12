@@ -18,12 +18,18 @@ func TestChange(t *testing.T) {
 	t.Logf("master -> work")
 	testMain(t, "change", "work")
 	testRan(t, "git checkout -q -b work",
-		"git branch -q --set-upstream-to origin/master",
-		"git commit -q --allow-empty -m foo: my commit msg")
+		"git branch -q --set-upstream-to origin/master")
 
 	t.Logf("work -> master")
 	testMain(t, "change", "master")
 	testRan(t, "git checkout -q master")
+
+	t.Logf("master -> work with staged changes")
+	write(t, gt.client+"/file", "new content")
+	trun(t, gt.client, "git", "add", "file")
+	testMain(t, "change", "work")
+	testRan(t, "git checkout -q work",
+		"git commit -q --allow-empty -m my commit msg")
 
 	t.Logf("master -> dev.branch")
 	testMain(t, "change", "dev.branch")

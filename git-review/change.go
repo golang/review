@@ -26,6 +26,9 @@ func change(args []string) {
 	target := flags.Arg(0)
 	if target != "" {
 		checkoutOrCreate(target)
+		if !HasStagedChanges() {
+			return
+		}
 	}
 
 	// Create or amend change commit.
@@ -39,7 +42,7 @@ func change(args []string) {
 	}
 
 	if b.ChangeID() == "" {
-		// No change commit on this branch, create one.
+		// No change commit on this branch, create one if there are staged changes.
 		commitChanges(false)
 		return
 	}
