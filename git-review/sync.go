@@ -13,6 +13,11 @@ func doSync(args []string) {
 	b := CurrentBranch()
 	id := b.ChangeID()
 
+	// Don't sync with staged or unstaged changes.
+	// rebase is going to complain if we don't, and we can give a nicer error.
+	checkStaged("sync")
+	checkUnstaged("sync")
+
 	// Pull remote changes into local branch.
 	// We do this in one command so that people following along with 'git sync -v'
 	// see fewer commands to understand.
@@ -26,5 +31,22 @@ func doSync(args []string) {
 	// Pull should have done this for us, but check just in case.
 	if b.Submitted(id) && b.HasPendingCommit() {
 		run("git", "reset", "HEAD^")
+	}
+}
+
+func checkStaged(cmd string) {
+	if HasStagedChanges() {
+		dief("cannot %s: staged changes exist\n"+
+			"\trun 'git status' to see changes\n"+
+			"\trun 'git-review change' to commit staged changes", cmd)
+	}
+}
+
+func checkUnstaged(cmd string) {
+	if HasUnstagedChanges() {
+		dief("cannot %s: unstaged changes exist\n"+
+			"\trun 'git status' to see changes\n"+
+			"\trun 'git stash' to save unstaged changes\n"+
+			"\trun 'git add' and 'git-review change' to commit staged changes", cmd)
 	}
 }

@@ -45,7 +45,10 @@ func mail(args []string) {
 			"Use 'review change' to include them or 'review mail -f' to force it.")
 	}
 
-	refSpec := "HEAD:refs/for/master"
+	// for side effect of dying with a good message if origin is GitHub
+	loadGerritOrigin()
+
+	refSpec := b.PushSpec()
 	start := "%"
 	if *rList != "" {
 		refSpec += mailList(start, "r", string(*rList))
@@ -68,6 +71,11 @@ func mail(args []string) {
 	// for work, because git change rejects any name containing a dot.
 	// The space of names with dots is ours (the Go team's) to define.
 	run("git", "tag", "-f", b.Name+".mailed")
+}
+
+// PushSpec returns the spec for a Gerrit push command to publish the change in b.
+func (b *Branch) PushSpec() string {
+	return "HEAD:refs/for/" + strings.TrimPrefix(b.OriginBranch(), "origin/")
 }
 
 // mailAddressRE matches the mail addresses we admit. It's restrictive but admits

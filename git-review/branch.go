@@ -15,9 +15,10 @@ import (
 
 // Branch describes a Git branch.
 type Branch struct {
-	Name     string // branch name
-	changeID string // Change-Id of pending commit ("" if nothing pending)
-	subject  string // first line of pending commit ("" if nothing pending)
+	Name       string // branch name
+	changeID   string // Change-Id of pending commit ("" if nothing pending)
+	subject    string // first line of pending commit ("" if nothing pending)
+	commitHash string // commit hash of pending commit ("" if nothing pending)
 }
 
 // CurrentBranch returns the current branch.
@@ -26,8 +27,11 @@ func CurrentBranch() *Branch {
 	return &Branch{Name: name}
 }
 
+// OriginBranch returns the name of the origin branch that branch b tracks.
+// The returned name is like "origin/master" or "origin/dev.garbage" or
+// "origin/release-branch.go1.4".
 func (b *Branch) OriginBranch() string {
-	argv := []string{"git", "rev-parse", "--abbrev-ref", "@{u}"}
+	argv := []string{"git", "rev-parse", "--abbrev-ref", b.Name + "@{u}"}
 	out, err := exec.Command(argv[0], argv[1:]...).CombinedOutput()
 	if err == nil && len(out) > 0 {
 		return string(bytes.TrimSpace(out))
@@ -56,6 +60,7 @@ func (b *Branch) ChangeID() string {
 		if b.HasPendingCommit() {
 			b.changeID = headChangeID(b.Name)
 			b.subject = commitSubject(b.Name)
+			b.commitHash = commitHash(b.Name)
 		}
 	}
 	return b.changeID
@@ -66,17 +71,22 @@ func (b *Branch) Subject() string {
 	return b.subject
 }
 
+func (b *Branch) CommitHash() string {
+	b.ChangeID() // page in commit hash
+	return b.commitHash
+}
+
 func commitSubject(ref string) string {
-	const f = "--format=format:%s"
-	return getOutput("git", "log", "-n", "1", f, ref, "--")
+	return getOutput("git", "log", "-n", "1", "--format=format:%s", ref, "--")
+}
+
+func commitHash(ref string) string {
+	return getOutput("git", "log", "-n", "1", "--format=format:%H", ref, "--")
 }
 
 func headChangeID(branch string) string {
-	const (
-		p = "Change-Id: "
-		f = "--format=format:%b"
-	)
-	for _, s := range getLines("git", "log", "-n", "1", f, branch, "--") {
+	const p = "Change-Id: "
+	for _, s := range getLines("git", "log", "-n", "1", "--format=format:%b", branch, "--") {
 		if strings.HasPrefix(s, p) {
 			return strings.TrimSpace(strings.TrimPrefix(s, p))
 		}
@@ -91,11 +101,22 @@ func (b *Branch) Submitted(id string) bool {
 	return len(getOutput("git", "log", "--grep", "Change-Id: "+id, b.OriginBranch())) > 0
 }
 
-var stagedRe = regexp.MustCompile(`^[ACDMR]  `)
+var stagedRE = regexp.MustCompile(`^[ACDMR]  `)
 
 func HasStagedChanges() bool {
 	for _, s := range getLines("git", "status", "-b", "--porcelain") {
-		if stagedRe.MatchString(s) {
+		if stagedRE.MatchString(s) {
+			return true
+		}
+	}
+	return false
+}
+
+var unstagedRE = regexp.MustCompile(`^.[ACDMR] `)
+
+func HasUnstagedChanges() bool {
+	for _, s := range getLines("git", "status", "-b", "--porcelain") {
+		if unstagedRE.MatchString(s) {
 			return true
 		}
 	}
@@ -122,4 +143,13 @@ func OriginBranches() []string {
 		}
 	}
 	return branches
+}
+
+// GerritChange returns the change metadata from the Gerrit server
+// for the branch's pending change.
+func (b *Branch) GerritChange() (*GerritChange, error) {
+	if !b.HasPendingCommit() {
+		return nil, fmt.Errorf("no pending commit")
+	}
+	return readGerritChange(fullChangeID(b) + "?o=LABELS&o=CURRENT_REVISION")
 }

@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -82,6 +83,9 @@ Available commands:
 		Show local branches and their head commits.
 		If -r is specified, show additional information from Gerrit.
 
+	submit
+		Submit the completed change commit into the repository.
+
 	sync
 		Fetch changes from the remote repository and merge them into
 		the current branch, rebasing the change commit on top of them.
@@ -109,7 +113,7 @@ func main() {
 	installHook()
 
 	switch command {
-	case "change", "c":
+	case "change":
 		change(args)
 	case "gofmt":
 		dief("gofmt not implemented")
@@ -117,9 +121,11 @@ func main() {
 		// done - installHook already ran
 	case "mail", "m":
 		mail(args)
-	case "pending", "p":
+	case "pending":
 		pending(args)
-	case "sync", "s":
+	case "submit":
+		submit(args)
+	case "sync":
 		doSync(args)
 	default:
 		flags.Usage()
@@ -145,7 +151,7 @@ func run(command string, args ...string) {
 	}
 }
 
-var runLog []string
+var runLogTrap []string
 
 func runErr(command string, args ...string) error {
 	if *verbose > 0 || *noRun {
@@ -154,13 +160,19 @@ func runErr(command string, args ...string) error {
 	if *noRun {
 		return nil
 	}
-	if runLog != nil {
-		runLog = append(runLog, strings.TrimSpace(command+" "+strings.Join(args, " ")))
+	if runLogTrap != nil {
+		runLogTrap = append(runLogTrap, strings.TrimSpace(command+" "+strings.Join(args, " ")))
 	}
 	cmd := exec.Command(command, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
+	if stdoutTrap != nil {
+		cmd.Stdout = stdoutTrap
+	}
 	cmd.Stderr = os.Stderr
+	if stderrTrap != nil {
+		cmd.Stderr = stderrTrap
+	}
 	return cmd.Run()
 }
 
@@ -215,8 +227,14 @@ func verbosef(format string, args ...interface{}) {
 	}
 }
 
+var stdoutTrap, stderrTrap *bytes.Buffer
+
 func printf(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "%s: %s\n", os.Args[0], fmt.Sprintf(format, args...))
+	w := io.Writer(os.Stderr)
+	if stderrTrap != nil {
+		w = stderrTrap
+	}
+	fmt.Fprintf(w, "%s: %s\n", os.Args[0], fmt.Sprintf(format, args...))
 }
 
 // count is a flag.Value that is like a flag.Bool and a flag.Int.

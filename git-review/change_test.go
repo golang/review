@@ -29,7 +29,7 @@ func TestChange(t *testing.T) {
 	trun(t, gt.client, "git", "add", "file")
 	testMain(t, "change", "work")
 	testRan(t, "git checkout -q work",
-		"git commit -q --allow-empty -m my commit msg")
+		"git commit -q --allow-empty -m foo: my commit msg")
 
 	t.Logf("master -> dev.branch")
 	testMain(t, "change", "dev.branch")
