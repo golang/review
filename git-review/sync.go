@@ -4,31 +4,26 @@
 
 package main
 
+import "strings"
+
 func doSync(args []string) {
 	expectZeroArgs(args, "sync")
 
-	// Fetch remote changes.
-	run("git", "fetch", "-q")
-
-	// If there's no pending change, just fast-forward.
+	// Get current branch and commit ID for fixup after pull.
 	b := CurrentBranch()
-	if !b.HasPendingCommit() {
-		run("git", "merge", "-q", "--ff-only", b.OriginBranch())
-		return
-	}
-
-	// Don't sync with staged changes.
-	// TODO(adg): should we handle unstaged changes also?
-	if HasStagedChanges() {
-		dief("run 'git-review change' to commit staged changes before sync.")
-	}
-
-	// Sync current branch to origin.
 	id := b.ChangeID()
-	run("git", "rebase", "-q", b.OriginBranch())
+
+	// Pull remote changes into local branch.
+	// We do this in one command so that people following along with 'git sync -v'
+	// see fewer commands to understand.
+	// We want to pull in the remote changes from the upstream branch
+	// and rebase the current pending commit (if any) on top of them.
+	// If there is no pending commit, the pull will do a fast-forward merge.
+	run("git", "pull", "-q", "-r", "origin", strings.TrimPrefix(b.OriginBranch(), "origin/"))
 
 	// If the change commit has been submitted,
 	// roll back change leaving any changes unstaged.
+	// Pull should have done this for us, but check just in case.
 	if b.Submitted(id) && b.HasPendingCommit() {
 		run("git", "reset", "HEAD^")
 	}
