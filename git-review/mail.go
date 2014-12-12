@@ -15,9 +15,12 @@ func mail(args []string) {
 	var (
 		diff   = flags.Bool("diff", false, "show change commit diff and don't upload or mail")
 		force  = flags.Bool("f", false, "mail even if there are staged changes")
-		rList  = flags.String("r", "", "comma-separated list of reviewers")
-		ccList = flags.String("cc", "", "comma-separated list of people to CC:")
+		rList  = new(stringList) // installed below
+		ccList = new(stringList) // installed below
 	)
+	flags.Var(rList, "r", "comma-separated list of reviewers")
+	flags.Var(ccList, "cc", "comma-separated list of people to CC:")
+
 	flags.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s mail %s [-r reviewer,...] [-cc mail,...]\n", os.Args[0], globalFlags)
 	}
@@ -45,11 +48,11 @@ func mail(args []string) {
 	refSpec := "HEAD:refs/for/master"
 	start := "%"
 	if *rList != "" {
-		refSpec += mailList(start, "r", *rList)
+		refSpec += mailList(start, "r", string(*rList))
 		start = ","
 	}
 	if *ccList != "" {
-		refSpec += mailList(start, "cc", *ccList)
+		refSpec += mailList(start, "cc", string(*ccList))
 	}
 	run("git", "push", "-q", "origin", refSpec)
 }
@@ -73,4 +76,23 @@ func mailList(start, tag string, flagList string) string {
 		spec += tag + "=" + addr
 	}
 	return spec
+}
+
+// stringList is a flag.Value that is like flag.String, but if repeated
+// keeps appending to the old value, inserting commas as separators.
+// This allows people to write -r rsc,adg (like the old hg command)
+// but also -r rsc -r adg (like standard git commands).
+// This does change the meaning of -r rsc -r adg (it used to mean just adg).
+type stringList string
+
+func (x *stringList) String() string {
+	return string(*x)
+}
+
+func (x *stringList) Set(s string) error {
+	if *x != "" && s != "" {
+		*x += ","
+	}
+	*x += stringList(s)
+	return nil
 }
