@@ -55,6 +55,19 @@ func mail(args []string) {
 		refSpec += mailList(start, "cc", string(*ccList))
 	}
 	run("git", "push", "-q", "origin", refSpec)
+
+	// Create local tag for mailed change.
+	// If in the 'work' branch, this creates or updates work.mailed.
+	// Older mailings are in the reflog, so work.mailed is newest,
+	// work.mailed@{1} is the one before that, work.mailed@{2} before that,
+	// and so on.
+	// Git doesn't actually have a concept of a local tag,
+	// but Gerrit won't let people push tags to it, so the tag
+	// can't propagate out of the local client into the official repo.
+	// There is no conflict with the branch names people are using
+	// for work, because git change rejects any name containing a dot.
+	// The space of names with dots is ours (the Go team's) to define.
+	run("git", "tag", "-f", b.Name+".mailed")
 }
 
 // mailAddressRE matches the mail addresses we admit. It's restrictive but admits
