@@ -102,6 +102,6 @@ func checkoutOrCreate(target string) {
 
 	// NOTE: This is different from git checkout -q -t -b branch. It does not move HEAD.
 	run("git", "checkout", "-q", "-b", target)
-	run("git", "branch", "--set-upstream-to", origin)
+	run("git", "branch", "-q", "--set-upstream-to", origin)
 	printf("created branch %v tracking %s.", target, origin)
 }

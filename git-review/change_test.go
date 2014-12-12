@@ -18,7 +18,7 @@ func TestChange(t *testing.T) {
 	t.Logf("master -> work")
 	testMain(t, "change", "work")
 	testRan(t, "git checkout -q -b work",
-		"git branch --set-upstream-to origin/master",
+		"git branch -q --set-upstream-to origin/master",
 		"git commit -q --allow-empty -m my commit msg")
 
 	t.Logf("work -> master")
