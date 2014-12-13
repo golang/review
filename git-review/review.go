@@ -26,13 +26,18 @@ import (
 )
 
 var (
-	flags   = flag.NewFlagSet("", flag.ExitOnError)
+	flags   *flag.FlagSet
 	verbose = new(count) // installed as -v below
-	noRun   = flags.Bool("n", false, "print but do not run commands")
+	noRun   = new(bool)
 )
 
-func init() {
+func initFlags() {
+	flags = flag.NewFlagSet("", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(os.Stderr, usage, os.Args[0], os.Args[0])
+	}
 	flags.Var(verbose, "v", "report git commands")
+	flags.BoolVar(noRun, "n", false, "print but do not run commands")
 }
 
 const globalFlags = "[-n] [-v]"
@@ -40,12 +45,6 @@ const globalFlags = "[-n] [-v]"
 const usage = `Usage: %s <command> ` + globalFlags + `
 Type "%s help" for more information.
 `
-
-func init() {
-	flags.Usage = func() {
-		fmt.Fprintf(os.Stderr, usage, os.Args[0], os.Args[0])
-	}
-}
 
 const help = `Usage: %s <command> ` + globalFlags + `
 
@@ -91,6 +90,8 @@ Available commands:
 `
 
 func main() {
+	initFlags()
+
 	if len(os.Args) < 2 {
 		flags.Usage()
 		if dieTrap != nil {
