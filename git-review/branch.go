@@ -104,7 +104,8 @@ func (b *Branch) Submitted(id string) bool {
 var stagedRE = regexp.MustCompile(`^[ACDMR]  `)
 
 func HasStagedChanges() bool {
-	for _, s := range getLines("git", "status", "-b", "--porcelain") {
+	// NOTE: Cannot use getLines, because it throws away leading spaces.
+	for _, s := range strings.Split(getOutput("git", "status", "-b", "--porcelain"), "\n") {
 		if stagedRE.MatchString(s) {
 			return true
 		}
@@ -112,10 +113,11 @@ func HasStagedChanges() bool {
 	return false
 }
 
-var unstagedRE = regexp.MustCompile(`^.[ACDMR] `)
+var unstagedRE = regexp.MustCompile(`^.[ACDMR]`)
 
 func HasUnstagedChanges() bool {
-	for _, s := range getLines("git", "status", "-b", "--porcelain") {
+	// NOTE: Cannot use getLines, because it throws away leading spaces.
+	for _, s := range strings.Split(getOutput("git", "status", "-b", "--porcelain"), "\n") {
 		if unstagedRE.MatchString(s) {
 			return true
 		}

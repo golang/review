@@ -89,11 +89,14 @@ func submit(args []string) {
 		dief("cannot submit: conflicting changes submitted, run 'git sync'")
 	}
 
+	if *noRun {
+		dief("stopped before submit")
+	}
+
 	// Otherwise, try the submit. Sends back updated GerritChange,
 	// but we need extended information and the reply is in the
 	// "SUBMITTED" state anyway, so ignore the GerritChange
 	// in the response and fetch a new one below.
-	ch = new(GerritChange)
 	if err := gerritAPI("/a/changes/"+fullChangeID(b)+"/submit", []byte(`{"wait_for_merge": true}`), nil); err != nil {
 		dief("cannot submit: %v", err)
 	}
@@ -110,7 +113,7 @@ func submit(args []string) {
 		time.Sleep(max * (1 << uint(i+1)) / (1 << steps))
 		ch, err = b.GerritChange()
 		if err != nil {
-			dief("%v", err)
+			dief("waiting for merge: %v", err)
 		}
 		if ch.Status != "SUBMITTED" {
 			break
@@ -119,7 +122,7 @@ func submit(args []string) {
 
 	switch ch.Status {
 	default:
-		dief("cannot submit: unexpected post-submit Gerrit change status %q", ch.Status)
+		dief("submit error: unexpected post-submit Gerrit change status %q", ch.Status)
 
 	case "MERGED":
 		// good
@@ -140,3 +143,4 @@ func submit(args []string) {
 
 	// Done! Change is submitted, branch is up to date, ready for new work.
 }
+

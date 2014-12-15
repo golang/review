@@ -38,6 +38,7 @@ func TestSubmitErrors(t *testing.T) {
 		"git status", "git stash", "git add", "git-review change")
 	testNoStdout(t)
 	testRan(t)
+	trun(t, gt.client, "git", "add", "file1")
 	trun(t, gt.client, "git", "commit", "--amend", "--no-edit")
 
 	t.Logf("> not found")
@@ -96,7 +97,7 @@ func TestSubmitErrors(t *testing.T) {
 	srv.setReply("/a/changes/proj~master~I123456789/submit", gerritReply{body: ")]}'\n" + newJSON})
 	testMainDied(t, "submit")
 	testRan(t, "git push -q origin HEAD:refs/for/master")
-	testPrintedStderr(t, "cannot submit: unexpected post-submit Gerrit change status \"NEW\"")
+	testPrintedStderr(t, "submit error: unexpected post-submit Gerrit change status \"NEW\"")
 }
 
 func TestSubmitTimeout(t *testing.T) {
