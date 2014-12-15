@@ -65,6 +65,17 @@ func newGitTest(t *testing.T) *gitTest {
 	client := tmpdir + "/git-client"
 	mkdir(t, client)
 	trun(t, client, "git", "clone", server, ".")
+
+	// write stub hooks to keep installHook from installing its own.
+	// If it installs its own, git will look for git-review on the current path
+	// and may find an old git-review that does just about anything.
+	// In any event, we wouldn't be testing what we want to test.
+	// Tests that want to exercise hooks need to arrange for a git-review
+	// in the path and replace these with the real ones.
+	for _, h := range hookFiles {
+		write(t, client+"/.git/hooks/"+h, "#!/bin/bash\nexit 0\n")
+	}
+
 	trun(t, client, "git", "config", "core.editor", "false")
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -83,6 +94,12 @@ func newGitTest(t *testing.T) *gitTest {
 	}
 
 	return gt
+}
+
+func (gt *gitTest) removeStubHooks() {
+	for _, h := range hookFiles {
+		os.RemoveAll(gt.client + "/.git/hooks/" + h)
+	}
 }
 
 func mkdir(t *testing.T, dir string) {

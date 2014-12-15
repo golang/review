@@ -5,28 +5,59 @@
 package main
 
 import (
+	"bytes"
+	"crypto/rand"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
 )
 
-var hookFile = filepath.FromSlash(".git/hooks/commit-msg")
+var hookPath = ".git/hooks/"
+var hookFiles = []string{
+	"commit-msg",
+}
 
 func installHook() {
-	filename := filepath.Join(repoRoot(), hookFile)
-	_, err := os.Stat(filename)
-	if err == nil {
-		return
-	}
-	if !os.IsNotExist(err) {
-		dief("error checking for hook file: %v", err)
-	}
-	verbosef("Presubmit hook to add Change-Id to commit messages is missing.")
-	verbosef("Automatically creating it at %v.", filename)
-	hookContent := []byte(commitMsgHook)
-	if err := ioutil.WriteFile(filename, hookContent, 0700); err != nil {
-		dief("error writing hook file: %v", err)
+	for _, hookFile := range hookFiles {
+		filename := filepath.Join(repoRoot(), hookPath+hookFile)
+
+		// Special case: remove old commit-msg shell script
+		// in favor of invoking the git-review hook implementation,
+		// which will be easier to change in the future.
+		if hookFile == "commit-msg" {
+			data, err := ioutil.ReadFile(filename)
+			if err == nil && string(data) == oldCommitMsgHook {
+				verbosef("removing old commit-msg hook")
+				os.Remove(filename)
+			}
+		}
+
+		hookContent := fmt.Sprintf(hookScript, hookFile)
+
+		// If hook file exists, assume it is okay.
+		_, err := os.Stat(filename)
+		if err == nil {
+			if *verbose > 0 {
+				data, err := ioutil.ReadFile(filename)
+				if err != nil {
+					verbosef("reading hook: %v", err)
+				} else if string(data) != hookContent {
+					verbosef("unexpected hook content in %s", filename)
+				}
+			}
+			continue
+		}
+
+		if !os.IsNotExist(err) {
+			dief("checking hook: %v", err)
+		}
+		verbosef("installing %s hook", hookFile)
+		if err := ioutil.WriteFile(filename, []byte(hookContent), 0700); err != nil {
+			dief("writing hook: %v", err)
+		}
 	}
 }
 
@@ -50,7 +81,53 @@ func repoRoot() string {
 	}
 }
 
-var commitMsgHook = `#!/bin/sh
+var hookScript = `#!/bin/sh
+exec git-review hook-invoke %s "$@"
+`
+
+func hookInvoke(args []string) {
+	if len(args) == 0 {
+		dief("usage: git-review hook-invoke <hook-name> [args...]")
+	}
+	switch args[0] {
+	case "commit-msg":
+		hookCommitMsg(args[1:])
+	}
+}
+
+// hookCommitMsg is installed as the git commit-msg hook.
+// It adds a Change-Id line to the bottom of the commit message
+// if there is not one already.
+func hookCommitMsg(args []string) {
+	// Add Change-Id to commit message if needed.
+	if len(args) != 1 {
+		dief("usage: git-review hook-invoke commit-msg message.txt\n")
+	}
+	file := args[0]
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		dief("%v", err)
+	}
+	if bytes.Contains(data, []byte("\nChange-Id: ")) {
+		return
+	}
+	n := len(data)
+	for n > 0 && data[n-1] == '\n' {
+		n--
+	}
+	var id [20]byte
+	if _, err := io.ReadFull(rand.Reader, id[:]); err != nil {
+		dief("generating Change-Id: %v", err)
+	}
+	data = append(data[:n], fmt.Sprintf("\n\nChange-Id: I%x\n", id[:])...)
+	if err := ioutil.WriteFile(file, data, 0666); err != nil {
+		dief("%v", err)
+	}
+}
+
+// This is NOT USED ANYMORE.
+// It is here only for comparing against old commit-hook files.
+var oldCommitMsgHook = `#!/bin/sh
 # From Gerrit Code Review 2.2.1
 #
 # Part of Gerrit Code Review (http://code.google.com/p/gerrit/)

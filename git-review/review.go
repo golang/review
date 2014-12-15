@@ -117,6 +117,8 @@ func main() {
 		change(args)
 	case "gofmt":
 		dief("gofmt not implemented")
+	case "hook-invoke":
+		hookInvoke(args)
 	case "hooks":
 		// done - installHook already ran
 	case "mail", "m":
