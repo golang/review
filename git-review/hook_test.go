@@ -37,6 +37,14 @@ func TestHookCommitMsg(t *testing.T) {
 	if !bytes.Equal(data, data1) {
 		t.Fatalf("second hook-invoke commit-msg changed Change-Id:\nbefore:\n%s\n\nafter:\n%s", data, data1)
 	}
+
+	// Check that hook fails when message is empty.
+	write(t, gt.client+"/empty.txt", "\n\n# just a file with\n# comments\n")
+	testMainDied(t, "hook-invoke", "commit-msg", gt.client+"/empty.txt")
+	const want = "git-review: empty commit message\n"
+	if got := stderr.String(); got != want {
+		t.Fatalf("unexpected output:\ngot: %q\nwant: %q", got, want)
+	}
 }
 
 func TestHooks(t *testing.T) {

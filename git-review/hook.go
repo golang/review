@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 )
 
@@ -108,6 +109,10 @@ func hookCommitMsg(args []string) {
 	if err != nil {
 		dief("%v", err)
 	}
+	data = stripComments(data)
+	if len(bytes.TrimSpace(data)) == 0 {
+		dief("empty commit message")
+	}
 	if bytes.Contains(data, []byte("\nChange-Id: ")) {
 		return
 	}
@@ -123,6 +128,11 @@ func hookCommitMsg(args []string) {
 	if err := ioutil.WriteFile(file, data, 0666); err != nil {
 		dief("%v", err)
 	}
+}
+
+// stripComments strips lines that begin with "#".
+func stripComments(in []byte) []byte {
+	return regexp.MustCompile(`(?m)^#.*\n`).ReplaceAll(in, nil)
 }
 
 // This is NOT USED ANYMORE.
