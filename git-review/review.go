@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// TODO(adg): recognize non-master remote branches
-// TODO(adg): accept -a flag on 'commit' (like git commit -a)
-// TODO(adg): check style of commit message
-// TOOD(adg): print gerrit votes on 'pending'
-// TODO(adg): add gofmt commit hook
 // TODO(adg): print changed files on review sync
 // TODO(adg): translate email addresses without @ by looking up somewhere
 
