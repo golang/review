@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -246,6 +247,16 @@ type GerritChange struct {
 	Messages        []*GerritMessage
 }
 
+// LabelNames returns the label names for the change, in lexicographic order.
+func (ch *GerritChange) LabelNames() []string {
+	var names []string
+	for name := range ch.Labels {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
 // GerritMessage is the JSON struct for a Gerrit MessageInfo.
 type GerritMessage struct {
 	Author struct {
@@ -260,11 +271,22 @@ type GerritLabel struct {
 	Blocking bool
 	Approved *GerritAccount
 	Rejected *GerritAccount
+	All      []*GerritApproval
 }
 
 // GerritAccount is the JSON struct for a Gerrit AccountInfo.
 type GerritAccount struct {
-	ID int `json:"_account_id"`
+	ID       int `json:"_account_id"`
+	Name     string
+	Email    string
+	Username string
+}
+
+// GerritApproval is the JSON struct for a Gerrit ApprovalInfo.
+type GerritApproval struct {
+	GerritAccount
+	Value int
+	Date  string
 }
 
 // GerritRevision is the JSON struct for a Gerrit RevisionInfo.

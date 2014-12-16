@@ -198,7 +198,8 @@ func getOutput(command string, args ...string) string {
 	return string(bytes.TrimSpace(b))
 }
 
-// getLines is like getOutput but it returns non-empty output lines.
+// getLines is like getOutput but it returns only non-empty output lines,
+// with leading and trailing spaces removed.
 // NOTE: It should only be used to run commands that return information,
 // **not** commands that make any actual changes.
 func getLines(command string, args ...string) []string {

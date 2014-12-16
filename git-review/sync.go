@@ -29,6 +29,7 @@ func doSync(args []string) {
 	// If the change commit has been submitted,
 	// roll back change leaving any changes unstaged.
 	// Pull should have done this for us, but check just in case.
+	b.loadedPending = false
 	if b.Submitted(id) && b.HasPendingCommit() {
 		run("git", "reset", "HEAD^")
 	}

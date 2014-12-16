@@ -11,10 +11,12 @@ import (
 	"strings"
 )
 
+var changeAuto bool
 var changeQuick bool
 
 func change(args []string) {
-	flags.BoolVar(&changeQuick, "q", false, "do not edit commit msg when updating commit")
+	flags.BoolVar(&changeAuto, "a", false, "add changes to any tracked files")
+	flags.BoolVar(&changeQuick, "q", false, "do not edit pending commit msg")
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
 		fmt.Fprintf(os.Stderr, "Usage: %s change %s [branch]\n", os.Args[0], globalFlags)
@@ -26,40 +28,51 @@ func change(args []string) {
 	target := flags.Arg(0)
 	if target != "" {
 		checkoutOrCreate(target)
-		if !HasStagedChanges() {
-			return
+		b := CurrentBranch()
+		if HasStagedChanges() && b.IsLocalOnly() && b.ChangeID() == "" {
+			commitChanges(false)
 		}
+		b.check()
+		return
 	}
 
 	// Create or amend change commit.
 	b := CurrentBranch()
 	if !b.IsLocalOnly() {
-		if target != "" {
-			// Permit "review change master".
-			return
-		}
 		dief("can't commit to %s branch (use '%s change branchname').", b.Name, os.Args[0])
 	}
 
-	if b.ChangeID() == "" {
-		// No change commit on this branch, create one if there are staged changes.
-		commitChanges(false)
-		return
+	amend := b.ChangeID() != ""
+	commitChanges(amend)
+	b.loadedPending = false // force reload after commitChanges
+	b.check()
+}
+
+func (b *Branch) check() {
+	// TODO(rsc): Test
+	staged, unstaged, _ := LocalChanges()
+	if len(staged) == 0 && len(unstaged) == 0 {
+		// No staged changes, no unstaged changes.
+		// If the branch is behind upstream, now is a good time to point that out.
+		// This applies to both local work branches and tracking branches.
+		// TODO(rsc): Test.
+		b.loadPending()
+		if b.commitsBehind > 0 {
+			printf("warning: %d commit%s behind %s; run 'git sync' to update.", b.commitsBehind, suffix(b.commitsBehind, "s"), b.OriginBranch())
+		}
 	}
-	if target != "" {
-		// If we switched to an existing branch, don't amend the
-		// commit. (The user can run 'review change' to do that.)
-		return
+
+	// TODO(rsc): Test
+	if text := b.errors(); text != "" {
+		printf("error: %s\n", text)
 	}
-	// Amend the commit.
-	commitChanges(true)
 }
 
 var testCommitMsg string
 
 func commitChanges(amend bool) {
-	if !HasStagedChanges() {
-		printf("no staged changes. Did you forget to 'git add'?")
+	if HasUnstagedChanges() && !HasStagedChanges() && !changeAuto {
+		printf("warning: unstaged changes and no staged changes; use 'git add' or 'git change -a'")
 	}
 	commit := func(amend bool) {
 		args := []string{"commit", "-q", "--allow-empty"}
@@ -71,6 +84,9 @@ func commitChanges(amend bool) {
 		}
 		if testCommitMsg != "" {
 			args = append(args, "-m", testCommitMsg)
+		}
+		if changeAuto {
+			args = append(args, "-a")
 		}
 		run("git", args...)
 	}

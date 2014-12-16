@@ -4,10 +4,7 @@
 
 package main
 
-import (
-	"sort"
-	"time"
-)
+import "time"
 
 // TODO(rsc): Add -tbr.
 
@@ -27,7 +24,7 @@ func submit(args []string) {
 	checkUnstaged("submit")
 
 	// Fetch Gerrit information about this change.
-	ch, err := b.GerritChange()
+	ch, err := b.GerritChange("LABELS", "CURRENT_REVISION")
 	if err != nil {
 		dief("%v", err)
 	}
@@ -54,12 +51,7 @@ func submit(args []string) {
 
 	// Check for label approvals (like CodeReview+2).
 	// The final submit will check these too, but it is better to fail now.
-	var names []string
-	for name := range ch.Labels {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
+	for _, name := range ch.LabelNames() {
 		label := ch.Labels[name]
 		if label.Optional {
 			continue
@@ -77,7 +69,7 @@ func submit(args []string) {
 		run("git", "push", "-q", "origin", b.PushSpec())
 
 		// Refetch change information, especially mergeable.
-		ch, err = b.GerritChange()
+		ch, err = b.GerritChange("LABELS", "CURRENT_REVISION")
 		if err != nil {
 			dief("%v", err)
 		}
@@ -111,7 +103,7 @@ func submit(args []string) {
 	const max = 2 * time.Second
 	for i := 0; i < steps; i++ {
 		time.Sleep(max * (1 << uint(i+1)) / (1 << steps))
-		ch, err = b.GerritChange()
+		ch, err = b.GerritChange("LABELS", "CURRENT_REVISION")
 		if err != nil {
 			dief("waiting for merge: %v", err)
 		}
@@ -143,4 +135,3 @@ func submit(args []string) {
 
 	// Done! Change is submitted, branch is up to date, ready for new work.
 }
-

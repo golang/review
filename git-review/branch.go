@@ -15,10 +15,17 @@ import (
 
 // Branch describes a Git branch.
 type Branch struct {
-	Name       string // branch name
-	changeID   string // Change-Id of pending commit ("" if nothing pending)
-	subject    string // first line of pending commit ("" if nothing pending)
-	commitHash string // commit hash of pending commit ("" if nothing pending)
+	Name            string // branch name
+	loadedPending   bool   // following fields are valid
+	changeID        string // Change-Id of pending commit ("" if nothing pending)
+	subject         string // first line of pending commit ("" if nothing pending)
+	message         string // commit message
+	commitHash      string // commit hash of pending commit ("" if nothing pending)
+	shortCommitHash string // abbreviated commitHash ("" if nothing pending)
+	parentHash      string // parent hash of pending commit ("" if nothing pending)
+	commitsAhead    int    // number of commits ahead of origin branch
+	commitsBehind   int    // number of commits behind origin branch
+	originBranch    string // upstream origin branch
 }
 
 // CurrentBranch returns the current branch.
@@ -31,14 +38,19 @@ func CurrentBranch() *Branch {
 // The returned name is like "origin/master" or "origin/dev.garbage" or
 // "origin/release-branch.go1.4".
 func (b *Branch) OriginBranch() string {
+	if b.originBranch != "" {
+		return b.originBranch
+	}
 	argv := []string{"git", "rev-parse", "--abbrev-ref", b.Name + "@{u}"}
 	out, err := exec.Command(argv[0], argv[1:]...).CombinedOutput()
 	if err == nil && len(out) > 0 {
-		return string(bytes.TrimSpace(out))
+		b.originBranch = string(bytes.TrimSpace(out))
+		return b.originBranch
 	}
 	if strings.Contains(string(out), "No upstream configured") {
 		// Assume branch was created before we set upstream correctly.
-		return "origin/master"
+		b.originBranch = "origin/master"
+		return b.originBranch
 	}
 	fmt.Fprintf(os.Stderr, "%v\n%s\n", commandString(argv[0], argv[1:]), out)
 	dief("%v", err)
@@ -50,55 +62,69 @@ func (b *Branch) IsLocalOnly() bool {
 }
 
 func (b *Branch) HasPendingCommit() bool {
-	head := getOutput("git", "rev-parse", b.Name)
-	base := getOutput("git", "merge-base", b.OriginBranch(), b.Name)
-	return base != head
+	b.loadPending()
+	return b.commitHash != ""
 }
 
 func (b *Branch) ChangeID() string {
-	if b.changeID == "" {
-		if b.HasPendingCommit() {
-			b.changeID = headChangeID(b.Name)
-			b.subject = commitSubject(b.Name)
-			b.commitHash = commitHash(b.Name)
-		}
-	}
+	b.loadPending()
 	return b.changeID
 }
 
 func (b *Branch) Subject() string {
-	b.ChangeID() // page in subject
+	b.loadPending()
 	return b.subject
 }
 
 func (b *Branch) CommitHash() string {
-	b.ChangeID() // page in commit hash
+	b.loadPending()
 	return b.commitHash
 }
 
-func commitSubject(ref string) string {
-	return getOutput("git", "log", "-n", "1", "--format=format:%s", ref, "--")
-}
-
-func commitHash(ref string) string {
-	return getOutput("git", "log", "-n", "1", "--format=format:%H", ref, "--")
-}
-
-func headChangeID(branch string) string {
-	const p = "Change-Id: "
-	for _, s := range getLines("git", "log", "-n", "1", "--format=format:%b", branch, "--") {
-		if strings.HasPrefix(s, p) {
-			return strings.TrimSpace(strings.TrimPrefix(s, p))
-		}
+func (b *Branch) loadPending() {
+	if b.loadedPending {
+		return
 	}
-	dief("no Change-Id line found in HEAD commit on branch %s.", branch)
-	panic("unreachable")
+	b.loadedPending = true
+
+	const numField = 5
+	all := getOutput("git", "log", "--format=format:%H%x00%h%x00%P%x00%s%x00%B%x00", b.OriginBranch()+".."+b.Name)
+	fields := strings.Split(all, "\x00")
+	if len(fields) < numField {
+		return // nothing pending
+	}
+	for i := 0; i+numField <= len(fields); i += numField {
+		hash := fields[i]
+		shortHash := fields[i+1]
+		parent := fields[i+2]
+		subject := fields[i+3]
+		msg := fields[i+4]
+		if i == 0 {
+			b.commitHash = hash
+			b.shortCommitHash = shortHash
+			b.parentHash = parent
+			b.subject = subject
+			b.message = msg
+			for _, line := range strings.Split(msg, "\n") {
+				if strings.HasPrefix(line, "Change-Id: ") {
+					b.changeID = line[len("Change-Id: "):]
+					break
+				}
+			}
+		}
+		b.commitsAhead++
+	}
+	b.commitsAhead = len(fields) / numField
+	b.commitsBehind = len(getOutput("git", "log", "--format=format:x", b.Name+".."+b.OriginBranch()))
 }
 
 // Submitted reports whether some form of b's pending commit
 // has been cherry picked to origin.
 func (b *Branch) Submitted(id string) bool {
-	return len(getOutput("git", "log", "--grep", "Change-Id: "+id, b.OriginBranch())) > 0
+	if id == "" {
+		return false
+	}
+	return len(getOutput("git", "log", "--grep", "Change-Id: "+id, b.Name+".."+b.OriginBranch())) > 0
 }
 
 var stagedRE = regexp.MustCompile(`^[ACDMR]  `)
@@ -121,6 +147,32 @@ func HasUnstagedChanges() bool {
 		}
 	}
 	return false
+}
+
+// LocalChanges returns a list of files containing staged, unstaged, and untracked changes.
+// The elements of the returned slices are typically file names, always relative to the root,
+// but there are a few alternate forms. First, for renaming or copying, the element takes
+// the form `from -> to`. Second, in the case of files with names that contain unusual characters,
+// the files (or the from, to fields of a rename or copy) are quoted C strings.
+// For now, we expect the caller only shows these to the user, so these exceptions are okay.
+func LocalChanges() (staged, unstaged, untracked []string) {
+	// NOTE: Cannot use getLines, because it throws away leading spaces.
+	for _, s := range strings.Split(getOutput("git", "status", "-b", "--porcelain"), "\n") {
+		if len(s) < 4 || s[2] != ' ' {
+			continue
+		}
+		switch s[0] {
+		case 'A', 'C', 'D', 'M', 'R':
+			staged = append(staged, s[3:])
+		case '?':
+			untracked = append(untracked, s[3:])
+		}
+		switch s[1] {
+		case 'A', 'C', 'D', 'M', 'R':
+			unstaged = append(unstaged, s[3:])
+		}
+	}
+	return
 }
 
 func LocalBranches() []*Branch {
@@ -149,9 +201,21 @@ func OriginBranches() []string {
 
 // GerritChange returns the change metadata from the Gerrit server
 // for the branch's pending change.
-func (b *Branch) GerritChange() (*GerritChange, error) {
+// The extra strings are passed to the Gerrit API request as o= parameters,
+// to enable additional information. Typical values include "LABELS" and "CURRENT_REVISION".
+// See https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html for details.
+func (b *Branch) GerritChange(extra ...string) (*GerritChange, error) {
 	if !b.HasPendingCommit() {
 		return nil, fmt.Errorf("no pending commit")
 	}
-	return readGerritChange(fullChangeID(b) + "?o=LABELS&o=CURRENT_REVISION")
+	id := fullChangeID(b)
+	for i, x := range extra {
+		if i == 0 {
+			id += "?"
+		} else {
+			id += "&"
+		}
+		id += "o=" + x
+	}
+	return readGerritChange(id)
 }
