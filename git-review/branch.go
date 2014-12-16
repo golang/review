@@ -81,6 +81,18 @@ func (b *Branch) CommitHash() string {
 	return b.commitHash
 }
 
+// Branchpoint returns an identifier for the latest revision
+// common to both this branch and its upstream branch.
+// If this branch has not split from upstream,
+// Branchpoint returns "HEAD".
+func (b *Branch) Branchpoint() string {
+	b.loadPending()
+	if b.parentHash == "" {
+		return "HEAD"
+	}
+	return b.parentHash
+}
+
 func (b *Branch) loadPending() {
 	if b.loadedPending {
 		return
@@ -99,17 +111,20 @@ func (b *Branch) loadPending() {
 		parent := fields[i+2]
 		subject := fields[i+3]
 		msg := fields[i+4]
-		if i == 0 {
-			b.commitHash = hash
-			b.shortCommitHash = shortHash
-			b.parentHash = parent
-			b.subject = subject
-			b.message = msg
-			for _, line := range strings.Split(msg, "\n") {
-				if strings.HasPrefix(line, "Change-Id: ") {
-					b.changeID = line[len("Change-Id: "):]
-					break
-				}
+
+		// Overwrite each time through the loop.
+		// We want to save the info about the *first* commit
+		// after the branch point, and the log is ordered
+		// starting at the most recent and working backward.
+		b.commitHash = hash
+		b.shortCommitHash = shortHash
+		b.parentHash = parent
+		b.subject = subject
+		b.message = msg
+		for _, line := range strings.Split(msg, "\n") {
+			if strings.HasPrefix(line, "Change-Id: ") {
+				b.changeID = line[len("Change-Id: "):]
+				break
 			}
 		}
 		b.commitsAhead++

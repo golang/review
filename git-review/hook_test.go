@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -51,21 +52,15 @@ func TestHookPreCommit(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
-	gt.removeStubHooks()
-	testMain(t, "hooks") // install hooks
-
 	// Write out a non-Go file.
 	testMain(t, "change", "mybranch")
 	write(t, gt.client+"/msg.txt", "A test message.")
 	trun(t, gt.client, "git", "add", "msg.txt")
 	testMain(t, "hook-invoke", "pre-commit") // should be no-op
 
-	// Write out a badly formatted Go files.
 	if err := os.MkdirAll(gt.client+"/test/bench", 0755); err != nil {
 		t.Fatal(err)
 	}
-	const badGo = "package main\nfunc main(){}"
-	const goodGo = "package main\n\nfunc main() {\n}\n"
 	write(t, gt.client+"/bad.go", badGo)
 	write(t, gt.client+"/good.go", goodGo)
 	write(t, gt.client+"/test/bad.go", badGo)
@@ -77,6 +72,79 @@ func TestHookPreCommit(t *testing.T) {
 	testMainDied(t, "hook-invoke", "pre-commit")
 	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):",
 		"bad.go", "!good.go", "!test/bad", "test/bench/bad.go")
+
+	write(t, gt.client+"/broken.go", brokenGo)
+	trun(t, gt.client, "git", "add", "broken.go")
+	testMainDied(t, "hook-invoke", "pre-commit")
+	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):",
+		"bad.go", "!good.go", "!test/bad", "test/bench/bad.go",
+		"gofmt reported errors:", "broken.go")
+}
+
+func TestHookPreCommitUnstaged(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+
+	write(t, gt.client+"/bad.go", badGo)
+	write(t, gt.client+"/good.go", goodGo)
+
+	// The pre-commit hook is being asked about files in the index.
+	// Make sure it is not looking at files in the working tree (current directory) instead.
+	// There are three possible kinds of file: good, bad (misformatted), and broken (syntax error).
+	// There are also three possible places files live: the most recent commit, the index,
+	// and the working tree. We write a sequence of files that cover all possible
+	// combination of kinds of file in the various places. For example,
+	// good-bad-broken.go is a good file in the most recent commit,
+	// a bad file in the index, and a broken file in the working tree.
+	// After creating these files, we check that the gofmt hook reports
+	// about the index only.
+
+	const N = 3
+	name := []string{"good", "bad", "broken"}
+	content := []string{goodGo, badGo, brokenGo}
+	var wantErr []string
+	var allFiles []string
+	writeFiles := func(n int) {
+		allFiles = nil
+		wantErr = nil
+		for i := 0; i < N*N*N; i++ {
+			// determine n'th digit of 3-digit base-N value i
+			j := i
+			for k := 0; k < (3 - 1 - n); k++ {
+				j /= N
+			}
+			file := fmt.Sprintf("%s-%s-%s.go", name[i/N/N], name[(i/N)%N], name[i%N])
+			allFiles = append(allFiles, file)
+			write(t, gt.client+"/"+file, content[j%N])
+
+			switch {
+			case strings.Contains(file, "-bad-"):
+				wantErr = append(wantErr, "\t"+file+"\n")
+			case strings.Contains(file, "-broken-"):
+				wantErr = append(wantErr, "\t"+file+":")
+			default:
+				wantErr = append(wantErr, "!"+file)
+			}
+		}
+	}
+
+	// committed files
+	writeFiles(0)
+	trun(t, gt.client, "git", "add", ".")
+	trun(t, gt.client, "git", "commit", "-m", "msg")
+
+	// staged files
+	writeFiles(1)
+	trun(t, gt.client, "git", "add", ".")
+
+	// unstaged files
+	writeFiles(2)
+
+	wantErr = append(wantErr, "gofmt reported errors", "gofmt needs to format these files")
+
+	testMainDied(t, "hook-invoke", "pre-commit")
+	testPrintedStderr(t, wantErr...)
 }
 
 func TestHooks(t *testing.T) {

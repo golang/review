@@ -31,7 +31,7 @@ func doSync(args []string) {
 	// Pull should have done this for us, but check just in case.
 	b.loadedPending = false
 	if b.Submitted(id) && b.HasPendingCommit() {
-		run("git", "reset", "HEAD^")
+		run("git", "reset", b.Branchpoint())
 	}
 }
 

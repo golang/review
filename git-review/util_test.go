@@ -147,6 +147,9 @@ func testMainCanDie(t *testing.T, args ...string) {
 }
 
 func testMain(t *testing.T, args ...string) {
+	*noRun = false
+	*verbose = 0
+
 	t.Logf("git-review %s", strings.Join(args, " "))
 
 	canDie := mainCanDie

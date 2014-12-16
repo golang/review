@@ -36,7 +36,7 @@ func mail(args []string) {
 	}
 
 	if *diff {
-		run("git", "diff", "HEAD^..HEAD")
+		run("git", "diff", b.Branchpoint()+"..HEAD")
 		return
 	}
 

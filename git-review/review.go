@@ -53,10 +53,12 @@ Available commands:
 		Create a change commit, or amend an existing change commit,
 		with the staged changes. If a branch name is provided, check
 		out that branch (creating it if it does not exist).
-		(Does not amend the existing commit when switching branches.)
+		Does not amend the existing commit when switching branches.
 
-	gofmt
-		TBD
+	gofmt [-l]
+		Run gofmt on all tracked files in the staging area and the working tree.
+		If -l is specified, list files that need formatting.
+		Otherwise, reformat files in place.
 
 	help
 		Show this help text.
@@ -111,7 +113,7 @@ func main() {
 	case "change":
 		change(args)
 	case "gofmt":
-		dief("gofmt not implemented")
+		gofmt(args)
 	case "hook-invoke":
 		hookInvoke(args)
 	case "hooks":
@@ -148,9 +150,13 @@ func run(command string, args ...string) {
 	}
 }
 
+func runErr(command string, args ...string) error {
+	return runDirErr("", command, args...)
+}
+
 var runLogTrap []string
 
-func runErr(command string, args ...string) error {
+func runDirErr(dir, command string, args ...string) error {
 	if *verbose > 0 || *noRun {
 		fmt.Fprintln(os.Stderr, commandString(command, args))
 	}

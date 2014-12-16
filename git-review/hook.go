@@ -151,41 +151,26 @@ func hookPreCommit(args []string) {
 		dief("cannot commit on %s branch", b.Name)
 	}
 
-	root := repoRoot()
+	hookGofmt()
+}
 
-	// Run the gofmt check over the pending commit, if any.
-	rev := "HEAD"
-	if b.HasPendingCommit() {
-		rev = "HEAD^" // branch point, hopefully
-	}
-	// This command prints file names relative to the repo root.
-	files := getLines("git", "diff", "--cached", "--name-only", "--diff-filter=ACM", rev)
-	var goFiles []string // absolute paths of files that need gofmting
-	for _, file := range files {
-		if gofmtRequired(file) {
-			goFiles = append(goFiles, filepath.Join(root, file))
+func hookGofmt() {
+	files, stderr := runGofmt(gofmtPreCommit)
+
+	if stderr != "" {
+		msgf := printf
+		if len(files) == 0 {
+			msgf = dief
 		}
-	}
-	if len(goFiles) == 0 {
-		return
+		msgf("gofmt reported errors:\n\t%s", strings.Replace(strings.TrimSpace(stderr), "\n", "\n\t", -1))
 	}
 
-	// Check gofmt.
-	unfmted := getLines("gofmt", append([]string{"-l"}, goFiles...)...)
-	if len(unfmted) == 0 {
+	if len(files) == 0 {
 		return
 	}
 
 	dief("gofmt needs to format these files (run 'git gofmt'):\n\t%s",
-		strings.Join(unfmted, "\n\t"))
-}
-
-// gofmtRequired reports whether the specified file should be checked
-// for gofmt'dness by the pre-commit hook.
-// The file name is relative to the repo root.
-func gofmtRequired(file string) bool {
-	return strings.HasSuffix(file, ".go") &&
-		!(strings.HasPrefix(file, "test/") && !strings.HasPrefix(file, "test/bench/"))
+		strings.Join(files, "\n\t"))
 }
 
 // This is NOT USED ANYMORE.
