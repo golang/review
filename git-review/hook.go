@@ -14,11 +14,13 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 )
 
 var hookPath = ".git/hooks/"
 var hookFiles = []string{
 	"commit-msg",
+	"pre-commit",
 }
 
 func installHook() {
@@ -93,6 +95,8 @@ func hookInvoke(args []string) {
 	switch args[0] {
 	case "commit-msg":
 		hookCommitMsg(args[1:])
+	case "pre-commit":
+		hookPreCommit(args[1:])
 	}
 }
 
@@ -133,6 +137,55 @@ func hookCommitMsg(args []string) {
 // stripComments strips lines that begin with "#".
 func stripComments(in []byte) []byte {
 	return regexp.MustCompile(`(?m)^#.*\n`).ReplaceAll(in, nil)
+}
+
+// hookPreCommit is installed as the git pre-commit hook.
+// It prevents commits to the master branch.
+// It checks that the Go files added, copied, or modified by
+// the change are gofmt'd, and if not it prints gofmt instructions
+// and exits with nonzero status.
+func hookPreCommit(args []string) {
+	// Prevent commits to master branches.
+	b := CurrentBranch()
+	if !b.IsLocalOnly() {
+		dief("cannot commit on %s branch", b.Name)
+	}
+
+	root := repoRoot()
+
+	// Run the gofmt check over the pending commit, if any.
+	rev := "HEAD"
+	if b.HasPendingCommit() {
+		rev = "HEAD^" // branch point, hopefully
+	}
+	// This command prints file names relative to the repo root.
+	files := getLines("git", "diff", "--cached", "--name-only", "--diff-filter=ACM", rev)
+	var goFiles []string // absolute paths of files that need gofmting
+	for _, file := range files {
+		if gofmtRequired(file) {
+			goFiles = append(goFiles, filepath.Join(root, file))
+		}
+	}
+	if len(goFiles) == 0 {
+		return
+	}
+
+	// Check gofmt.
+	unfmted := getLines("gofmt", append([]string{"-l"}, goFiles...)...)
+	if len(unfmted) == 0 {
+		return
+	}
+
+	dief("gofmt needs to format these files (run 'git gofmt'):\n\t%s",
+		strings.Join(unfmted, "\n\t"))
+}
+
+// gofmtRequired reports whether the specified file should be checked
+// for gofmt'dness by the pre-commit hook.
+// The file name is relative to the repo root.
+func gofmtRequired(file string) bool {
+	return strings.HasSuffix(file, ".go") &&
+		!(strings.HasPrefix(file, "test/") && !strings.HasPrefix(file, "test/bench/"))
 }
 
 // This is NOT USED ANYMORE.

@@ -47,6 +47,38 @@ func TestHookCommitMsg(t *testing.T) {
 	}
 }
 
+func TestHookPreCommit(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	gt.removeStubHooks()
+	testMain(t, "hooks") // install hooks
+
+	// Write out a non-Go file.
+	testMain(t, "change", "mybranch")
+	write(t, gt.client+"/msg.txt", "A test message.")
+	trun(t, gt.client, "git", "add", "msg.txt")
+	testMain(t, "hook-invoke", "pre-commit") // should be no-op
+
+	// Write out a badly formatted Go files.
+	if err := os.MkdirAll(gt.client+"/test/bench", 0755); err != nil {
+		t.Fatal(err)
+	}
+	const badGo = "package main\nfunc main(){}"
+	const goodGo = "package main\n\nfunc main() {\n}\n"
+	write(t, gt.client+"/bad.go", badGo)
+	write(t, gt.client+"/good.go", goodGo)
+	write(t, gt.client+"/test/bad.go", badGo)
+	write(t, gt.client+"/test/good.go", goodGo)
+	write(t, gt.client+"/test/bench/bad.go", badGo)
+	write(t, gt.client+"/test/bench/good.go", goodGo)
+	trun(t, gt.client, "git", "add", ".")
+
+	testMainDied(t, "hook-invoke", "pre-commit")
+	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):",
+		"bad.go", "!good.go", "!test/bad", "test/bench/bad.go")
+}
+
 func TestHooks(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
@@ -92,6 +124,7 @@ func TestHookCommitMsgFromGit(t *testing.T) {
 
 	gt.removeStubHooks()
 	testMain(t, "hooks") // install hooks
+	testMain(t, "change", "mybranch")
 	write(t, gt.client+"/file", "more data")
 	trun(t, gt.client, "git", "add", "file")
 	trun(t, gt.client, "git", "commit", "-m", "mymsg")

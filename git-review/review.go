@@ -204,7 +204,9 @@ func getOutput(command string, args ...string) string {
 func getLines(command string, args ...string) []string {
 	var s []string
 	for _, l := range strings.Split(getOutput(command, args...), "\n") {
-		s = append(s, strings.TrimSpace(l))
+		if len(strings.TrimSpace(l)) > 0 {
+			s = append(s, l)
+		}
 	}
 	return s
 }

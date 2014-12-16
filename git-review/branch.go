@@ -104,8 +104,7 @@ func (b *Branch) Submitted(id string) bool {
 var stagedRE = regexp.MustCompile(`^[ACDMR]  `)
 
 func HasStagedChanges() bool {
-	// NOTE: Cannot use getLines, because it throws away leading spaces.
-	for _, s := range strings.Split(getOutput("git", "status", "-b", "--porcelain"), "\n") {
+	for _, s := range getLines("git", "status", "-b", "--porcelain") {
 		if stagedRE.MatchString(s) {
 			return true
 		}
@@ -116,8 +115,7 @@ func HasStagedChanges() bool {
 var unstagedRE = regexp.MustCompile(`^.[ACDMR]`)
 
 func HasUnstagedChanges() bool {
-	// NOTE: Cannot use getLines, because it throws away leading spaces.
-	for _, s := range strings.Split(getOutput("git", "status", "-b", "--porcelain"), "\n") {
+	for _, s := range getLines("git", "status", "-b", "--porcelain") {
 		if unstagedRE.MatchString(s) {
 			return true
 		}
@@ -128,7 +126,8 @@ func HasUnstagedChanges() bool {
 func LocalBranches() []*Branch {
 	var branches []*Branch
 	for _, s := range getLines("git", "branch", "-q") {
-		branches = append(branches, &Branch{Name: strings.TrimPrefix(s, "* ")})
+		s = strings.TrimPrefix(strings.TrimSpace(s), "* ")
+		branches = append(branches, &Branch{Name: s})
 	}
 	return branches
 }
@@ -136,6 +135,7 @@ func LocalBranches() []*Branch {
 func OriginBranches() []string {
 	var branches []string
 	for _, line := range getLines("git", "branch", "-a", "-q") {
+		line = strings.TrimSpace(line)
 		if i := strings.Index(line, " -> "); i >= 0 {
 			line = line[:i]
 		}
