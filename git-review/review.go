@@ -47,6 +47,11 @@ const help = `Usage: %s <command> ` + globalFlags + `
 The review command is a wrapper for the git command that provides a simple
 interface to the "single-commit feature branch" development model.
 
+See the full docs for details: https://godoc.org/golang.org/x/review/git-review
+
+The -v flag prints all Git commands that make changes.
+The -n flag prints all commands that would be run, but does not run them.
+
 Available commands:
 
 	change [name]
@@ -54,9 +59,14 @@ Available commands:
 		with the staged changes. If a branch name is provided, check
 		out that branch (creating it if it does not exist).
 		Does not amend the existing commit when switching branches.
+		If -q is specified, skip the editing of an extant pending
+		change's commit message.
+		If -a is specified, automatically add any unstaged changes in
+		tracked files during commit.
 
 	gofmt [-l]
-		Run gofmt on all tracked files in the staging area and the working tree.
+		Run gofmt on all tracked files in the staging area and the
+		working tree.
 		If -l is specified, list files that need formatting.
 		Otherwise, reformat files in place.
 
@@ -65,23 +75,28 @@ Available commands:
 
 	hooks
 		Install Git commit hooks for Gerrit and gofmt.
-		Every other operation except help also does this, if they are not
-		already installed.
+		Every other operation except help also does this,
+		if they are not already installed.
 
 	mail [-f] [-r reviewer,...] [-cc mail,...]
 		Upload change commit to the code review server and send mail
 		requesting a code review.
 		If -f is specified, upload even if there are staged changes.
+		The -r and -cc flags identify the email addresses of people to
+		do the code review and to be CC'ed about the code review.
+		Multiple addresses are given as a comma-separated list.
 
 	mail -diff
 		Show the changes but do not send mail or upload.
 
-	pending [-r]
-		Show local branches and their head commits.
-		If -r is specified, show additional information from Gerrit.
+	pending [-l]
+		Show the status of all pending changes and staged, unstaged,
+		and untracked files in the local repository.
+		If -l is specified, only use locally available information.
 
 	submit
-		Submit the completed change commit into the repository.
+		Push the pending change to the Gerrit server and tell Gerrit to
+		submit it to the master branch.
 
 	sync
 		Fetch changes from the remote repository and merge them into
