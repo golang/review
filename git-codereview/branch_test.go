@@ -91,3 +91,18 @@ func checkLocalBranches(t *testing.T, want ...string) {
 		t.Errorf("LocalBranches() = %v, want %v", names, want)
 	}
 }
+
+func TestAmbiguousRevision(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+
+	t.Logf("creating file paths that conflict with revision parameters")
+	mkdir(t, gt.client+"/origin")
+	write(t, gt.client+"/origin/master..work", "Uh-Oh! SpaghettiOs")
+	mkdir(t, gt.client+"/work..origin")
+	write(t, gt.client+"/work..origin/master", "Be sure to drink your Ovaltine")
+
+	b := CurrentBranch()
+	b.Submitted("I123456789")
+}

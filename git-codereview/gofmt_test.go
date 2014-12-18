@@ -169,3 +169,13 @@ func TestGofmtUnstaged(t *testing.T) {
 	testNoStdout(t)
 	testPrintedStderr(t, wantErr...)
 }
+
+func TestGofmtAmbiguousRevision(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	t.Logf("creating file that conflicts with revision parameter")
+	write(t, gt.client+"/HEAD", "foo")
+
+	testMain(t, "gofmt")
+}

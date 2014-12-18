@@ -35,3 +35,16 @@ func TestMailGitHub(t *testing.T) {
 	testMainDied(t, "mail")
 	testPrintedStderr(t, "git origin must be a Gerrit host, not GitHub: https://github.com/golang/go")
 }
+
+func TestMailAmbiguousRevision(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+
+	t.Logf("creating file that conflicts with revision parameter")
+	b := CurrentBranch()
+	mkdir(t, gt.client+"/origin")
+	write(t, gt.client+"/"+b.Branchpoint()+"..HEAD", "foo")
+
+	testMain(t, "mail", "-diff")
+}

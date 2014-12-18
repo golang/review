@@ -41,7 +41,7 @@ func (b *pendingBranch) load() {
 		b.staged, b.unstaged, b.untracked = LocalChanges()
 	}
 	if b.parentHash != "" && b.commitHash != "" {
-		b.committed = getLines("git", "diff", "--name-only", b.parentHash, b.commitHash)
+		b.committed = getLines("git", "diff", "--name-only", b.parentHash, b.commitHash, "--")
 	}
 	if !pendingLocal {
 		b.g, b.gerr = b.GerritChange("DETAILED_LABELS", "CURRENT_REVISION", "MESSAGES", "DETAILED_ACCOUNTS")

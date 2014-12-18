@@ -117,7 +117,7 @@ func (b *Branch) loadPending() {
 	}
 
 	const numField = 5
-	all := getOutput("git", "log", "--format=format:%H%x00%h%x00%P%x00%s%x00%B%x00", b.OriginBranch()+".."+b.Name)
+	all := getOutput("git", "log", "--format=format:%H%x00%h%x00%P%x00%s%x00%B%x00", b.OriginBranch()+".."+b.Name, "--")
 	fields := strings.Split(all, "\x00")
 	if len(fields) < numField {
 		return // nothing pending
@@ -147,7 +147,7 @@ func (b *Branch) loadPending() {
 		b.commitsAhead++
 	}
 	b.commitsAhead = len(fields) / numField
-	b.commitsBehind = len(getOutput("git", "log", "--format=format:x", b.Name+".."+b.OriginBranch()))
+	b.commitsBehind = len(getOutput("git", "log", "--format=format:x", b.Name+".."+b.OriginBranch(), "--"))
 }
 
 // Submitted reports whether some form of b's pending commit
@@ -157,7 +157,7 @@ func (b *Branch) Submitted(id string) bool {
 		return false
 	}
 	line := "Change-Id: " + id
-	out := getOutput("git", "log", "-n", "1", "-F", "--grep", line, b.Name+".."+b.OriginBranch())
+	out := getOutput("git", "log", "-n", "1", "-F", "--grep", line, b.Name+".."+b.OriginBranch(), "--")
 	return strings.Contains(out, line)
 }
 

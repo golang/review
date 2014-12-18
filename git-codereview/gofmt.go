@@ -119,7 +119,7 @@ func runGofmt(flags int) (files []string, stderrText string) {
 	}
 
 	// Find files modified in the index compared to the branchpoint.
-	indexFiles := addRoot(repo, filter(gofmtRequired, getLines("git", "diff", "--name-only", "--diff-filter=ACM", "--cached", b.Branchpoint())))
+	indexFiles := addRoot(repo, filter(gofmtRequired, getLines("git", "diff", "--name-only", "--diff-filter=ACM", "--cached", b.Branchpoint(), "--")))
 	localFiles := addRoot(repo, filter(gofmtRequired, getLines("git", "diff", "--name-only", "--diff-filter=ACM")))
 	localFilesMap := stringMap(localFiles)
 	isUnstaged := func(file string) bool {
