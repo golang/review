@@ -104,7 +104,7 @@ func pending(args []string) {
 
 	// Print output, like:
 	//	pending d8fcb99 https://go-review.googlesource.com/1620 (current branch, 1 behind)
-	//		git-review: expand pending output
+	//		git-codereview: expand pending output
 	//
 	//		for pending:
 	//		- show full commit message
@@ -122,16 +122,16 @@ func pending(args []string) {
 	//		Code-Review:
 	//			+2 Andrew Gerrand, Rob Pike
 	//		Files in this change:
-	//			git-review/api.go
-	//			git-review/branch.go
-	//			git-review/change.go
-	//			git-review/pending.go
-	//			git-review/review.go
-	//			git-review/submit.go
-	//			git-review/sync.go
+	//			git-codereview/api.go
+	//			git-codereview/branch.go
+	//			git-codereview/change.go
+	//			git-codereview/pending.go
+	//			git-codereview/review.go
+	//			git-codereview/submit.go
+	//			git-codereview/sync.go
 	//		Files untracked:
-	//			git-review/doc.go
-	//			git-review/savedmail.go.txt
+	//			git-codereview/doc.go
+	//			git-codereview/savedmail.go.txt
 	//
 	var buf bytes.Buffer
 	for _, b := range branches {

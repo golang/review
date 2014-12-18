@@ -42,7 +42,7 @@ func TestHookCommitMsg(t *testing.T) {
 	// Check that hook fails when message is empty.
 	write(t, gt.client+"/empty.txt", "\n\n# just a file with\n# comments\n")
 	testMainDied(t, "hook-invoke", "commit-msg", gt.client+"/empty.txt")
-	const want = "git-review: empty commit message\n"
+	const want = "git-codereview: empty commit message\n"
 	if got := stderr.String(); got != want {
 		t.Fatalf("unexpected output:\ngot: %q\nwant: %q", got, want)
 	}
@@ -158,7 +158,7 @@ func TestHooks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("hooks did not write commit-msg hook: %v", err)
 	}
-	if string(data) != "#!/bin/sh\nexec git-review hook-invoke commit-msg \"$@\"\n" {
+	if string(data) != "#!/bin/sh\nexec git-codereview hook-invoke commit-msg \"$@\"\n" {
 		t.Fatalf("invalid commit-msg hook:\n%s", string(data))
 	}
 }
@@ -176,7 +176,7 @@ func TestHooksOverwriteOldCommitMsg(t *testing.T) {
 	if string(data) == oldCommitMsgHook {
 		t.Fatalf("hooks left old commit-msg hook in place")
 	}
-	if string(data) != "#!/bin/sh\nexec git-review hook-invoke commit-msg \"$@\"\n" {
+	if string(data) != "#!/bin/sh\nexec git-codereview hook-invoke commit-msg \"$@\"\n" {
 		t.Fatalf("invalid commit-msg hook:\n%s", string(data))
 	}
 }
@@ -185,7 +185,7 @@ func TestHookCommitMsgFromGit(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
-	trun(t, gt.pwd, "go", "build", "-o", gt.client+"/git-review")
+	trun(t, gt.pwd, "go", "build", "-o", gt.client+"/git-codereview")
 	path := os.Getenv("PATH")
 	defer os.Setenv("PATH", path)
 	os.Setenv("PATH", gt.client+string(filepath.ListSeparator)+path)

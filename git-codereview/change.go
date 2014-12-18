@@ -123,7 +123,7 @@ func checkoutOrCreate(target string) {
 	// Otherwise, this is a request to create a local work branch.
 	// Check for reserved names. We take everything with a dot.
 	if strings.Contains(target, ".") {
-		dief("invalid branch name %v: branch names with dots are reserved for git-review.", target)
+		dief("invalid branch name %v: branch names with dots are reserved for git-codereview.", target)
 	}
 
 	// If the current branch has a pending commit, building

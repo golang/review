@@ -28,14 +28,14 @@ func TestSubmitErrors(t *testing.T) {
 	trun(t, gt.client, "git", "add", "file1")
 	testMainDied(t, "submit")
 	testPrintedStderr(t, "cannot submit: staged changes exist",
-		"git status", "!git stash", "!git add", "git-review change")
+		"git status", "!git stash", "!git add", "git-codereview change")
 	testNoStdout(t)
 
 	t.Logf("> unstaged changes")
 	write(t, gt.client+"/file1", "actual content")
 	testMainDied(t, "submit")
 	testPrintedStderr(t, "cannot submit: unstaged changes exist",
-		"git status", "git stash", "git add", "git-review change")
+		"git status", "git stash", "git add", "git-codereview change")
 	testNoStdout(t)
 	testRan(t)
 	trun(t, gt.client, "git", "add", "file1")

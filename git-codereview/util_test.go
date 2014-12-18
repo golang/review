@@ -42,7 +42,7 @@ func (gt *gitTest) work(t *testing.T) {
 }
 
 func newGitTest(t *testing.T) *gitTest {
-	tmpdir, err := ioutil.TempDir("", "git-review-test")
+	tmpdir, err := ioutil.TempDir("", "git-codereview-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,10 +67,10 @@ func newGitTest(t *testing.T) *gitTest {
 	trun(t, client, "git", "clone", server, ".")
 
 	// write stub hooks to keep installHook from installing its own.
-	// If it installs its own, git will look for git-review on the current path
-	// and may find an old git-review that does just about anything.
+	// If it installs its own, git will look for git-codereview on the current path
+	// and may find an old git-codereview that does just about anything.
 	// In any event, we wouldn't be testing what we want to test.
-	// Tests that want to exercise hooks need to arrange for a git-review
+	// Tests that want to exercise hooks need to arrange for a git-codereview
 	// in the path and replace these with the real ones.
 	for _, h := range hookFiles {
 		write(t, client+"/.git/hooks/"+h, "#!/bin/bash\nexit 0\n")
@@ -150,7 +150,7 @@ func testMain(t *testing.T, args ...string) {
 	*noRun = false
 	*verbose = 0
 
-	t.Logf("git-review %s", strings.Join(args, " "))
+	t.Logf("git-codereview %s", strings.Join(args, " "))
 
 	canDie := mainCanDie
 	mainCanDie = false // reset for next invocation
@@ -187,7 +187,7 @@ func testMain(t *testing.T, args ...string) {
 	stdoutTrap = new(bytes.Buffer)
 	stderrTrap = new(bytes.Buffer)
 
-	os.Args = append([]string{"git-review"}, args...)
+	os.Args = append([]string{"git-codereview"}, args...)
 	main()
 }
 

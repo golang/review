@@ -26,19 +26,24 @@ var hookFiles = []string{
 func installHook() {
 	for _, hookFile := range hookFiles {
 		filename := filepath.Join(repoRoot(), hookPath+hookFile)
+		hookContent := fmt.Sprintf(hookScript, hookFile)
 
-		// Special case: remove old commit-msg shell script
-		// in favor of invoking the git-review hook implementation,
-		// which will be easier to change in the future.
-		if hookFile == "commit-msg" {
-			data, err := ioutil.ReadFile(filename)
-			if err == nil && string(data) == oldCommitMsgHook {
+		if data, err := ioutil.ReadFile(filename); err == nil {
+			// Special case: remove old hooks that use 'git-review'
+			oldHookContent := fmt.Sprintf(oldHookScript, hookFile)
+			if string(data) == oldHookContent {
+				verbosef("removing old %v hook", hookFile)
+				os.Remove(filename)
+			}
+			// Special case: remove old commit-msg shell script
+			// in favor of invoking the git-codereview hook
+			// implementation, which will be easier to change in
+			// the future.
+			if hookFile == "commit-msg" && string(data) == oldCommitMsgHook {
 				verbosef("removing old commit-msg hook")
 				os.Remove(filename)
 			}
 		}
-
-		hookContent := fmt.Sprintf(hookScript, hookFile)
 
 		// If hook file exists, assume it is okay.
 		_, err := os.Stat(filename)
@@ -85,12 +90,16 @@ func repoRoot() string {
 }
 
 var hookScript = `#!/bin/sh
+exec git-codereview hook-invoke %s "$@"
+`
+
+var oldHookScript = `#!/bin/sh
 exec git-review hook-invoke %s "$@"
 `
 
 func hookInvoke(args []string) {
 	if len(args) == 0 {
-		dief("usage: git-review hook-invoke <hook-name> [args...]")
+		dief("usage: git-codereview hook-invoke <hook-name> [args...]")
 	}
 	switch args[0] {
 	case "commit-msg":
@@ -106,7 +115,7 @@ func hookInvoke(args []string) {
 func hookCommitMsg(args []string) {
 	// Add Change-Id to commit message if needed.
 	if len(args) != 1 {
-		dief("usage: git-review hook-invoke commit-msg message.txt\n")
+		dief("usage: git-codereview hook-invoke commit-msg message.txt\n")
 	}
 	file := args[0]
 	data, err := ioutil.ReadFile(file)

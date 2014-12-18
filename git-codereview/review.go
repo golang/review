@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// TODO(adg): print changed files on review sync
 // TODO(adg): translate email addresses without @ by looking up somewhere
 
-// Command git-review provides a simple command-line user interface for
+// Command git-codereview provides a simple command-line user interface for
 // working with git repositories and the Gerrit code review system.
-// See "git-review help" for details.
-package main // import "golang.org/x/review/git-review"
+// See "git-codereview help" for details.
+package main // import "golang.org/x/review/git-codereview"
 
 import (
 	"bytes"
@@ -44,10 +43,10 @@ Type "%s help" for more information.
 
 const help = `Usage: %s <command> ` + globalFlags + `
 
-The review command is a wrapper for the git command that provides a simple
-interface to the "single-commit feature branch" development model.
+The git-codereview command is a wrapper for the git command that provides a
+simple interface to the "single-commit feature branch" development model.
 
-See the full docs for details: https://godoc.org/golang.org/x/review/git-review
+See the docs for details: https://godoc.org/golang.org/x/review/git-codereview
 
 The -v flag prints all Git commands that make changes.
 The -n flag prints all commands that would be run, but does not run them.

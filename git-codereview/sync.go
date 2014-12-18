@@ -39,7 +39,7 @@ func checkStaged(cmd string) {
 	if HasStagedChanges() {
 		dief("cannot %s: staged changes exist\n"+
 			"\trun 'git status' to see changes\n"+
-			"\trun 'git-review change' to commit staged changes", cmd)
+			"\trun 'git-codereview change' to commit staged changes", cmd)
 	}
 }
 
@@ -48,6 +48,6 @@ func checkUnstaged(cmd string) {
 		dief("cannot %s: unstaged changes exist\n"+
 			"\trun 'git status' to see changes\n"+
 			"\trun 'git stash' to save unstaged changes\n"+
-			"\trun 'git add' and 'git-review change' to commit staged changes", cmd)
+			"\trun 'git add' and 'git-codereview change' to commit staged changes", cmd)
 	}
 }

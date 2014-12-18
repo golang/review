@@ -18,14 +18,14 @@ func TestSync(t *testing.T) {
 	write(t, gt.client+"/file1", "actual content")
 	testMainDied(t, "sync")
 	testPrintedStderr(t, "cannot sync: unstaged changes exist",
-		"git status", "git stash", "git add", "git-review change")
+		"git status", "git stash", "git add", "git-codereview change")
 	testNoStdout(t)
 
 	// check for error with staged changes
 	trun(t, gt.client, "git", "add", "file1")
 	testMainDied(t, "sync")
 	testPrintedStderr(t, "cannot sync: staged changes exist",
-		"git status", "!git stash", "!git add", "git-review change")
+		"git status", "!git stash", "!git add", "git-codereview change")
 	testNoStdout(t)
 
 	// check for success after stash
