@@ -86,13 +86,18 @@ func loadAuth() {
 	// now tells users to store this information.
 	if cookieFile, _ := getOutputErr("git", "config", "http.cookiefile"); cookieFile != "" {
 		data, _ := ioutil.ReadFile(cookieFile)
+		maxMatch := -1
 		for _, line := range strings.Split(string(data), "\n") {
 			f := strings.Split(line, "\t")
-			if len(f) >= 7 && f[0] == auth.host {
-				auth.cookieName = f[5]
-				auth.cookieValue = f[6]
-				return
+			if len(f) >= 7 && (f[0] == auth.host || strings.HasPrefix(f[0], ".") && strings.HasSuffix(auth.host, f[0])) {
+				if len(f[0]) > maxMatch {
+					auth.cookieName = f[5]
+					auth.cookieValue = f[6]
+				}
 			}
+		}
+		if maxMatch > 0 {
+			return
 		}
 	}
 
