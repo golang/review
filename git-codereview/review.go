@@ -195,9 +195,21 @@ func runDirErr(dir, command string, args ...string) error {
 
 // getOutput runs the specified command and returns its combined standard
 // output and standard error outputs.
+// It dies on command errors.
 // NOTE: It should only be used to run commands that return information,
 // **not** commands that make any actual changes.
 func getOutput(command string, args ...string) string {
+	s, err := getOutputErr(command, args...)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n%s\n", commandString(command, args), s)
+		dief("%v", err)
+	}
+	return s
+}
+
+// Given a command and its arguments, getOutputErr returns the same
+// trimmed output as getOutput, but it returns any error instead of exiting.
+func getOutputErr(command string, args ...string) (string, error) {
 	// NOTE: We only show these non-state-modifying commands with -v -v.
 	// Otherwise things like 'git sync -v' show all our internal "find out about
 	// the git repo" commands, which is confusing if you are just trying to find
@@ -206,11 +218,7 @@ func getOutput(command string, args ...string) string {
 		fmt.Fprintln(os.Stderr, commandString(command, args))
 	}
 	b, err := exec.Command(command, args...).CombinedOutput()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n%s\n", commandString(command, args), b)
-		dief("%v", err)
-	}
-	return string(bytes.TrimSpace(b))
+	return string(bytes.TrimSpace(b)), err
 }
 
 // getLines is like getOutput but it returns only non-empty output lines,

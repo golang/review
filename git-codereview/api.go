@@ -40,10 +40,9 @@ func loadGerritOrigin() {
 		return
 	}
 
+	// Gerrit must be set as Git's origin remote.
 	origin := getOutput("git", "config", "remote.origin.url")
-	if origin == "" {
-		dief("git config remote.origin.url: origin not found")
-	}
+
 	if strings.Contains(origin, "//github.com/") {
 		dief("git origin must be a Gerrit host, not GitHub: %s", origin)
 	}
@@ -85,7 +84,7 @@ func loadAuth() {
 
 	// First look in Git's http.cookiefile, which is where Gerrit
 	// now tells users to store this information.
-	if cookieFile := getOutput("git", "config", "http.cookiefile"); cookieFile != "" {
+	if cookieFile, _ := getOutputErr("git", "config", "http.cookiefile"); cookieFile != "" {
 		data, _ := ioutil.ReadFile(cookieFile)
 		for _, line := range strings.Split(string(data), "\n") {
 			f := strings.Split(line, "\t")
