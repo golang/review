@@ -233,8 +233,8 @@ func (b *Branch) errors() string {
 		fmt.Fprintf(&buf, "\tDo not commit directly to %s branch.\n", b.Name)
 	} else if b.commitsAhead > 1 {
 		fmt.Fprintf(&buf, "Branch contains %d commits not on origin/%s.\n", b.commitsAhead, b.OriginBranch())
-		fmt.Fprintf(&buf, "\tThere should be at most one.\n", b.commitsAhead, b.OriginBranch())
-		fmt.Fprintf(&buf, "\tUse 'git change', not 'git commit'.\n", b.Name)
+		fmt.Fprint(&buf, "\tThere should be at most one.\n")
+		fmt.Fprint(&buf, "\tUse 'git change', not 'git commit'.\n")
 		fmt.Fprintf(&buf, "\tRun 'git log %s..%s' to list commits.\n", b.OriginBranch(), b.Name)
 	}
 	return buf.String()
