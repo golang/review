@@ -143,7 +143,7 @@ func checkoutOrCreate(target string) {
 }
 
 var (
-	messageRE  = regexp.MustCompile(`^(\[[a-zA-Z0-9.-]+\] )?[a-zA-Z0-9-/, ]+: `)
+	messageRE  = regexp.MustCompile(`^(\[[a-zA-Z0-9.-]+\] )?[a-zA-Z0-9-/,. ]+: `)
 	oldFixesRE = regexp.MustCompile(`Fixes +(issue +#?)?([0-9]+)`)
 )
 
