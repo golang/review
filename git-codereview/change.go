@@ -19,7 +19,7 @@ func change(args []string) {
 	flags.BoolVar(&changeQuick, "q", false, "do not edit pending commit msg")
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
-		fmt.Fprintf(os.Stderr, "Usage: %s change %s [branch]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s change %s [branch]\n", os.Args[0], globalFlags)
 		os.Exit(2)
 
 	}
@@ -71,6 +71,10 @@ func (b *Branch) check() {
 var testCommitMsg string
 
 func commitChanges(amend bool) {
+	// git commit will run the gofmt hook.
+	// Run it now to give a better error (won't show a git commit command failing).
+	hookGofmt()
+
 	if HasUnstagedChanges() && !HasStagedChanges() && !changeAuto {
 		printf("warning: unstaged changes and no staged changes; use 'git add' or 'git change -a'")
 	}
@@ -102,6 +106,13 @@ func commitChanges(amend bool) {
 }
 
 func checkoutOrCreate(target string) {
+	if strings.ToUpper(target) == "HEAD" {
+		// Git gets very upset and confused if you 'git change head'
+		// on systems with case-insensitive file names: the branch
+		// head conflicts with the usual HEAD.
+		dief("invalid branch name %q: ref name HEAD is reserved for git.", target)
+	}
+
 	// If local branch exists, check it out.
 	for _, b := range LocalBranches() {
 		if b.Name == target {

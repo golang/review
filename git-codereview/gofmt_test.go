@@ -46,10 +46,10 @@ func TestGofmt(t *testing.T) {
 	testPrintedStdout(t, "bad.go\n", "!good.go", "!test/bad", "test/bench/bad.go")
 
 	testMain(t, "gofmt")
-	testPrintedStdout(t, "!.go") // no output
+	testNoStdout(t)
 
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "!.go") // no output
+	testNoStdout(t)
 
 	write(t, gt.client+"/bad.go", badGo)
 	write(t, gt.client+"/broken.go", brokenGo)
@@ -146,7 +146,7 @@ func TestGofmtUnstaged(t *testing.T) {
 
 	// Reformat in place.
 	testMainDied(t, "gofmt")
-	testPrintedStdout(t, "!.go")
+	testNoStdout(t)
 	testPrintedStderr(t, wantErr...)
 
 	// Read files to make sure unstaged did not bleed into staged.
@@ -166,6 +166,6 @@ func TestGofmtUnstaged(t *testing.T) {
 
 	// Check that gofmt -l still shows the errors.
 	testMainDied(t, "gofmt", "-l")
-	testPrintedStdout(t, "!.go")
+	testNoStdout(t)
 	testPrintedStderr(t, wantErr...)
 }

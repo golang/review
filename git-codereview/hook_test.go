@@ -43,7 +43,7 @@ func TestHookCommitMsg(t *testing.T) {
 	write(t, gt.client+"/empty.txt", "\n\n# just a file with\n# comments\n")
 	testMainDied(t, "hook-invoke", "commit-msg", gt.client+"/empty.txt")
 	const want = "git-codereview: empty commit message\n"
-	if got := stderr.String(); got != want {
+	if got := testStderr.String(); got != want {
 		t.Fatalf("unexpected output:\ngot: %q\nwant: %q", got, want)
 	}
 }
@@ -79,6 +79,55 @@ func TestHookPreCommit(t *testing.T) {
 	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):",
 		"bad.go", "!good.go", "!test/bad", "test/bench/bad.go",
 		"gofmt reported errors:", "broken.go")
+}
+
+func TestHookChangeGofmt(t *testing.T) {
+	// During git change, we run the gofmt check before invoking commit,
+	// so we should not see the line about 'git commit' failing.
+	// That is, the failure should come from git change, not from
+	// the commit hook.
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+
+	// Write out a non-Go file.
+	write(t, gt.client+"/bad.go", badGo)
+	trun(t, gt.client, "git", "add", ".")
+
+	t.Logf("invoking commit hook explicitly")
+	testMainDied(t, "hook-invoke", "pre-commit")
+	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):", "bad.go")
+
+	t.Logf("change without hook installed")
+	testCommitMsg = "foo: msg"
+	testMainDied(t, "change")
+	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):", "bad.go", "!running: git")
+
+	t.Logf("change with hook installed")
+	restore := testInstallHook(t, gt)
+	defer restore()
+	testCommitMsg = "foo: msg"
+	testMainDied(t, "change")
+	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):", "bad.go", "!running: git")
+}
+
+func TestHookPreCommitDetachedHead(t *testing.T) {
+	// If we're in detached head mode, something special is going on,
+	// like git rebase. We disable the gofmt-checking precommit hook,
+	// since we expect it would just get in the way at that point.
+	// (It also used to crash.)
+
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+
+	write(t, gt.client+"/bad.go", badGo)
+	trun(t, gt.client, "git", "add", ".")
+	trun(t, gt.client, "git", "checkout", "HEAD^0")
+
+	testMain(t, "hook-invoke", "pre-commit")
+	testNoStdout(t)
+	testNoStderr(t)
 }
 
 func TestHookPreCommitUnstaged(t *testing.T) {
@@ -181,17 +230,25 @@ func TestHooksOverwriteOldCommitMsg(t *testing.T) {
 	}
 }
 
+func testInstallHook(t *testing.T, gt *gitTest) (restore func()) {
+	trun(t, gt.pwd, "go", "build", "-o", gt.client+"/git-codereview")
+	path := os.Getenv("PATH")
+	os.Setenv("PATH", gt.client+string(filepath.ListSeparator)+path)
+	gt.removeStubHooks()
+	testMain(t, "hooks") // install hooks
+
+	return func() {
+		os.Setenv("PATH", path)
+	}
+}
+
 func TestHookCommitMsgFromGit(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
-	trun(t, gt.pwd, "go", "build", "-o", gt.client+"/git-codereview")
-	path := os.Getenv("PATH")
-	defer os.Setenv("PATH", path)
-	os.Setenv("PATH", gt.client+string(filepath.ListSeparator)+path)
+	restore := testInstallHook(t, gt)
+	defer restore()
 
-	gt.removeStubHooks()
-	testMain(t, "hooks") // install hooks
 	testMain(t, "change", "mybranch")
 	write(t, gt.client+"/file", "more data")
 	trun(t, gt.client, "git", "add", "file")

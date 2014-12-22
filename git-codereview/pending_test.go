@@ -241,7 +241,7 @@ func testPending(t *testing.T, want string) {
 	want = strings.TrimPrefix(want, "\n")
 
 	testMain(t, "pending")
-	out := stdout.Bytes()
+	out := testStdout.Bytes()
 
 	out = regexp.MustCompile(`\b[0-9a-f]{7}\b`).ReplaceAllLiteral(out, []byte("REVHASH"))
 	out = regexp.MustCompile(`\b127\.0\.0\.1:\d+\b`).ReplaceAllLiteral(out, []byte("127.0.0.1:PORT"))

@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -34,10 +33,24 @@ func CurrentBranch() *Branch {
 	return &Branch{Name: name}
 }
 
+// DetachedHead reports whether branch b corresponds to a detached HEAD
+// (does not have a real branch name).
+func (b *Branch) DetachedHead() bool {
+	return b.Name == "HEAD"
+}
+
 // OriginBranch returns the name of the origin branch that branch b tracks.
 // The returned name is like "origin/master" or "origin/dev.garbage" or
 // "origin/release-branch.go1.4".
 func (b *Branch) OriginBranch() string {
+	if b.DetachedHead() {
+		// Detached head mode.
+		// "origin/HEAD" is clearly false, but it should be easy to find when it
+		// appears in other commands. Really any caller of OriginBranch
+		// should check for detached head mode.
+		return "origin/HEAD"
+	}
+
 	if b.originBranch != "" {
 		return b.originBranch
 	}
@@ -52,7 +65,7 @@ func (b *Branch) OriginBranch() string {
 		b.originBranch = "origin/master"
 		return b.originBranch
 	}
-	fmt.Fprintf(os.Stderr, "%v\n%s\n", commandString(argv[0], argv[1:]), out)
+	fmt.Fprintf(stderr(), "%v\n%s\n", commandString(argv[0], argv[1:]), out)
 	dief("%v", err)
 	panic("not reached")
 }
@@ -98,6 +111,10 @@ func (b *Branch) loadPending() {
 		return
 	}
 	b.loadedPending = true
+
+	if b.DetachedHead() {
+		return
+	}
 
 	const numField = 5
 	all := getOutput("git", "log", "--format=format:%H%x00%h%x00%P%x00%s%x00%B%x00", b.OriginBranch()+".."+b.Name)
@@ -192,8 +209,20 @@ func LocalChanges() (staged, unstaged, untracked []string) {
 
 func LocalBranches() []*Branch {
 	var branches []*Branch
+	current := CurrentBranch()
 	for _, s := range getLines("git", "branch", "-q") {
-		s = strings.TrimPrefix(strings.TrimSpace(s), "* ")
+		s = strings.TrimSpace(s)
+		if strings.HasPrefix(s, "* ") {
+			// * marks current branch in output.
+			// Normally the current branch has a name like any other,
+			// but in detached HEAD mode the branch listing shows
+			// a localized (translated) textual description instead of
+			// a branch name. Avoid language-specific differences
+			// by using CurrentBranch().Name for the current branch.
+			// It detects detached HEAD mode in a more portable way.
+			// (git rev-parse --abbrev-ref HEAD returns 'HEAD').
+			s = current.Name
+		}
 		branches = append(branches, &Branch{Name: s})
 	}
 	return branches

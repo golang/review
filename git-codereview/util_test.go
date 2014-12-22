@@ -125,10 +125,10 @@ func trun(t *testing.T, dir string, cmdline ...string) string {
 }
 
 var (
-	runLog []string
-	stderr *bytes.Buffer
-	stdout *bytes.Buffer
-	died   bool
+	runLog     []string
+	testStderr *bytes.Buffer
+	testStdout *bytes.Buffer
+	died       bool
 )
 
 var mainCanDie bool
@@ -137,7 +137,7 @@ func testMainDied(t *testing.T, args ...string) {
 	mainCanDie = true
 	testMain(t, args...)
 	if !died {
-		t.Fatalf("expected to die, did not\nstdout:\n%sstderr:\n%s", stdout, stderr)
+		t.Fatalf("expected to die, did not\nstdout:\n%sstderr:\n%s", testStdout, testStderr)
 	}
 }
 
@@ -157,8 +157,8 @@ func testMain(t *testing.T, args ...string) {
 
 	defer func() {
 		runLog = runLogTrap
-		stdout = stdoutTrap
-		stderr = stderrTrap
+		testStdout = stdoutTrap
+		testStderr = stderrTrap
 
 		dieTrap = nil
 		runLogTrap = nil
@@ -174,7 +174,7 @@ func testMain(t *testing.T, args ...string) {
 			} else {
 				msg = fmt.Sprintf("panic: %v", err)
 			}
-			t.Fatalf("%s\nstdout:\n%sstderr:\n%s", msg, stdout, stderr)
+			t.Fatalf("%s\nstdout:\n%sstderr:\n%s", msg, testStdout, testStderr)
 		}
 	}()
 
@@ -221,22 +221,22 @@ func testPrinted(t *testing.T, buf *bytes.Buffer, name string, messages ...strin
 }
 
 func testPrintedStdout(t *testing.T, messages ...string) {
-	testPrinted(t, stdout, "stdout", messages...)
+	testPrinted(t, testStdout, "stdout", messages...)
 }
 
 func testPrintedStderr(t *testing.T, messages ...string) {
-	testPrinted(t, stderr, "stderr", messages...)
+	testPrinted(t, testStderr, "stderr", messages...)
 }
 
 func testNoStdout(t *testing.T) {
-	if stdout.Len() != 0 {
-		t.Fatalf("unexpected stdout:\n%s", stdout)
+	if testStdout.Len() != 0 {
+		t.Fatalf("unexpected stdout:\n%s", testStdout)
 	}
 }
 
 func testNoStderr(t *testing.T) {
-	if stderr.Len() != 0 {
-		t.Fatalf("unexpected stderr:\n%s", stderr)
+	if testStderr.Len() != 0 {
+		t.Fatalf("unexpected stderr:\n%s", testStderr)
 	}
 }
 

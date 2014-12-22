@@ -156,6 +156,11 @@ func stripComments(in []byte) []byte {
 func hookPreCommit(args []string) {
 	// Prevent commits to master branches.
 	b := CurrentBranch()
+	if b.DetachedHead() {
+		// This is an internal commit such as during git rebase.
+		// Don't die, and don't force gofmt.
+		return
+	}
 	if !b.IsLocalOnly() {
 		dief("cannot commit on %s branch", b.Name)
 	}

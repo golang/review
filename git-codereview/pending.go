@@ -52,7 +52,7 @@ func pending(args []string) {
 	flags.BoolVar(&pendingLocal, "l", false, "use only local information - no network operations")
 	flags.Parse(args)
 	if len(flags.Args()) > 0 {
-		fmt.Fprintf(os.Stderr, "Usage: %s pending %s [-l]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s pending %s [-l]\n", os.Args[0], globalFlags)
 		os.Exit(2)
 	}
 
@@ -219,11 +219,7 @@ func pending(args []string) {
 		fmt.Fprintf(&buf, "\n")
 	}
 
-	if stdoutTrap != nil {
-		stdoutTrap.Write(buf.Bytes())
-	} else {
-		os.Stdout.Write(buf.Bytes())
-	}
+	stdout().Write(buf.Bytes())
 }
 
 // errors returns any errors that should be displayed

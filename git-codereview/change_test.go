@@ -36,6 +36,14 @@ func TestChange(t *testing.T) {
 	testRan(t, "git checkout -q -t -b dev.branch origin/dev.branch")
 }
 
+func TestChangeHEAD(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	testMainDied(t, "change", "HeAd")
+	testPrintedStderr(t, "invalid branch name \"HeAd\": ref name HEAD is reserved for git")
+}
+
 func TestMessageRE(t *testing.T) {
 	for _, c := range []struct {
 		in   string

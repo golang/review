@@ -22,7 +22,7 @@ func mail(args []string) {
 	flags.Var(ccList, "cc", "comma-separated list of people to CC:")
 
 	flags.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s mail %s [-r reviewer,...] [-cc mail,...]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
 	if len(flags.Args()) != 0 {

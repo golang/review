@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,7 +21,7 @@ func gofmt(args []string) {
 	flags.BoolVar(&gofmtList, "l", false, "list files that need to be formatted")
 	flags.Parse(args)
 	if len(flag.Args()) > 0 {
-		fmt.Fprintf(os.Stderr, "Usage: %s gofmt %s [-l]\n", globalFlags, os.Args[0])
+		fmt.Fprintf(stderr(), "Usage: %s gofmt %s [-l]\n", globalFlags, os.Args[0])
 		os.Exit(2)
 	}
 
@@ -33,12 +32,9 @@ func gofmt(args []string) {
 
 	files, stderr := runGofmt(f)
 	if gofmtList {
-		var out io.Writer = os.Stdout
-		if stdoutTrap != nil {
-			out = stdoutTrap
-		}
+		w := stdout()
 		for _, file := range files {
-			fmt.Fprintf(out, "%s\n", file)
+			fmt.Fprintf(w, "%s\n", file)
 		}
 	}
 	if stderr != "" {

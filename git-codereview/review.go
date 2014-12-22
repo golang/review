@@ -29,7 +29,7 @@ var (
 func initFlags() {
 	flags = flag.NewFlagSet("", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(os.Stderr, usage, os.Args[0], os.Args[0])
+		fmt.Fprintf(stderr(), usage, os.Args[0], os.Args[0])
 	}
 	flags.Var(verbose, "v", "report git commands")
 	flags.BoolVar(noRun, "n", false, "print but do not run commands")
@@ -117,7 +117,7 @@ func main() {
 	command, args := os.Args[1], os.Args[2:]
 
 	if command == "help" {
-		fmt.Fprintf(os.Stdout, help, os.Args[0])
+		fmt.Fprintf(stdout(), help, os.Args[0])
 		return
 	}
 
@@ -148,7 +148,7 @@ func main() {
 func expectZeroArgs(args []string, command string) {
 	flags.Parse(args)
 	if len(flags.Args()) > 0 {
-		fmt.Fprintf(os.Stderr, "Usage: %s %s %s\n", os.Args[0], command, globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s %s %s\n", os.Args[0], command, globalFlags)
 		os.Exit(2)
 	}
 }
@@ -158,7 +158,7 @@ func run(command string, args ...string) {
 		if *verbose == 0 {
 			// If we're not in verbose mode, print the command
 			// before dying to give context to the failure.
-			fmt.Fprintln(os.Stderr, commandString(command, args))
+			fmt.Fprintf(stderr(), "(running: %s)\n", commandString(command, args))
 		}
 		dief("%v", err)
 	}
@@ -172,7 +172,7 @@ var runLogTrap []string
 
 func runDirErr(dir, command string, args ...string) error {
 	if *verbose > 0 || *noRun {
-		fmt.Fprintln(os.Stderr, commandString(command, args))
+		fmt.Fprintln(stderr(), commandString(command, args))
 	}
 	if *noRun {
 		return nil
@@ -182,14 +182,8 @@ func runDirErr(dir, command string, args ...string) error {
 	}
 	cmd := exec.Command(command, args...)
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	if stdoutTrap != nil {
-		cmd.Stdout = stdoutTrap
-	}
-	cmd.Stderr = os.Stderr
-	if stderrTrap != nil {
-		cmd.Stderr = stderrTrap
-	}
+	cmd.Stdout = stdout()
+	cmd.Stderr = stderr()
 	return cmd.Run()
 }
 
@@ -201,7 +195,7 @@ func runDirErr(dir, command string, args ...string) error {
 func getOutput(command string, args ...string) string {
 	s, err := getOutputErr(command, args...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n%s\n", commandString(command, args), s)
+		fmt.Fprintf(stderr(), "%v\n%s\n", commandString(command, args), s)
 		dief("%v", err)
 	}
 	return s
@@ -215,7 +209,7 @@ func getOutputErr(command string, args ...string) (string, error) {
 	// the git repo" commands, which is confusing if you are just trying to find
 	// out what git sync means.
 	if *verbose > 1 {
-		fmt.Fprintln(os.Stderr, commandString(command, args))
+		fmt.Fprintln(stderr(), commandString(command, args))
 	}
 	b, err := exec.Command(command, args...).CombinedOutput()
 	return string(bytes.TrimSpace(b)), err
@@ -257,12 +251,22 @@ func verbosef(format string, args ...interface{}) {
 
 var stdoutTrap, stderrTrap *bytes.Buffer
 
-func printf(format string, args ...interface{}) {
-	w := io.Writer(os.Stderr)
-	if stderrTrap != nil {
-		w = stderrTrap
+func stdout() io.Writer {
+	if stdoutTrap != nil {
+		return stdoutTrap
 	}
-	fmt.Fprintf(w, "%s: %s\n", os.Args[0], fmt.Sprintf(format, args...))
+	return os.Stdout
+}
+
+func stderr() io.Writer {
+	if stderrTrap != nil {
+		return stderrTrap
+	}
+	return os.Stderr
+}
+
+func printf(format string, args ...interface{}) {
+	fmt.Fprintf(stderr(), "%s: %s\n", os.Args[0], fmt.Sprintf(format, args...))
 }
 
 // count is a flag.Value that is like a flag.Bool and a flag.Int.

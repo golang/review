@@ -4,7 +4,10 @@
 
 package main
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestCurrentBranch(t *testing.T) {
 	gt := newGitTest(t)
@@ -34,6 +37,10 @@ func TestCurrentBranch(t *testing.T) {
 	write(t, gt.client+"/file", "i made another change")
 	trun(t, gt.client, "git", "commit", "-a", "-m", "My other change line.\n\nChange-Id: I1123456789abcdef0123456789abcdef\n")
 	checkCurrentBranch(t, "newdev", "origin/dev.branch", true, true, "I1123456789abcdef0123456789abcdef", "My other change line.")
+
+	t.Logf("detached head mode")
+	trun(t, gt.client, "git", "checkout", "HEAD^0")
+	checkCurrentBranch(t, "HEAD", "origin/HEAD", false, false, "", "")
 }
 
 func checkCurrentBranch(t *testing.T, name, origin string, isLocal, hasPending bool, changeID, subject string) {
@@ -55,5 +62,32 @@ func checkCurrentBranch(t *testing.T, name, origin string, isLocal, hasPending b
 	}
 	if x := b.Subject(); x != subject {
 		t.Errorf("b.Subject() = %q, want %q", x, subject)
+	}
+}
+
+func TestLocalBranches(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	t.Logf("on master")
+	checkLocalBranches(t, "master")
+
+	t.Logf("on dev branch")
+	trun(t, gt.client, "git", "checkout", "-b", "newbranch")
+	checkLocalBranches(t, "master", "newbranch")
+
+	t.Logf("detached head mode")
+	trun(t, gt.client, "git", "checkout", "HEAD^0")
+	checkLocalBranches(t, "HEAD", "master", "newbranch")
+}
+
+func checkLocalBranches(t *testing.T, want ...string) {
+	var names []string
+	branches := LocalBranches()
+	for _, b := range branches {
+		names = append(names, b.Name)
+	}
+	if !reflect.DeepEqual(names, want) {
+		t.Errorf("LocalBranches() = %v, want %v", names, want)
 	}
 }
