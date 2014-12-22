@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// TODO(rsc): Tests
-
 package main
 
 import (
@@ -42,7 +40,9 @@ func (b *pendingBranch) load() {
 	if b.current {
 		b.staged, b.unstaged, b.untracked = LocalChanges()
 	}
-	b.committed = getLines("git", "diff", "--name-only", b.parentHash, b.commitHash)
+	if b.parentHash != "" && b.commitHash != "" {
+		b.committed = getLines("git", "diff", "--name-only", b.parentHash, b.commitHash)
+	}
 	if !pendingLocal {
 		b.g, b.gerr = b.GerritChange("DETAILED_LABELS", "CURRENT_REVISION", "MESSAGES", "DETAILED_ACCOUNTS")
 	}
@@ -165,8 +165,7 @@ func pending(args []string) {
 		}
 		fmt.Fprintf(&buf, "\n")
 		if text := b.errors(); text != "" {
-			// TODO(rsc): Test
-			fmt.Fprintf(&buf, "\tERROR: %s", strings.Replace(text, "\n", "\n\t", -1))
+			fmt.Fprintf(&buf, "\tERROR: %s\n\n", strings.Replace(strings.TrimSpace(text), "\n", "\n\t", -1))
 		}
 		if b.message != "" {
 			msg := strings.TrimRight(b.message, "\r\n")
@@ -220,7 +219,11 @@ func pending(args []string) {
 		fmt.Fprintf(&buf, "\n")
 	}
 
-	os.Stdout.Write(buf.Bytes())
+	if stdoutTrap != nil {
+		stdoutTrap.Write(buf.Bytes())
+	} else {
+		os.Stdout.Write(buf.Bytes())
+	}
 }
 
 // errors returns any errors that should be displayed
@@ -233,8 +236,8 @@ func (b *Branch) errors() string {
 		fmt.Fprintf(&buf, "\tDo not commit directly to %s branch.\n", b.Name)
 	} else if b.commitsAhead > 1 {
 		fmt.Fprintf(&buf, "Branch contains %d commits not on origin/%s.\n", b.commitsAhead, b.OriginBranch())
-		fmt.Fprint(&buf, "\tThere should be at most one.\n")
-		fmt.Fprint(&buf, "\tUse 'git change', not 'git commit'.\n")
+		fmt.Fprintf(&buf, "\tThere should be at most one.\n")
+		fmt.Fprintf(&buf, "\tUse 'git change', not 'git commit'.\n")
 		fmt.Fprintf(&buf, "\tRun 'git log %s..%s' to list commits.\n", b.OriginBranch(), b.Name)
 	}
 	return buf.String()

@@ -116,9 +116,9 @@ func (b *Branch) loadPending() {
 		// We want to save the info about the *first* commit
 		// after the branch point, and the log is ordered
 		// starting at the most recent and working backward.
-		b.commitHash = hash
-		b.shortCommitHash = shortHash
-		b.parentHash = parent
+		b.commitHash = strings.TrimSpace(hash)
+		b.shortCommitHash = strings.TrimSpace(shortHash)
+		b.parentHash = strings.TrimSpace(parent)
 		b.subject = subject
 		b.message = msg
 		for _, line := range strings.Split(msg, "\n") {
