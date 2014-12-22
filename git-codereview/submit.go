@@ -6,7 +6,7 @@ package main
 
 import "time"
 
-// TODO(rsc): Add -tbr.
+// TODO(rsc): Add -tbr, along with standard exceptions (doc/go1.5.txt)
 
 func submit(args []string) {
 	expectZeroArgs(args, "submit")
