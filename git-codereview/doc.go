@@ -127,6 +127,10 @@ The mail command fails if there are staged changes that are not committed. The
 
 The mail command assumes that the Gerrit remote is called 'origin'.
 
+The mail command updates the tag <branchname>.mailed to refer to the
+commit that was most recently mailed, so running 'git diff <branchname>.mailed'
+shows diffs between what is on the Gerrit server and the current directory.
+
 Pending
 
 The pending command prints to standard output the status of all pending changes
