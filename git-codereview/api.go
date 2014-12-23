@@ -208,12 +208,12 @@ func gerritAPI(path string, requestBody []byte, target interface{}) error {
 	return nil
 }
 
-// fullChangeID returns the unambigous Gerrit change ID for the pending change on branch b.
+// fullChangeID returns the unambigous Gerrit change ID for the commit c on branch b.
 // The retruned ID has the form project~originbranch~Ihexhexhexhexhex.
 // See https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#change-id for details.
-func fullChangeID(b *Branch) string {
+func fullChangeID(b *Branch, c *Commit) string {
 	loadGerritOrigin()
-	return auth.project + "~" + strings.TrimPrefix(b.OriginBranch(), "origin/") + "~" + b.ChangeID()
+	return auth.project + "~" + strings.TrimPrefix(b.OriginBranch(), "origin/") + "~" + c.ChangeID
 }
 
 // readGerritChange reads the metadata about a change from the Gerrit server.
@@ -253,9 +253,9 @@ type GerritChange struct {
 }
 
 // LabelNames returns the label names for the change, in lexicographic order.
-func (ch *GerritChange) LabelNames() []string {
+func (g *GerritChange) LabelNames() []string {
 	var names []string
-	for name := range ch.Labels {
+	for name := range g.Labels {
 		names = append(names, name)
 	}
 	sort.Strings(names)

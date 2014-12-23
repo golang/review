@@ -18,7 +18,7 @@ func TestSubmitErrors(t *testing.T) {
 
 	t.Logf("> no commit")
 	testMainDied(t, "submit")
-	testPrintedStderr(t, "cannot submit: no pending commit")
+	testPrintedStderr(t, "cannot submit: no changes pending")
 	write(t, gt.client+"/file1", "")
 	trun(t, gt.client, "git", "add", "file1")
 	trun(t, gt.client, "git", "commit", "-m", "msg\n\nChange-Id: I123456789\n")
@@ -45,55 +45,53 @@ func TestSubmitErrors(t *testing.T) {
 	testMainDied(t, "submit")
 	testPrintedStderr(t, "change not found on Gerrit server")
 
-	setJSON := func(json string) {
-		srv.setReply("/a/changes/proj~master~I123456789", gerritReply{body: ")]}'\n" + json})
-	}
+	const id = "I123456789"
 
 	t.Logf("> malformed json")
-	setJSON("XXX")
+	srv.setJSON(id, "XXX")
 	testMainDied(t, "submit")
 	testRan(t) // nothing
 	testPrintedStderr(t, "malformed json response")
 
 	t.Logf("> unexpected change status")
-	setJSON(`{"status": "UNEXPECTED"}`)
+	srv.setJSON(id, `{"status": "UNEXPECTED"}`)
 	testMainDied(t, "submit")
 	testRan(t) // nothing
 	testPrintedStderr(t, "cannot submit: unexpected Gerrit change status \"UNEXPECTED\"")
 
 	t.Logf("> already merged")
-	setJSON(`{"status": "MERGED"}`)
+	srv.setJSON(id, `{"status": "MERGED"}`)
 	testMainDied(t, "submit")
 	testRan(t) // nothing
 	testPrintedStderr(t, "cannot submit: change already submitted, run 'git sync'")
 
 	t.Logf("> abandoned")
-	setJSON(`{"status": "ABANDONED"}`)
+	srv.setJSON(id, `{"status": "ABANDONED"}`)
 	testMainDied(t, "submit")
 	testRan(t) // nothing
 	testPrintedStderr(t, "cannot submit: change abandoned")
 
 	t.Logf("> missing approval")
-	setJSON(`{"status": "NEW", "labels": {"Code-Review": {}}}`)
+	srv.setJSON(id, `{"status": "NEW", "labels": {"Code-Review": {}}}`)
 	testMainDied(t, "submit")
 	testRan(t) // nothing
 	testPrintedStderr(t, "cannot submit: change missing Code-Review approval")
 
 	t.Logf("> rejection")
-	setJSON(`{"status": "NEW", "labels": {"Code-Review": {"rejected": {}}}}`)
+	srv.setJSON(id, `{"status": "NEW", "labels": {"Code-Review": {"rejected": {}}}}`)
 	testMainDied(t, "submit")
 	testRan(t) // nothing
 	testPrintedStderr(t, "cannot submit: change has Code-Review rejection")
 
 	t.Logf("> unmergeable")
-	setJSON(`{"status": "NEW", "mergeable": false, "labels": {"Code-Review": {"approved": {}}}}`)
+	srv.setJSON(id, `{"status": "NEW", "mergeable": false, "labels": {"Code-Review": {"approved": {}}}}`)
 	testMainDied(t, "submit")
 	testRan(t, "git push -q origin HEAD:refs/for/master")
 	testPrintedStderr(t, "cannot submit: conflicting changes submitted, run 'git sync'")
 
 	t.Logf("> submit with unexpected status")
 	const newJSON = `{"status": "NEW", "mergeable": true, "labels": {"Code-Review": {"approved": {}}}}`
-	setJSON(newJSON)
+	srv.setJSON(id, newJSON)
 	srv.setReply("/a/changes/proj~master~I123456789/submit", gerritReply{body: ")]}'\n" + newJSON})
 	testMainDied(t, "submit")
 	testRan(t, "git push -q origin HEAD:refs/for/master")

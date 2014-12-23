@@ -41,7 +41,7 @@ func TestPendingBasic(t *testing.T) {
 	gt.work(t)
 
 	testPending(t, `
-		work REVHASH (current branch)
+		work REVHASH..REVHASH (current branch)
 			msg
 			
 			Change-Id: I123456789
@@ -83,7 +83,7 @@ func TestPendingComplex(t *testing.T) {
 	write(t, gt.client+"/bfile", "untracked")
 
 	testPending(t, `
-		work REVHASH (5 behind)
+		work REVHASH..REVHASH (5 behind)
 			msg
 			
 			Change-Id: I123456789
@@ -91,7 +91,25 @@ func TestPendingComplex(t *testing.T) {
 			Files in this change:
 				file
 
-		work2 REVHASH (current branch)
+		work2 REVHASH..REVHASH (current branch)
+			some changes
+		
+			Files in this change:
+				file
+				file1
+			Files staged:
+				afile1
+				file1
+			Files unstaged:
+				file
+				file1
+			Files untracked:
+				bfile
+		
+	`)
+
+	testPendingArgs(t, []string{"-c"}, `
+		work2 REVHASH..REVHASH (current branch)
 			some changes
 		
 			Files in this change:
@@ -113,16 +131,12 @@ func TestPendingErrors(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
-	gt.work(t)
-	write(t, gt.client+"/file", "v2")
-	trun(t, gt.client, "git", "commit", "-a", "-m", "v2")
-
 	trun(t, gt.client, "git", "checkout", "master")
 	write(t, gt.client+"/file", "v3")
 	trun(t, gt.client, "git", "commit", "-a", "-m", "v3")
 
 	testPending(t, `
-		master REVHASH (current branch)
+		master REVHASH..REVHASH (current branch)
 			ERROR: Branch contains 1 commit not on origin/master.
 				Do not commit directly to master branch.
 		
@@ -130,13 +144,41 @@ func TestPendingErrors(t *testing.T) {
 		
 			Files in this change:
 				file
+
+	`)
+}
+
+func TestPendingMultiChange(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	gt.work(t)
+	write(t, gt.client+"/file", "v2")
+	trun(t, gt.client, "git", "commit", "-a", "-m", "v2")
+
+	write(t, gt.client+"/file", "v4")
+	trun(t, gt.client, "git", "add", "file")
+
+	write(t, gt.client+"/file", "v5")
+	write(t, gt.client+"/file2", "v6")
+
+	testPending(t, `
+		work REVHASH..REVHASH (current branch)
+		+ uncommitted changes
+			Files staged:
+				file
+			Files unstaged:
+				file
+			Files untracked:
+				file2
 		
-		work REVHASH
-			ERROR: Branch contains 2 commits not on origin/origin/master.
-				There should be at most one.
-				Use 'git change', not 'git commit'.
-				Run 'git log origin/master..work' to list commits.
+		+ REVHASH
+			v2
 		
+			Files in this change:
+				file
+
+		+ REVHASH
 			msg
 			
 			Change-Id: I123456789
@@ -144,7 +186,7 @@ func TestPendingErrors(t *testing.T) {
 			Files in this change:
 				file
 
-`)
+	`)
 }
 
 func TestPendingGerrit(t *testing.T) {
@@ -157,7 +199,7 @@ func TestPendingGerrit(t *testing.T) {
 
 	// Test error from Gerrit server.
 	testPending(t, `
-		work REVHASH (current branch)
+		work REVHASH..REVHASH (current branch)
 			msg
 			
 			Change-Id: I123456789
@@ -167,13 +209,121 @@ func TestPendingGerrit(t *testing.T) {
 
 	`)
 
-	setJSON := func(json string) {
-		srv.setReply("/a/changes/proj~master~I123456789", gerritReply{body: ")]}'\n" + json})
-	}
+	testPendingReply(srv, "I123456789", CurrentBranch().Pending()[0].Hash, "MERGED")
 
-	setJSON(`{
-		"current_revision": "` + CurrentBranch().CommitHash() + `",
-		"status": "MERGED",
+	// Test local mode does not talk to any server.
+	// Make client 1 behind server.
+	// The '1 behind' should not show up, nor any Gerrit information.
+	write(t, gt.server+"/file", "v4")
+	trun(t, gt.server, "git", "add", "file")
+	trun(t, gt.server, "git", "commit", "-m", "msg")
+	testPendingArgs(t, []string{"-l"}, `
+		work REVHASH..REVHASH (current branch)
+			msg
+			
+			Change-Id: I123456789
+
+			Files in this change:
+				file
+
+	`)
+
+	// Without -l, the 1 behind should appear, as should Gerrit information.
+	testPending(t, `
+		work REVHASH..REVHASH http://127.0.0.1:PORT/1234 (current branch, mailed, submitted, 1 behind)
+			msg
+			
+			Change-Id: I123456789
+		
+			Code-Review:
+				+1 Grace Emlin
+				-2 George Opher
+			Other-Label:
+				+2 The Owner
+			Files in this change:
+				file
+
+	`)
+
+	// Since pending did a fetch, 1 behind should show up even with -l.
+	testPendingArgs(t, []string{"-l"}, `
+		work REVHASH..REVHASH (current branch, 1 behind)
+			msg
+			
+			Change-Id: I123456789
+
+			Files in this change:
+				file
+
+	`)
+}
+
+func TestPendingGerritMultiChange(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	gt.work(t)
+	hash1 := CurrentBranch().Pending()[0].Hash
+
+	write(t, gt.client+"/file", "v2")
+	trun(t, gt.client, "git", "commit", "-a", "-m", "v2\n\nChange-Id: I2345")
+	hash2 := CurrentBranch().Pending()[0].Hash
+
+	write(t, gt.client+"/file", "v4")
+	trun(t, gt.client, "git", "add", "file")
+
+	write(t, gt.client+"/file", "v5")
+	write(t, gt.client+"/file2", "v6")
+
+	srv := newGerritServer(t)
+	defer srv.done()
+
+	testPendingReply(srv, "I123456789", hash1, "MERGED")
+	testPendingReply(srv, "I2345", hash2, "NEW")
+
+	testPending(t, `
+		work REVHASH..REVHASH (current branch, all mailed)
+		+ uncommitted changes
+			Files staged:
+				file
+			Files unstaged:
+				file
+			Files untracked:
+				file2
+		
+		+ REVHASH http://127.0.0.1:PORT/1234 (mailed)
+			v2
+			
+			Change-Id: I2345
+
+			Code-Review:
+				+1 Grace Emlin
+				-2 George Opher
+			Other-Label:
+				+2 The Owner
+			Files in this change:
+				file
+
+		+ REVHASH http://127.0.0.1:PORT/1234 (mailed, submitted)
+			msg
+			
+			Change-Id: I123456789
+		
+			Code-Review:
+				+1 Grace Emlin
+				-2 George Opher
+			Other-Label:
+				+2 The Owner
+			Files in this change:
+				file
+
+	`)
+}
+
+func testPendingReply(srv *gerritServer, id, rev, status string) {
+	srv.setJSON(id, `{
+		"current_revision": "`+rev+`",
+		"status": "`+status+`",
 		"_number": 1234,
 		"owner": {"_id": 42},
 		"labels": {
@@ -206,26 +356,13 @@ func TestPendingGerrit(t *testing.T) {
 			}
 		}
 	}`)
-
-	testPending(t, `
-		work REVHASH http://127.0.0.1:PORT/1234 (current branch, mailed, submitted)
-			msg
-			
-			Change-Id: I123456789
-		
-			Code-Review:
-				+1 Grace Emlin
-				-2 George Opher
-			Other-Label:
-				+2 The Owner
-			Files in this change:
-				file
-
-	`)
-
 }
 
 func testPending(t *testing.T, want string) {
+	testPendingArgs(t, nil, want)
+}
+
+func testPendingArgs(t *testing.T, args []string, want string) {
 	// fake auth information to avoid Gerrit error
 	if auth.host == "" {
 		auth.host = "gerrit.fake"
@@ -240,7 +377,7 @@ func testPending(t *testing.T, want string) {
 	want = strings.Replace(want, "\n\t", "\n", -1)
 	want = strings.TrimPrefix(want, "\n")
 
-	testMain(t, "pending")
+	testMain(t, append([]string{"pending"}, args...)...)
 	out := testStdout.Bytes()
 
 	out = regexp.MustCompile(`\b[0-9a-f]{7}\b`).ReplaceAllLiteral(out, []byte("REVHASH"))

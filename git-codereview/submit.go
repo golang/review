@@ -4,35 +4,49 @@
 
 package main
 
-import "time"
+import (
+	"fmt"
+	"os"
+	"time"
+)
 
 // TODO(rsc): Add -tbr, along with standard exceptions (doc/go1.5.txt)
 
 func submit(args []string) {
-	expectZeroArgs(args, "submit")
-
-	// Must have pending change, no staged changes.
-	b := CurrentBranch()
-	if !b.HasPendingCommit() {
-		dief("cannot submit: no pending commit")
+	flags.Usage = func() {
+		fmt.Fprintf(stderr(), "Usage: %s submit %s [commit-hash]\n", os.Args[0], globalFlags)
 	}
-	checkStaged("submit")
+	flags.Parse(args)
+	if n := len(flags.Args()); n > 1 {
+		flags.Usage()
+		os.Exit(2)
+	}
 
+	b := CurrentBranch()
+	var c *Commit
+	if len(flags.Args()) == 1 {
+		c = b.CommitByHash("submit", flags.Arg(0))
+	} else {
+		c = b.DefaultCommit("submit")
+	}
+
+	// No staged changes.
 	// Also, no unstaged changes, at least for now.
 	// This makes sure the sync at the end will work well.
 	// We can relax this later if there is a good reason.
+	checkStaged("submit")
 	checkUnstaged("submit")
 
 	// Fetch Gerrit information about this change.
-	ch, err := b.GerritChange("LABELS", "CURRENT_REVISION")
+	g, err := b.GerritChange(c, "LABELS", "CURRENT_REVISION")
 	if err != nil {
 		dief("%v", err)
 	}
 
 	// Check Gerrit change status.
-	switch ch.Status {
+	switch g.Status {
 	default:
-		dief("cannot submit: unexpected Gerrit change status %q", ch.Status)
+		dief("cannot submit: unexpected Gerrit change status %q", g.Status)
 
 	case "NEW", "SUBMITTED":
 		// Not yet "MERGED", so try the submit.
@@ -51,8 +65,8 @@ func submit(args []string) {
 
 	// Check for label approvals (like CodeReview+2).
 	// The final submit will check these too, but it is better to fail now.
-	for _, name := range ch.LabelNames() {
-		label := ch.Labels[name]
+	for _, name := range g.LabelNames() {
+		label := g.Labels[name]
 		if label.Optional {
 			continue
 		}
@@ -65,18 +79,19 @@ func submit(args []string) {
 	}
 
 	// Upload most recent revision if not already on server.
-	if b.CommitHash() != ch.CurrentRevision {
-		run("git", "push", "-q", "origin", b.PushSpec())
+
+	if c.Hash != g.CurrentRevision {
+		run("git", "push", "-q", "origin", b.PushSpec(c))
 
 		// Refetch change information, especially mergeable.
-		ch, err = b.GerritChange("LABELS", "CURRENT_REVISION")
+		g, err = b.GerritChange(c, "LABELS", "CURRENT_REVISION")
 		if err != nil {
 			dief("%v", err)
 		}
 	}
 
 	// Don't bother if the server can't merge the changes.
-	if !ch.Mergeable {
+	if !g.Mergeable {
 		// Server cannot merge; explicit sync is needed.
 		dief("cannot submit: conflicting changes submitted, run 'git sync'")
 	}
@@ -89,7 +104,7 @@ func submit(args []string) {
 	// but we need extended information and the reply is in the
 	// "SUBMITTED" state anyway, so ignore the GerritChange
 	// in the response and fetch a new one below.
-	if err := gerritAPI("/a/changes/"+fullChangeID(b)+"/submit", []byte(`{"wait_for_merge": true}`), nil); err != nil {
+	if err := gerritAPI("/a/changes/"+fullChangeID(b, c)+"/submit", []byte(`{"wait_for_merge": true}`), nil); err != nil {
 		dief("cannot submit: %v", err)
 	}
 
@@ -103,18 +118,18 @@ func submit(args []string) {
 	const max = 2 * time.Second
 	for i := 0; i < steps; i++ {
 		time.Sleep(max * (1 << uint(i+1)) / (1 << steps))
-		ch, err = b.GerritChange("LABELS", "CURRENT_REVISION")
+		g, err = b.GerritChange(c, "LABELS", "CURRENT_REVISION")
 		if err != nil {
 			dief("waiting for merge: %v", err)
 		}
-		if ch.Status != "SUBMITTED" {
+		if g.Status != "SUBMITTED" {
 			break
 		}
 	}
 
-	switch ch.Status {
+	switch g.Status {
 	default:
-		dief("submit error: unexpected post-submit Gerrit change status %q", ch.Status)
+		dief("submit error: unexpected post-submit Gerrit change status %q", g.Status)
 
 	case "MERGED":
 		// good
@@ -127,10 +142,14 @@ func submit(args []string) {
 	// Sync client to revision that Gerrit committed, but only if we can do it cleanly.
 	// Otherwise require user to run 'git sync' themselves (if they care).
 	run("git", "fetch", "-q")
-	if err := runErr("git", "checkout", "-q", "-B", b.Name, ch.CurrentRevision, "--"); err != nil {
-		dief("submit succeeded, but cannot sync local branch\n"+
-			"\trun 'git sync' to sync, or\n"+
-			"\trun 'git branch -D %s; git change master; git sync' to discard local branch", b.Name)
+	if len(b.Pending()) == 1 {
+		if err := runErr("git", "checkout", "-q", "-B", b.Name, g.CurrentRevision, "--"); err != nil {
+			dief("submit succeeded, but cannot sync local branch\n"+
+				"\trun 'git sync' to sync, or\n"+
+				"\trun 'git branch -D %s; git change master; git sync' to discard local branch", b.Name)
+		}
+	} else {
+		printf("submit succeeded; run 'git sync' to sync")
 	}
 
 	// Done! Change is submitted, branch is up to date, ready for new work.

@@ -14,17 +14,28 @@ import (
 
 // Branch describes a Git branch.
 type Branch struct {
-	Name            string // branch name
-	loadedPending   bool   // following fields are valid
-	changeID        string // Change-Id of pending commit ("" if nothing pending)
-	subject         string // first line of pending commit ("" if nothing pending)
-	message         string // commit message
-	commitHash      string // commit hash of pending commit ("" if nothing pending)
-	shortCommitHash string // abbreviated commitHash ("" if nothing pending)
-	parentHash      string // parent hash of pending commit ("" if nothing pending)
-	commitsAhead    int    // number of commits ahead of origin branch
-	commitsBehind   int    // number of commits behind origin branch
-	originBranch    string // upstream origin branch
+	Name          string    // branch name
+	loadedPending bool      // following fields are valid
+	originBranch  string    // upstream origin branch
+	commitsAhead  int       // number of commits ahead of origin branch
+	commitsBehind int       // number of commits behind origin branch
+	branchpoint   string    // latest commit hash shared with origin branch
+	pending       []*Commit // pending commits, newest first (children before parents)
+}
+
+// A Commit describes a single pending commit on a Git branch.
+type Commit struct {
+	Hash      string // commit hash
+	ShortHash string // abbreviated commit hash
+	Parent    string // parent hash
+	Message   string // commit message
+	Subject   string // first line of commit message
+	ChangeID  string // Change-Id in commit message ("" if missing)
+
+	// For use by pending command.
+	g         *GerritChange // associated Gerrit change data
+	gerr      error         // error loading Gerrit data
+	committed []string      // list of files in this commit
 }
 
 // CurrentBranch returns the current branch.
@@ -70,40 +81,28 @@ func (b *Branch) OriginBranch() string {
 	panic("not reached")
 }
 
+// IsLocalOnly reports whether b is a local work branch (only local, not known to remote server).
 func (b *Branch) IsLocalOnly() bool {
 	return "origin/"+b.Name != b.OriginBranch()
 }
 
+// HasPendingCommit reports whether b has any pending commits.
 func (b *Branch) HasPendingCommit() bool {
 	b.loadPending()
-	return b.commitHash != ""
+	return b.commitsAhead > 0
 }
 
-func (b *Branch) ChangeID() string {
+// Pending returns b's pending commits, newest first (children before parents).
+func (b *Branch) Pending() []*Commit {
 	b.loadPending()
-	return b.changeID
-}
-
-func (b *Branch) Subject() string {
-	b.loadPending()
-	return b.subject
-}
-
-func (b *Branch) CommitHash() string {
-	b.loadPending()
-	return b.commitHash
+	return b.pending
 }
 
 // Branchpoint returns an identifier for the latest revision
 // common to both this branch and its upstream branch.
-// If this branch has not split from upstream,
-// Branchpoint returns "HEAD".
 func (b *Branch) Branchpoint() string {
 	b.loadPending()
-	if b.parentHash == "" {
-		return "HEAD"
-	}
-	return b.parentHash
+	return b.branchpoint
 }
 
 func (b *Branch) loadPending() {
@@ -112,41 +111,46 @@ func (b *Branch) loadPending() {
 	}
 	b.loadedPending = true
 
+	// In case of early return.
+	b.branchpoint = getOutput("git", "rev-parse", "HEAD")
+
 	if b.DetachedHead() {
 		return
 	}
 
+	// Note: --topo-order means child first, then parent.
 	const numField = 5
-	all := getOutput("git", "log", "--format=format:%H%x00%h%x00%P%x00%s%x00%B%x00", b.OriginBranch()+".."+b.Name, "--")
+	all := getOutput("git", "log", "--topo-order", "--format=format:%H%x00%h%x00%P%x00%B%x00%s%x00", b.OriginBranch()+".."+b.Name, "--")
 	fields := strings.Split(all, "\x00")
 	if len(fields) < numField {
 		return // nothing pending
 	}
+	for i, field := range fields {
+		fields[i] = strings.TrimLeft(field, "\r\n")
+	}
 	for i := 0; i+numField <= len(fields); i += numField {
-		hash := fields[i]
-		shortHash := fields[i+1]
-		parent := fields[i+2]
-		subject := fields[i+3]
-		msg := fields[i+4]
-
-		// Overwrite each time through the loop.
-		// We want to save the info about the *first* commit
-		// after the branch point, and the log is ordered
-		// starting at the most recent and working backward.
-		b.commitHash = strings.TrimSpace(hash)
-		b.shortCommitHash = strings.TrimSpace(shortHash)
-		b.parentHash = strings.TrimSpace(parent)
-		b.subject = subject
-		b.message = msg
-		for _, line := range strings.Split(msg, "\n") {
+		c := &Commit{
+			Hash:      fields[i],
+			ShortHash: fields[i+1],
+			Parent:    strings.TrimSpace(fields[i+2]), // %P starts with \n for some reason
+			Message:   fields[i+3],
+			Subject:   fields[i+4],
+		}
+		for _, line := range strings.Split(c.Message, "\n") {
+			// Note: Keep going even if we find one, so that
+			// we take the last Change-Id line, just in case
+			// there is a commit message quoting another
+			// commit message.
+			// I'm not sure this can come up at all, but just in case.
 			if strings.HasPrefix(line, "Change-Id: ") {
-				b.changeID = line[len("Change-Id: "):]
-				break
+				c.ChangeID = line[len("Change-Id: "):]
 			}
 		}
-		b.commitsAhead++
+
+		b.pending = append(b.pending, c)
+		b.branchpoint = c.Parent
 	}
-	b.commitsAhead = len(fields) / numField
+	b.commitsAhead = len(b.pending)
 	b.commitsBehind = len(getOutput("git", "log", "--format=format:x", b.Name+".."+b.OriginBranch(), "--"))
 }
 
@@ -163,6 +167,7 @@ func (b *Branch) Submitted(id string) bool {
 
 var stagedRE = regexp.MustCompile(`^[ACDMR]  `)
 
+// HasStagedChanges reports whether the working directory contains staged changes.
 func HasStagedChanges() bool {
 	for _, s := range getLines("git", "status", "-b", "--porcelain") {
 		if stagedRE.MatchString(s) {
@@ -174,6 +179,7 @@ func HasStagedChanges() bool {
 
 var unstagedRE = regexp.MustCompile(`^.[ACDMR]`)
 
+// HasUnstagedChanges reports whether the working directory contains unstaged changes.
 func HasUnstagedChanges() bool {
 	for _, s := range getLines("git", "status", "-b", "--porcelain") {
 		if unstagedRE.MatchString(s) {
@@ -209,6 +215,9 @@ func LocalChanges() (staged, unstaged, untracked []string) {
 	return
 }
 
+// LocalBranches returns a list of all known local branches.
+// If the current directory is in detached HEAD mode, one returned
+// branch will have Name == "HEAD" and DetachedHead() == true.
 func LocalBranches() []*Branch {
 	var branches []*Branch
 	current := CurrentBranch()
@@ -250,11 +259,11 @@ func OriginBranches() []string {
 // The extra strings are passed to the Gerrit API request as o= parameters,
 // to enable additional information. Typical values include "LABELS" and "CURRENT_REVISION".
 // See https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html for details.
-func (b *Branch) GerritChange(extra ...string) (*GerritChange, error) {
+func (b *Branch) GerritChange(c *Commit, extra ...string) (*GerritChange, error) {
 	if !b.HasPendingCommit() {
-		return nil, fmt.Errorf("no pending commit")
+		return nil, fmt.Errorf("no changes pending")
 	}
-	id := fullChangeID(b)
+	id := fullChangeID(b, c)
 	for i, x := range extra {
 		if i == 0 {
 			id += "?"
@@ -264,4 +273,46 @@ func (b *Branch) GerritChange(extra ...string) (*GerritChange, error) {
 		id += "o=" + x
 	}
 	return readGerritChange(id)
+}
+
+const minHashLen = 4 // git minimum hash length accepted on command line
+
+// CommitByHash finds a unique pending commit by its hash prefix.
+// It dies if the hash cannot be resolved to a pending commit,
+// using the action ("mail", "submit") in the failure message.
+func (b *Branch) CommitByHash(action, hash string) *Commit {
+	if len(hash) < minHashLen {
+		dief("cannot %s: commit hash %q must be at least %d digits long", action, hash, minHashLen)
+	}
+	var c *Commit
+	for _, c1 := range b.Pending() {
+		if strings.HasPrefix(c1.Hash, hash) {
+			if c != nil {
+				dief("cannot %s: commit hash %q is ambiguous in the current branch", action, hash)
+			}
+			c = c1
+		}
+	}
+	if c == nil {
+		dief("cannot %s: commit hash %q not found in the current branch", action, hash)
+	}
+	return c
+}
+
+// DefaultCommit returns the default pending commit for this branch.
+// It dies if there is not exactly one pending commit,
+// using the action ("mail", "submit") in the failure message.
+func (b *Branch) DefaultCommit(action string) *Commit {
+	work := b.Pending()
+	if len(work) == 0 {
+		dief("cannot %s: no changes pending", action)
+	}
+	if len(work) >= 2 {
+		var buf bytes.Buffer
+		for _, c := range work {
+			fmt.Fprintf(&buf, "\n\t%s %s", c.ShortHash, c.Subject)
+		}
+		dief("cannot %s: multiple changes pending; must specify commit hash on command line:%s", action, buf.String())
+	}
+	return work[0]
 }

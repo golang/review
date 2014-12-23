@@ -331,6 +331,10 @@ func (s *gerritServer) setReply(path string, reply gerritReply) {
 	s.reply[path] = reply
 }
 
+func (s *gerritServer) setJSON(id, json string) {
+	s.setReply("/a/changes/proj~master~"+id, gerritReply{body: ")]}'\n" + json})
+}
+
 func (s *gerritServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

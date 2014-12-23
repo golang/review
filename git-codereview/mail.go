@@ -23,21 +23,25 @@ func mail(args []string) {
 	flags.Var(ccList, "cc", "comma-separated list of people to CC:")
 
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [commit-hash]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
-	if len(flags.Args()) != 0 {
+	if len(flags.Args()) > 1 {
 		flags.Usage()
 		os.Exit(2)
 	}
 
 	b := CurrentBranch()
-	if b.ChangeID() == "" {
-		dief("no pending change; can't mail.")
+
+	var c *Commit
+	if len(flags.Args()) == 1 {
+		c = b.CommitByHash("mail", flags.Arg(0))
+	} else {
+		c = b.DefaultCommit("mail")
 	}
 
 	if *diff {
-		run("git", "diff", b.Branchpoint()+"..HEAD", "--")
+		run("git", "diff", b.Branchpoint()[:7]+".."+c.ShortHash, "--")
 		return
 	}
 
@@ -49,7 +53,7 @@ func mail(args []string) {
 	// for side effect of dying with a good message if origin is GitHub
 	loadGerritOrigin()
 
-	refSpec := b.PushSpec()
+	refSpec := b.PushSpec(c)
 	start := "%"
 	if *rList != "" {
 		refSpec += mailList(start, "r", string(*rList))
@@ -74,9 +78,14 @@ func mail(args []string) {
 	run("git", "tag", "-f", b.Name+".mailed")
 }
 
-// PushSpec returns the spec for a Gerrit push command to publish the change in b.
-func (b *Branch) PushSpec() string {
-	return "HEAD:refs/for/" + strings.TrimPrefix(b.OriginBranch(), "origin/")
+// PushSpec returns the spec for a Gerrit push command to publish the change c in b.
+// If c is nil, PushSpec returns a spec for pushing all changes in b.
+func (b *Branch) PushSpec(c *Commit) string {
+	local := "HEAD"
+	if c != nil && (len(b.Pending()) == 0 || b.Pending()[0].Hash != c.Hash) {
+		local = c.ShortHash
+	}
+	return local + ":refs/for/" + strings.TrimPrefix(b.OriginBranch(), "origin/")
 }
 
 // mailAddressRE matches the mail addresses we admit. It's restrictive but admits

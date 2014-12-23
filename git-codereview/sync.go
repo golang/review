@@ -11,7 +11,10 @@ func doSync(args []string) {
 
 	// Get current branch and commit ID for fixup after pull.
 	b := CurrentBranch()
-	id := b.ChangeID()
+	var id string
+	if work := b.Pending(); len(work) > 0 {
+		id = work[len(work)-1].ChangeID
+	}
 
 	// Don't sync with staged or unstaged changes.
 	// rebase is going to complain if we don't, and we can give a nicer error.
@@ -29,8 +32,8 @@ func doSync(args []string) {
 	// If the change commit has been submitted,
 	// roll back change leaving any changes unstaged.
 	// Pull should have done this for us, but check just in case.
-	b.loadedPending = false
-	if b.Submitted(id) && b.HasPendingCommit() {
+	b = CurrentBranch() // discard any cached information
+	if len(b.Pending()) == 1 && b.Submitted(id) {
 		run("git", "reset", b.Branchpoint())
 	}
 }

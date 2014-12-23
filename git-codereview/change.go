@@ -29,7 +29,7 @@ func change(args []string) {
 	if target != "" {
 		checkoutOrCreate(target)
 		b := CurrentBranch()
-		if HasStagedChanges() && b.IsLocalOnly() && b.ChangeID() == "" {
+		if HasStagedChanges() && b.IsLocalOnly() && !b.HasPendingCommit() {
 			commitChanges(false)
 		}
 		b.check()
@@ -42,7 +42,7 @@ func change(args []string) {
 		dief("can't commit to %s branch (use '%s change branchname').", b.Name, os.Args[0])
 	}
 
-	amend := b.ChangeID() != ""
+	amend := b.HasPendingCommit()
 	commitChanges(amend)
 	b.loadedPending = false // force reload after commitChanges
 	b.check()

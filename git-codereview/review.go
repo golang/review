@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// TODO(rsc): Document multi-change branch behavior.
+
 // Command git-codereview provides a simple command-line user interface for
 // working with git repositories and the Gerrit code review system.
 // See "git-codereview help" for details.

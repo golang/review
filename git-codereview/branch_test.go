@@ -57,11 +57,14 @@ func checkCurrentBranch(t *testing.T, name, origin string, isLocal, hasPending b
 	if x := b.HasPendingCommit(); x != hasPending {
 		t.Errorf("b.HasPendingCommit() = %v, want %v", x, isLocal)
 	}
-	if x := b.ChangeID(); x != changeID {
-		t.Errorf("b.ChangeID() = %q, want %q", x, changeID)
-	}
-	if x := b.Subject(); x != subject {
-		t.Errorf("b.Subject() = %q, want %q", x, subject)
+	if work := b.Pending(); len(work) > 0 {
+		c := work[0]
+		if x := c.ChangeID; x != changeID {
+			t.Errorf("b.Pending()[0].ChangeID = %q, want %q", x, changeID)
+		}
+		if x := c.Subject; x != subject {
+			t.Errorf("b.Pending()[0].Subject = %q, want %q", x, subject)
+		}
 	}
 }
 
