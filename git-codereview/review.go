@@ -140,6 +140,8 @@ func main() {
 		submit(args)
 	case "sync":
 		doSync(args)
+	case "test-loadAuth": // for testing only
+		loadAuth()
 	default:
 		flags.Usage()
 	}
