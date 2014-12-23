@@ -147,6 +147,12 @@ func write(t *testing.T, file, data string) {
 	}
 }
 
+func remove(t *testing.T, file string) {
+	if err := os.RemoveAll(file); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func trun(t *testing.T, dir string, cmdline ...string) string {
 	cmd := exec.Command(cmdline[0], cmdline[1:]...)
 	cmd.Dir = dir

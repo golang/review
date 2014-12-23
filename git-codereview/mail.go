@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -80,23 +81,114 @@ func (b *Branch) PushSpec() string {
 
 // mailAddressRE matches the mail addresses we admit. It's restrictive but admits
 // all the addresses in the Go CONTRIBUTORS file at time of writing (tested separately).
-var mailAddressRE = regexp.MustCompile(`^[a-zA-Z0-9][-_.a-zA-Z0-9]*@[-_.a-zA-Z0-9]+$`)
+var mailAddressRE = regexp.MustCompile(`^([a-zA-Z0-9][-_.a-zA-Z0-9]*)(@[-_.a-zA-Z0-9]+)?$`)
 
 // mailList turns the list of mail addresses from the flag value into the format
 // expected by gerrit. The start argument is a % or , depending on where we
 // are in the processing sequence.
 func mailList(start, tag string, flagList string) string {
+	errors := false
 	spec := start
+	short := ""
+	long := ""
 	for i, addr := range strings.Split(flagList, ",") {
-		if !mailAddressRE.MatchString(addr) {
-			dief("%q is not a valid reviewer mail address", addr)
+		m := mailAddressRE.FindStringSubmatch(addr)
+		if m == nil {
+			printf("invalid reviewer mail address: %s", addr)
+			errors = true
+			continue
+		}
+		if m[2] == "" {
+			email := mailLookup(addr)
+			if email == "" {
+				printf("unknown reviewer: %s", addr)
+				errors = true
+				continue
+			}
+			short += "," + addr
+			long += "," + email
+			addr = email
 		}
 		if i > 0 {
 			spec += ","
 		}
 		spec += tag + "=" + addr
 	}
+	if short != "" {
+		verbosef("expanded %s to %s", short[1:], long[1:])
+	}
+	if errors {
+		die()
+	}
 	return spec
+}
+
+// reviewers is the list of reviewers for the current repository,
+// sorted by how many reviews each has done.
+var reviewers []reviewer
+
+type reviewer struct {
+	addr  string
+	count int
+}
+
+// mailLookup translates the short name (like adg) into a full
+// email address (like adg@golang.org).
+// It returns "" if no translation is found.
+// The algorithm for expanding short user names is as follows:
+// Look at the git commit log for the current repository,
+// extracting all the email addresses in Reviewed-By lines
+// and sorting by how many times each address appears.
+// For each short user name, walk the list, most common
+// address first, and use the first address found that has
+// the short user name on the left side of the @.
+func mailLookup(short string) string {
+	loadReviewers()
+
+	short += "@"
+	for _, r := range reviewers {
+		if strings.HasPrefix(r.addr, short) {
+			return r.addr
+		}
+	}
+	return ""
+}
+
+// loadReviewers reads the reviewer list from the current git repo
+// and leaves it in the global variable reviewers.
+// See the comment on mailLookup for a description of how the
+// list is generated and used.
+func loadReviewers() {
+	if reviewers != nil {
+		return
+	}
+	countByAddr := map[string]int{}
+	for _, line := range getLines("git", "log", "--format=format:%B") {
+		if strings.HasPrefix(line, "Reviewed-by:") {
+			f := strings.Fields(line)
+			addr := f[len(f)-1]
+			if strings.HasPrefix(addr, "<") && strings.Contains(addr, "@") && strings.HasSuffix(addr, ">") {
+				countByAddr[addr[1:len(addr)-1]]++
+			}
+		}
+	}
+
+	reviewers = []reviewer{}
+	for addr, count := range countByAddr {
+		reviewers = append(reviewers, reviewer{addr, count})
+	}
+	sort.Sort(reviewersByCount(reviewers))
+}
+
+type reviewersByCount []reviewer
+
+func (x reviewersByCount) Len() int      { return len(x) }
+func (x reviewersByCount) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
+func (x reviewersByCount) Less(i, j int) bool {
+	if x[i].count != x[j].count {
+		return x[i].count > x[j].count
+	}
+	return x[i].addr < x[j].addr
 }
 
 // stringList is a flag.Value that is like flag.String, but if repeated

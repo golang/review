@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// TODO(adg): translate email addresses without @ by looking up somewhere
-
 // Command git-codereview provides a simple command-line user interface for
 // working with git repositories and the Gerrit code review system.
 // See "git-codereview help" for details.
@@ -237,6 +235,10 @@ var dieTrap func()
 
 func dief(format string, args ...interface{}) {
 	printf(format, args...)
+	die()
+}
+
+func die() {
 	if dieTrap != nil {
 		dieTrap()
 	}

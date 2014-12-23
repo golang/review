@@ -4,7 +4,10 @@
 
 package main
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestMail(t *testing.T) {
 	gt := newGitTest(t)
@@ -47,4 +50,58 @@ func TestMailAmbiguousRevision(t *testing.T) {
 	write(t, gt.client+"/"+b.Branchpoint()+"..HEAD", "foo")
 
 	testMain(t, "mail", "-diff")
+}
+
+var reviewerLog = []string{
+	"Fake 1 <r1@fake.com>",
+	"Fake 1 <r1@fake.com>",
+	"Fake 1 <r1@fake.com>",
+	"Reviewer 1 <r1@golang.org>",
+	"Reviewer 1 <r1@golang.org>",
+	"Reviewer 1 <r1@golang.org>",
+	"Reviewer 1 <r1@golang.org>",
+	"Reviewer 1 <r1@golang.org>",
+	"Other <other@golang.org>",
+	"<anon@golang.org>",
+}
+
+func TestMailShort(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	// fake auth information to avoid Gerrit error
+	auth.host = "gerrit.fake"
+	auth.user = "not-a-user"
+	defer func() {
+		auth.host = ""
+		auth.user = ""
+	}()
+
+	// Seed commit history with reviewers.
+	for i, addr := range reviewerLog {
+		write(t, gt.server+"/file", fmt.Sprintf("v%d", i))
+		trun(t, gt.server, "git", "commit", "-a", "-m", "msg\n\nReviewed-by: "+addr+"\n")
+	}
+	trun(t, gt.client, "git", "pull")
+
+	// Do some work.
+	gt.work(t)
+
+	testMain(t, "mail")
+	testRan(t,
+		"git push -q origin HEAD:refs/for/master",
+		"git tag -f work.mailed")
+
+	testMain(t, "mail", "-r", "r1")
+	testRan(t,
+		"git push -q origin HEAD:refs/for/master%r=r1@golang.org",
+		"git tag -f work.mailed")
+
+	testMain(t, "mail", "-r", "other,anon", "-cc", "r1,full@email.com")
+	testRan(t,
+		"git push -q origin HEAD:refs/for/master%r=other@golang.org,r=anon@golang.org,cc=r1@golang.org,cc=full@email.com",
+		"git tag -f work.mailed")
+
+	testMainDied(t, "mail", "-r", "other", "-r", "anon,r1,missing")
+	testPrintedStderr(t, "unknown reviewer: missing")
 }
