@@ -93,6 +93,7 @@ func loadAuth() {
 				if len(f[0]) > maxMatch {
 					auth.cookieName = f[5]
 					auth.cookieValue = f[6]
+					maxMatch = len(f[0])
 				}
 			}
 		}
