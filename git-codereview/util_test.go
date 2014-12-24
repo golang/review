@@ -52,6 +52,8 @@ func newGitTest(t *testing.T) *gitTest {
 	mkdir(t, server)
 	write(t, server+"/file", "this is master")
 	trun(t, server, "git", "init", ".")
+	trun(t, server, "git", "config", "user.name", "gopher")
+	trun(t, server, "git", "config", "user.email", "gopher@example.com")
 	trun(t, server, "git", "add", "file")
 	trun(t, server, "git", "commit", "-m", "on master")
 
@@ -65,6 +67,8 @@ func newGitTest(t *testing.T) *gitTest {
 	client := tmpdir + "/git-client"
 	mkdir(t, client)
 	trun(t, client, "git", "clone", server, ".")
+	trun(t, client, "git", "config", "user.name", "gopher")
+	trun(t, client, "git", "config", "user.email", "gopher@example.com")
 
 	// write stub hooks to keep installHook from installing its own.
 	// If it installs its own, git will look for git-codereview on the current path
