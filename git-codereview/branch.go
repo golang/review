@@ -156,7 +156,9 @@ func (b *Branch) Submitted(id string) bool {
 	if id == "" {
 		return false
 	}
-	return len(getOutput("git", "log", "--grep", "Change-Id: "+id, b.Name+".."+b.OriginBranch())) > 0
+	line := "Change-Id: " + id
+	out := getOutput("git", "log", "-n", "1", "-F", "--grep", line, b.Name+".."+b.OriginBranch())
+	return strings.Contains(out, line)
 }
 
 var stagedRE = regexp.MustCompile(`^[ACDMR]  `)
