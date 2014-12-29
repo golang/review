@@ -40,10 +40,10 @@ func TestGofmt(t *testing.T) {
 	trun(t, gt.client, "git", "add", ".") // make files tracked
 
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "bad.go\n", "!good.go", "!test/bad", "test/bench/bad.go")
+	testPrintedStdout(t, "bad.go\n", "!good.go", fromSlash("!test/bad"), fromSlash("test/bench/bad.go"))
 
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "bad.go\n", "!good.go", "!test/bad", "test/bench/bad.go")
+	testPrintedStdout(t, "bad.go\n", "!good.go", fromSlash("!test/bad"), fromSlash("test/bench/bad.go"))
 
 	testMain(t, "gofmt")
 	testNoStdout(t)

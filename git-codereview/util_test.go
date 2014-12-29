@@ -26,9 +26,37 @@ type gitTest struct {
 	client string // client repo root
 }
 
+// resetReadOnlyFlagAll resets windows read-only flag
+// set on path and any children it contains.
+// The flag is set by git and has to be removed.
+// os.Remove refuses to remove files with read-only flag set.
+func resetReadOnlyFlagAll(path string) error {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	if !fi.IsDir() {
+		return os.Chmod(path, 0666)
+	}
+
+	fd, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+
+	names, _ := fd.Readdirnames(-1)
+	for _, name := range names {
+		resetReadOnlyFlagAll(path + string(filepath.Separator) + name)
+	}
+	return nil
+}
+
 func (gt *gitTest) done() {
+	os.Chdir(gt.pwd) // change out of gt.tmpdir first, otherwise following os.RemoveAll fails on windows
+	resetReadOnlyFlagAll(gt.tmpdir)
 	os.RemoveAll(gt.tmpdir)
-	os.Chdir(gt.pwd)
 }
 
 func (gt *gitTest) work(t *testing.T) {
@@ -51,10 +79,11 @@ func newGitTest(t *testing.T) *gitTest {
 
 	mkdir(t, server)
 	write(t, server+"/file", "this is master")
+	write(t, server+"/.gitattributes", "* -text\n")
 	trun(t, server, "git", "init", ".")
 	trun(t, server, "git", "config", "user.name", "gopher")
 	trun(t, server, "git", "config", "user.email", "gopher@example.com")
-	trun(t, server, "git", "add", "file")
+	trun(t, server, "git", "add", "file", ".gitattributes")
 	trun(t, server, "git", "commit", "-m", "on master")
 
 	for _, name := range []string{"dev.branch", "release.branch"} {
@@ -126,6 +155,14 @@ func trun(t *testing.T, dir string, cmdline ...string) string {
 		t.Fatalf("in %s/, ran %s: %v\n%s", filepath.Base(dir), cmdline, err, out)
 	}
 	return string(out)
+}
+
+// fromSlash is like filepath.FromSlash, but it ignores ! at the start of the path.
+func fromSlash(path string) string {
+	if len(path) > 0 && path[0] == '!' {
+		return "!" + filepath.FromSlash(path[1:])
+	}
+	return filepath.FromSlash(path)
 }
 
 var (

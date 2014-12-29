@@ -145,18 +145,68 @@ func runGofmt(flags int) (files []string, stderrText string) {
 		// Git stores the temporary files, named .merge_*, in the repo root.
 		// Unlike the Git commands above, the non-temp file names printed
 		// here are relative to the current directory, not the repo root.
-		args := []string{"checkout-index", "--temp", "--"}
-		args = append(args, needTemp...)
-		for _, line := range getLines("git", args...) {
-			i := strings.Index(line, "\t")
-			if i < 0 {
-				continue
+
+		// git checkout-index --temp is broken on windows. Running this command:
+		//
+		// git checkout-index --temp -- bad-bad-bad2.go bad-bad-broken.go bad-bad-good.go bad-bad2-bad.go bad-bad2-broken.go bad-bad2-good.go bad-broken-bad.go bad-broken-bad2.go bad-broken-good.go bad-good-bad.go bad-good-bad2.go bad-good-broken.go bad2-bad-bad2.go bad2-bad-broken.go bad2-bad-good.go bad2-bad2-bad.go bad2-bad2-broken.go bad2-bad2-good.go bad2-broken-bad.go bad2-broken-bad2.go bad2-broken-good.go bad2-good-bad.go bad2-good-bad2.go bad2-good-broken.go broken-bad-bad2.go broken-bad-broken.go broken-bad-good.go broken-bad2-bad.go broken-bad2-broken.go broken-bad2-good.go
+		//
+		// produces this output
+		//
+		// .merge_file_a05448      bad-bad-bad2.go
+		// .merge_file_b05448      bad-bad-broken.go
+		// .merge_file_c05448      bad-bad-good.go
+		// .merge_file_d05448      bad-bad2-bad.go
+		// .merge_file_e05448      bad-bad2-broken.go
+		// .merge_file_f05448      bad-bad2-good.go
+		// .merge_file_g05448      bad-broken-bad.go
+		// .merge_file_h05448      bad-broken-bad2.go
+		// .merge_file_i05448      bad-broken-good.go
+		// .merge_file_j05448      bad-good-bad.go
+		// .merge_file_k05448      bad-good-bad2.go
+		// .merge_file_l05448      bad-good-broken.go
+		// .merge_file_m05448      bad2-bad-bad2.go
+		// .merge_file_n05448      bad2-bad-broken.go
+		// .merge_file_o05448      bad2-bad-good.go
+		// .merge_file_p05448      bad2-bad2-bad.go
+		// .merge_file_q05448      bad2-bad2-broken.go
+		// .merge_file_r05448      bad2-bad2-good.go
+		// .merge_file_s05448      bad2-broken-bad.go
+		// .merge_file_t05448      bad2-broken-bad2.go
+		// .merge_file_u05448      bad2-broken-good.go
+		// .merge_file_v05448      bad2-good-bad.go
+		// .merge_file_w05448      bad2-good-bad2.go
+		// .merge_file_x05448      bad2-good-broken.go
+		// .merge_file_y05448      broken-bad-bad2.go
+		// .merge_file_z05448      broken-bad-broken.go
+		// error: unable to create file .merge_file_XXXXXX (No error)
+		// .merge_file_XXXXXX      broken-bad-good.go
+		// error: unable to create file .merge_file_XXXXXX (No error)
+		// .merge_file_XXXXXX      broken-bad2-bad.go
+		// error: unable to create file .merge_file_XXXXXX (No error)
+		// .merge_file_XXXXXX      broken-bad2-broken.go
+		// error: unable to create file .merge_file_XXXXXX (No error)
+		// .merge_file_XXXXXX      broken-bad2-good.go
+		//
+		// so limit the number of file arguments to 25.
+		for len(needTemp) > 0 {
+			n := len(needTemp)
+			if n > 25 {
+				n = 25
 			}
-			temp, file := line[:i], line[i+1:]
-			temp = filepath.Join(repo, temp)
-			file = filepath.Join(pwd, file)
-			tempToFile[temp] = file
-			fileToTemp[file] = temp
+			args := []string{"checkout-index", "--temp", "--"}
+			args = append(args, needTemp[:n]...)
+			for _, line := range getLines("git", args...) {
+				i := strings.Index(line, "\t")
+				if i < 0 {
+					continue
+				}
+				temp, file := line[:i], line[i+1:]
+				temp = filepath.Join(repo, temp)
+				file = filepath.Join(pwd, file)
+				tempToFile[temp] = file
+				fileToTemp[file] = temp
+			}
+			needTemp = needTemp[n:]
 		}
 		cleanup = func() {
 			for temp := range tempToFile {

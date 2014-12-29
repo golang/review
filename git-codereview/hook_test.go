@@ -71,13 +71,13 @@ func TestHookPreCommit(t *testing.T) {
 
 	testMainDied(t, "hook-invoke", "pre-commit")
 	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):",
-		"bad.go", "!good.go", "!test/bad", "test/bench/bad.go")
+		"bad.go", "!good.go", fromSlash("!test/bad"), fromSlash("test/bench/bad.go"))
 
 	write(t, gt.client+"/broken.go", brokenGo)
 	trun(t, gt.client, "git", "add", "broken.go")
 	testMainDied(t, "hook-invoke", "pre-commit")
 	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):",
-		"bad.go", "!good.go", "!test/bad", "test/bench/bad.go",
+		"bad.go", "!good.go", fromSlash("!test/bad"), fromSlash("test/bench/bad.go"),
 		"gofmt reported errors:", "broken.go")
 }
 
