@@ -193,6 +193,9 @@ func runGofmt(flags int) (files []string, stderrText string) {
 		}
 	}
 
+	if *verbose > 1 {
+		fmt.Fprintln(stderr(), commandString("gofmt", args))
+	}
 	cmd := exec.Command("gofmt", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -235,6 +238,7 @@ func runGofmt(flags int) (files []string, stderrText string) {
 			for i, name := range updateIndex {
 				fmt.Fprintf(&buf, "100644 %s\t%s\n", hashes[i], name)
 			}
+			verbosef("git update-index --index-info")
 			cmd := exec.Command("git", "update-index", "--index-info")
 			cmd.Stdin = &buf
 			out, err := cmd.CombinedOutput()

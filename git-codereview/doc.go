@@ -35,7 +35,7 @@ aliases in their .gitconfig file:
 
 All commands accept these global flags:
 
-The -v flag prints all Git commands that make changes.
+The -v flag prints all commands that make changes.
 
 The -n flag prints all commands that would be run, but does not run them.
 

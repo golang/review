@@ -31,7 +31,7 @@ func initFlags() {
 	flags.Usage = func() {
 		fmt.Fprintf(stderr(), usage, os.Args[0], os.Args[0])
 	}
-	flags.Var(verbose, "v", "report git commands")
+	flags.Var(verbose, "v", "report commands")
 	flags.BoolVar(noRun, "n", false, "print but do not run commands")
 }
 
@@ -48,7 +48,7 @@ simple interface to the "single-commit feature branch" development model.
 
 See the docs for details: https://godoc.org/golang.org/x/review/git-codereview
 
-The -v flag prints all Git commands that make changes.
+The -v flag prints all commands that make changes.
 The -n flag prints all commands that would be run, but does not run them.
 
 Available commands:
