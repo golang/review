@@ -41,8 +41,8 @@ func mail(args []string) {
 	}
 
 	if !*force && HasStagedChanges() {
-		dief("there are staged changes; aborting.\n" +
-			"Use 'review change' to include them or 'review mail -f' to force it.")
+		dief("there are staged changes; aborting.\n"+
+			"Use '%s change' to include them or '%s mail -f' to force it.", os.Args[0], os.Args[0])
 	}
 
 	// for side effect of dying with a good message if origin is GitHub
