@@ -142,6 +142,9 @@ func checkoutOrCreate(target string) {
 	// Otherwise, inherit HEAD and upstream from the current branch.
 	b := CurrentBranch()
 	if b.HasPendingCommit() {
+		if !b.IsLocalOnly() {
+			dief("bad repo state: branch %s is ahead of origin/%s", b.Name, b.Name)
+		}
 		dief("cannot branch from work branch; change back to %v first.", strings.TrimPrefix(b.OriginBranch(), "origin/"))
 	}
 

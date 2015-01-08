@@ -44,6 +44,19 @@ func TestChangeHEAD(t *testing.T) {
 	testPrintedStderr(t, "invalid branch name \"HeAd\": ref name HEAD is reserved for git")
 }
 
+func TestChangeAhead(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	// commit to master (mistake)
+	write(t, gt.client+"/file", "new content")
+	trun(t, gt.client, "git", "add", "file")
+	trun(t, gt.client, "git", "commit", "-m", "msg")
+
+	testMainDied(t, "change", "work")
+	testPrintedStderr(t, "bad repo state: branch master is ahead of origin/master")
+}
+
 func TestMessageRE(t *testing.T) {
 	for _, c := range []struct {
 		in   string
