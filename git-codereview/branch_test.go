@@ -128,3 +128,31 @@ func TestBranchpoint(t *testing.T) {
 		gt.work(t)
 	}
 }
+
+func TestBranchpointMerge(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	// commit more work on master
+	write(t, gt.server+"/file", "more work")
+	trun(t, gt.server, "git", "commit", "-m", "work", "file")
+
+	// update client
+	trun(t, gt.client, "git", "checkout", "master")
+	trun(t, gt.client, "git", "pull")
+
+	hash := strings.TrimSpace(trun(t, gt.client, "git", "rev-parse", "HEAD"))
+
+	// merge dev.branch
+	testMain(t, "change", "work")
+	trun(t, gt.client, "git", "merge", "-m", "merge", "origin/dev.branch")
+
+	// check branchpoint is old head (despite this commit having two parents)
+	bp := CurrentBranch().Branchpoint()
+	if bp != hash {
+		t.Logf("branches:\n%s", trun(t, gt.client, "git", "branch", "-a", "-v"))
+		t.Logf("log:\n%s", trun(t, gt.client, "git", "log", "--graph", "--decorate"))
+		t.Logf("log origin/master..HEAD:\n%s", trun(t, gt.client, "git", "log", "origin/master..HEAD"))
+		t.Fatalf("branchpoint=%q, want %q", bp, hash)
+	}
+}

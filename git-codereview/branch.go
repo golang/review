@@ -28,6 +28,7 @@ type Commit struct {
 	Hash      string // commit hash
 	ShortHash string // abbreviated commit hash
 	Parent    string // parent hash
+	Merge     string // for merges, hash of commit being merged into Parent
 	Message   string // commit message
 	Subject   string // first line of commit message
 	ChangeID  string // Change-Id in commit message ("" if missing)
@@ -119,8 +120,9 @@ func (b *Branch) loadPending() {
 	}
 
 	// Note: --topo-order means child first, then parent.
+	origin := b.OriginBranch()
 	const numField = 5
-	all := getOutput("git", "log", "--topo-order", "--format=format:%H%x00%h%x00%P%x00%B%x00%s%x00", b.OriginBranch()+".."+b.Name, "--")
+	all := getOutput("git", "log", "--topo-order", "--format=format:%H%x00%h%x00%P%x00%B%x00%s%x00", origin+".."+b.Name, "--")
 	fields := strings.Split(all, "\x00")
 	if len(fields) < numField {
 		return // nothing pending
@@ -128,6 +130,7 @@ func (b *Branch) loadPending() {
 	for i, field := range fields {
 		fields[i] = strings.TrimLeft(field, "\r\n")
 	}
+	foundMergeBranchpoint := false
 	for i := 0; i+numField <= len(fields); i += numField {
 		c := &Commit{
 			Hash:      fields[i],
@@ -135,6 +138,25 @@ func (b *Branch) loadPending() {
 			Parent:    strings.TrimSpace(fields[i+2]), // %P starts with \n for some reason
 			Message:   fields[i+3],
 			Subject:   fields[i+4],
+		}
+		if j := strings.Index(c.Parent, " "); j >= 0 {
+			c.Parent, c.Merge = c.Parent[:j], c.Parent[j+1:]
+			// Found merge point.
+			// Merges break the invariant that the last shared commit (the branchpoint)
+			// is the parent of the final commit in the log output.
+			// If c.Parent is on the origin branch, then since we are reading the log
+			// in (reverse) topological order, we know that c.Parent is the actual branchpoint,
+			// even if we later see additional commits on a different branch leading down to
+			// a lower location on the same origin branch.
+			// Check c.Merge (the second parent) too, so we don't depend on the parent order.
+			if strings.Contains(getOutput("git", "branch", "-a", "--contains", c.Parent), " "+origin+"\n") {
+				foundMergeBranchpoint = true
+				b.branchpoint = c.Parent
+			}
+			if strings.Contains(getOutput("git", "branch", "-a", "--contains", c.Merge), " "+origin+"\n") {
+				foundMergeBranchpoint = true
+				b.branchpoint = c.Merge
+			}
 		}
 		for _, line := range strings.Split(c.Message, "\n") {
 			// Note: Keep going even if we find one, so that
@@ -148,7 +170,9 @@ func (b *Branch) loadPending() {
 		}
 
 		b.pending = append(b.pending, c)
-		b.branchpoint = c.Parent
+		if !foundMergeBranchpoint {
+			b.branchpoint = c.Parent
+		}
 	}
 	b.commitsAhead = len(b.pending)
 	b.commitsBehind = len(getOutput("git", "log", "--format=format:x", b.Name+".."+b.OriginBranch(), "--"))
