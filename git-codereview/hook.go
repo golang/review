@@ -195,6 +195,11 @@ func hookPreCommit(args []string) {
 }
 
 func hookGofmt() {
+	if os.Getenv("GIT_GOFMT_HOOK") == "off" {
+		fmt.Fprintf(stderr(), "git-gofmt-hook disabled by $GIT_GOFMT_HOOK=off\n")
+		return
+	}
+
 	files, stderr := runGofmt(gofmtPreCommit)
 
 	if stderr != "" {

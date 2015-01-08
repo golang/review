@@ -166,6 +166,23 @@ func TestHookPreCommitDetachedHead(t *testing.T) {
 	testNoStderr(t)
 }
 
+func TestHookPreCommitEnv(t *testing.T) {
+	// If $GIT_GOFMT_HOOK == "off", gofmt hook should not complain.
+
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+
+	write(t, gt.client+"/bad.go", badGo)
+	trun(t, gt.client, "git", "add", ".")
+	os.Setenv("GIT_GOFMT_HOOK", "off")
+	defer os.Unsetenv("GIT_GOFMT_HOOK")
+
+	testMain(t, "hook-invoke", "pre-commit")
+	testNoStdout(t)
+	testPrintedStderr(t, "git-gofmt-hook disabled by $GIT_GOFMT_HOOK=off")
+}
+
 func TestHookPreCommitUnstaged(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
