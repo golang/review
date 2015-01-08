@@ -21,7 +21,7 @@ func gofmt(args []string) {
 	flags.BoolVar(&gofmtList, "l", false, "list files that need to be formatted")
 	flags.Parse(args)
 	if len(flag.Args()) > 0 {
-		fmt.Fprintf(stderr(), "Usage: %s gofmt %s [-l]\n", globalFlags, os.Args[0])
+		fmt.Fprintf(stderr(), "Usage: %s gofmt %s [-l]\n", os.Args[0], globalFlags)
 		os.Exit(2)
 	}
 

@@ -8,7 +8,9 @@ server.
 
 The git-codereview tool manages "change branches" in the local git repository.
 Each such branch tracks a single commit, or "pending change",
-that is reviewed using a Gerrit server.
+that is reviewed using a Gerrit server; the Gerrit remote must be
+named 'origin' in the local git repo.
+
 Modifications to the pending change are applied by amending the commit.
 This process implements the "single-commit feature branch" model.
 
@@ -122,10 +124,13 @@ The -r and -cc flags identify the email addresses of people to do the code
 review and to be CC'ed about the code review.
 Multiple addresses are given as a comma-separated list.
 
-The mail command fails if there are staged changes that are not committed. The
--f flag overrides this behavior.
+An email address passed to -r or -cc can be shortened from name@domain to name.
+The mail command resolves such shortenings by reading the list of past reviewers
+from the git repository log to find email addresses of the form name@somedomain
+and then, in case of ambiguity, using the reviewer who appears most often.
 
-The mail command assumes that the Gerrit remote is called 'origin'.
+The mail command fails if there are staged changes that are not committed.
+The -f flag overrides this behavior.
 
 The mail command updates the tag <branchname>.mailed to refer to the
 commit that was most recently mailed, so running 'git diff <branchname>.mailed'
