@@ -92,10 +92,12 @@ func newGitTest(t *testing.T) *gitTest {
 
 	for _, name := range []string{"dev.branch", "release.branch"} {
 		trun(t, server, "git", "checkout", "master")
-		trun(t, server, "git", "branch", name)
-		write(t, server+"/file", "this is "+name)
-		trun(t, server, "git", "commit", "-a", "-m", "on "+name)
+		trun(t, server, "git", "checkout", "-b", name)
+		write(t, server+"/file."+name, "this is "+name)
+		trun(t, server, "git", "add", "file."+name)
+		trun(t, server, "git", "commit", "-m", "on "+name)
 	}
+	trun(t, server, "git", "checkout", "master")
 
 	client := tmpdir + "/git-client"
 	mkdir(t, client)
