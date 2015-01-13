@@ -48,6 +48,42 @@ func TestHookCommitMsg(t *testing.T) {
 	}
 }
 
+func TestHookCommitMsgBranchPrefix(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	checkPrefix := func(prefix string) {
+		write(t, gt.client+"/msg.txt", "Test message.\n")
+		testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
+		data, err := ioutil.ReadFile(gt.client + "/msg.txt")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.HasPrefix(data, []byte(prefix)) {
+			t.Errorf("after hook-invoke commit-msg on %s, want prefix %q:\n%s", CurrentBranch().Name, prefix, data)
+		}
+	}
+
+	// Create server branch and switch to server branch on client.
+	// Test that commit hook adds prefix.
+	trun(t, gt.server, "git", "checkout", "-b", "dev.cc")
+	trun(t, gt.client, "git", "fetch", "-q")
+	trun(t, gt.client, "git", "change", "dev.cc")
+	checkPrefix("[dev.cc] Test message.\n")
+
+	// Work branch with server branch as upstream.
+	trun(t, gt.client, "git", "change", "ccwork")
+	checkPrefix("[dev.cc] Test message.\n")
+
+	// Master has no prefix.
+	trun(t, gt.client, "git", "change", "master")
+	checkPrefix("Test message.\n")
+
+	// Work branch from master has no prefix.
+	trun(t, gt.client, "git", "change", "work")
+	checkPrefix("Test message.\n")
+}
+
 func TestHookPreCommit(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()

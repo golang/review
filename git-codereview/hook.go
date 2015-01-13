@@ -113,33 +113,59 @@ func hookInvoke(args []string) {
 // It adds a Change-Id line to the bottom of the commit message
 // if there is not one already.
 func hookCommitMsg(args []string) {
-	// Add Change-Id to commit message if needed.
 	if len(args) != 1 {
 		dief("usage: git-codereview hook-invoke commit-msg message.txt\n")
 	}
+
+	b := CurrentBranch()
+	if b.DetachedHead() {
+		// Likely executing rebase or some other internal operation.
+		// Probably a mistake to make commit message changes.
+		return
+	}
+
 	file := args[0]
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		dief("%v", err)
 	}
 	data = stripComments(data)
+
+	// Empty message not allowed.
 	if len(bytes.TrimSpace(data)) == 0 {
 		dief("empty commit message")
 	}
-	if bytes.Contains(data, []byte("\nChange-Id: ")) {
-		return
+
+	// Add Change-Id to commit message if not present.
+	edited := false
+	if !bytes.Contains(data, []byte("\nChange-Id: ")) {
+		edited = true
+		n := len(data)
+		for n > 0 && data[n-1] == '\n' {
+			n--
+		}
+		var id [20]byte
+		if _, err := io.ReadFull(rand.Reader, id[:]); err != nil {
+			dief("generating Change-Id: %v", err)
+		}
+		data = append(data[:n], fmt.Sprintf("\n\nChange-Id: I%x\n", id[:])...)
 	}
-	n := len(data)
-	for n > 0 && data[n-1] == '\n' {
-		n--
+
+	// Add branch prefix to commit message if not present and not on master.
+	branch := strings.TrimPrefix(b.OriginBranch(), "origin/")
+	if branch != "master" {
+		prefix := "[" + branch + "] "
+		if !bytes.HasPrefix(data, []byte(prefix)) {
+			edited = true
+			data = []byte(prefix + string(data))
+		}
 	}
-	var id [20]byte
-	if _, err := io.ReadFull(rand.Reader, id[:]); err != nil {
-		dief("generating Change-Id: %v", err)
-	}
-	data = append(data[:n], fmt.Sprintf("\n\nChange-Id: I%x\n", id[:])...)
-	if err := ioutil.WriteFile(file, data, 0666); err != nil {
-		dief("%v", err)
+
+	// Write back.
+	if edited {
+		if err := ioutil.WriteFile(file, data, 0666); err != nil {
+			dief("%v", err)
+		}
 	}
 }
 
