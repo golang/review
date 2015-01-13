@@ -316,3 +316,8 @@ func (b *Branch) DefaultCommit(action string) *Commit {
 	}
 	return work[0]
 }
+
+func branchpoint(args []string) {
+	expectZeroArgs(args, "sync")
+	fmt.Fprintf(stdout(), "%s\n", CurrentBranch().Branchpoint())
+}

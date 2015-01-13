@@ -43,6 +43,15 @@ The -n flag prints all commands that would be run, but does not run them.
 
 Descriptions of each command follow.
 
+Branchpoint
+
+	git codereview branchpoint
+
+The branchpoint command prints the commit hash of the most recent change
+on the current branch that is shared with the Gerrit server. This is the point
+where local work branched from the published tree. The command is intended
+mainly for use in scripts. For example, "git rebase -i $(git codereview branchpoint)".
+
 Change
 
 The change command creates and moves between Git branches and maintains the

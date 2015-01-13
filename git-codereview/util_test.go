@@ -24,6 +24,7 @@ type gitTest struct {
 	tmpdir string // temporary directory holding repos
 	server string // server repo root
 	client string // client repo root
+	nwork  int    // number of calls to work method
 }
 
 // resetReadOnlyFlagAll resets windows read-only flag
@@ -60,13 +61,16 @@ func (gt *gitTest) done() {
 }
 
 func (gt *gitTest) work(t *testing.T) {
-	trun(t, gt.client, "git", "checkout", "-b", "work")
-	trun(t, gt.client, "git", "branch", "--set-upstream-to", "origin/master")
+	if gt.nwork == 0 {
+		trun(t, gt.client, "git", "checkout", "-b", "work")
+		trun(t, gt.client, "git", "branch", "--set-upstream-to", "origin/master")
+	}
 
 	// make local change on client
-	write(t, gt.client+"/file", "new content")
+	gt.nwork++
+	write(t, gt.client+"/file", fmt.Sprintf("new content %d", gt.nwork))
 	trun(t, gt.client, "git", "add", "file")
-	trun(t, gt.client, "git", "commit", "-m", "msg\n\nChange-Id: I123456789\n")
+	trun(t, gt.client, "git", "commit", "-m", fmt.Sprintf("msg\n\nChange-Id: I%d23456789\n", gt.nwork))
 }
 
 func newGitTest(t *testing.T) *gitTest {

@@ -6,6 +6,7 @@ package main
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -108,4 +109,22 @@ func TestAmbiguousRevision(t *testing.T) {
 
 	b := CurrentBranch()
 	b.Submitted("I123456789")
+}
+
+func TestBranchpoint(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	// Get hash corresponding to checkout (known to server).
+	hash := strings.TrimSpace(trun(t, gt.client, "git", "rev-parse", "HEAD"))
+
+	// Any work we do after this point should find hash as branchpoint.
+	for i := 0; i < 4; i++ {
+		testMain(t, "branchpoint")
+		t.Logf("numCommits=%d", i)
+		testPrintedStdout(t, hash)
+		testNoStderr(t)
+
+		gt.work(t)
+	}
 }

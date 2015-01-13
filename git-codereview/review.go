@@ -124,6 +124,8 @@ func main() {
 	installHook()
 
 	switch command {
+	case "branchpoint":
+		branchpoint(args)
 	case "change":
 		change(args)
 	case "gofmt":
