@@ -172,7 +172,7 @@ func loadReviewers() {
 		return
 	}
 	countByAddr := map[string]int{}
-	for _, line := range getLines("git", "log", "--format=format:%B") {
+	for _, line := range nonBlankLines(cmdOutput("git", "log", "--format=format:%B")) {
 		if strings.HasPrefix(line, "Reviewed-by:") {
 			f := strings.Fields(line)
 			addr := f[len(f)-1]

@@ -191,13 +191,26 @@ func runDirErr(dir, command string, args ...string) error {
 	return cmd.Run()
 }
 
-// getOutput runs the specified command and returns its combined standard
-// output and standard error outputs.
-// It dies on command errors.
-// NOTE: It should only be used to run commands that return information,
-// **not** commands that make any actual changes.
-func getOutput(command string, args ...string) string {
-	s, err := getOutputErr(command, args...)
+// cmdOutput runs the command line, returning its output.
+// If the command cannot be run or does not exit successfully,
+// cmdOutput dies.
+//
+// NOTE: cmdOutput must be used only to run commands that read state,
+// not for commands that make changes. Commands that make changes
+// should be run using runDirErr so that the -v and -n flags apply to them.
+func cmdOutput(command string, args ...string) string {
+	return cmdOutputDir(".", command, args...)
+}
+
+// cmdOutputDir runs the command line in dir, returning its output.
+// If the command cannot be run or does not exit successfully,
+// cmdOutput dies.
+//
+// NOTE: cmdOutput must be used only to run commands that read state,
+// not for commands that make changes. Commands that make changes
+// should be run using runDirErr so that the -v and -n flags apply to them.
+func cmdOutputDir(dir, command string, args ...string) string {
+	s, err := cmdOutputDirErr(dir, command, args...)
 	if err != nil {
 		fmt.Fprintf(stderr(), "%v\n%s\n", commandString(command, args), s)
 		dief("%v", err)
@@ -205,9 +218,23 @@ func getOutput(command string, args ...string) string {
 	return s
 }
 
-// Given a command and its arguments, getOutputErr returns the same
-// trimmed output as getOutput, but it returns any error instead of exiting.
-func getOutputErr(command string, args ...string) (string, error) {
+// cmdOutputErr runs the command line in dir, returning its output
+// and any error results.
+//
+// NOTE: cmdOutputErr must be used only to run commands that read state,
+// not for commands that make changes. Commands that make changes
+// should be run using runDirErr so that the -v and -n flags apply to them.
+func cmdOutputErr(command string, args ...string) (string, error) {
+	return cmdOutputDirErr(".", command, args...)
+}
+
+// cmdOutputDirErr runs the command line in dir, returning its output
+// and any error results.
+//
+// NOTE: cmdOutputDirErr must be used only to run commands that read state,
+// not for commands that make changes. Commands that make changes
+// should be run using runDirErr so that the -v and -n flags apply to them.
+func cmdOutputDirErr(dir, command string, args ...string) (string, error) {
 	// NOTE: We only show these non-state-modifying commands with -v -v.
 	// Otherwise things like 'git sync -v' show all our internal "find out about
 	// the git repo" commands, which is confusing if you are just trying to find
@@ -215,22 +242,44 @@ func getOutputErr(command string, args ...string) (string, error) {
 	if *verbose > 1 {
 		fmt.Fprintln(stderr(), commandString(command, args))
 	}
-	b, err := exec.Command(command, args...).CombinedOutput()
-	return string(bytes.TrimSpace(b)), err
+	cmd := exec.Command(command, args...)
+	if dir != "." {
+		cmd.Dir = dir
+	}
+	b, err := cmd.CombinedOutput()
+	return string(b), err
 }
 
-// getLines is like getOutput but it returns only non-empty output lines,
-// with leading and trailing spaces removed.
-// NOTE: It should only be used to run commands that return information,
-// **not** commands that make any actual changes.
-func getLines(command string, args ...string) []string {
-	var s []string
-	for _, l := range strings.Split(getOutput(command, args...), "\n") {
-		if len(strings.TrimSpace(l)) > 0 {
-			s = append(s, l)
+// trim is shorthand for strings.TrimSpace.
+func trim(text string) string {
+	return strings.TrimSpace(text)
+}
+
+// trimErr applies strings.TrimSpace to the result of cmdOutput(Dir)Err,
+// passing the error along unmodified.
+func trimErr(text string, err error) (string, error) {
+	return strings.TrimSpace(text), err
+}
+
+// lines returns the lines in text.
+func lines(text string) []string {
+	out := strings.Split(text, "\n")
+	// Split will include a "" after the last line. Remove it.
+	if n := len(out) - 1; n >= 0 && out[n] == "" {
+		out = out[:n]
+	}
+	return out
+}
+
+// nonBlankLines returns the non-blank lines in text.
+func nonBlankLines(text string) []string {
+	var out []string
+	for _, s := range lines(text) {
+		if strings.TrimSpace(s) != "" {
+			out = append(out, s)
 		}
 	}
-	return s
+	return out
 }
 
 func commandString(command string, args []string) string {

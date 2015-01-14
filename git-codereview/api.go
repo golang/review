@@ -41,7 +41,7 @@ func loadGerritOrigin() {
 	}
 
 	// Gerrit must be set as Git's origin remote.
-	origin := getOutput("git", "config", "remote.origin.url")
+	origin := trim(cmdOutput("git", "config", "remote.origin.url"))
 
 	if strings.Contains(origin, "//github.com/") {
 		dief("git origin must be a Gerrit host, not GitHub: %s", origin)
@@ -84,10 +84,10 @@ func loadAuth() {
 
 	// First look in Git's http.cookiefile, which is where Gerrit
 	// now tells users to store this information.
-	if cookieFile, _ := getOutputErr("git", "config", "http.cookiefile"); cookieFile != "" {
+	if cookieFile, _ := trimErr(cmdOutputErr("git", "config", "http.cookiefile")); cookieFile != "" {
 		data, _ := ioutil.ReadFile(cookieFile)
 		maxMatch := -1
-		for _, line := range strings.Split(string(data), "\n") {
+		for _, line := range lines(string(data)) {
 			f := strings.Split(line, "\t")
 			if len(f) >= 7 && (f[0] == auth.host || strings.HasPrefix(f[0], ".") && strings.HasSuffix(auth.host, f[0])) {
 				if len(f[0]) > maxMatch {
@@ -106,7 +106,7 @@ func loadAuth() {
 	// used to tell users to store the information, until the passwords
 	// got so long that old versions of curl couldn't handle them.
 	data, _ := ioutil.ReadFile(os.Getenv("HOME") + "/.netrc")
-	for _, line := range strings.Split(string(data), "\n") {
+	for _, line := range lines(string(data)) {
 		if i := strings.Index(line, "#"); i >= 0 {
 			line = line[:i]
 		}

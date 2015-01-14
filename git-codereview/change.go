@@ -162,7 +162,7 @@ var (
 )
 
 func commitMessageOK() bool {
-	body := getOutput("git", "log", "--format=format:%B", "-n", "1")
+	body := cmdOutput("git", "log", "--format=format:%B", "-n", "1")
 	ok := true
 	if !messageRE.MatchString(body) {
 		fmt.Print(commitMessageWarning)

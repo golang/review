@@ -120,15 +120,15 @@ func runGofmt(flags int) (files []string, stderrText string) {
 
 	// Find files modified in the index compared to the branchpoint.
 	branchpt := b.Branchpoint()
-	if strings.Contains(getOutput("git", "branch", "-r", "--contains", b.Name), "origin/") {
+	if strings.Contains(cmdOutput("git", "branch", "-r", "--contains", b.Name), "origin/") {
 		// This is a branch tag move, not an actual change.
 		// Use HEAD as branch point, so nothing will appear changed.
 		// We don't want to think about gofmt on already published
 		// commits.
 		branchpt = "HEAD"
 	}
-	indexFiles := addRoot(repo, filter(gofmtRequired, getLines("git", "diff", "--name-only", "--diff-filter=ACM", "--cached", branchpt, "--")))
-	localFiles := addRoot(repo, filter(gofmtRequired, getLines("git", "diff", "--name-only", "--diff-filter=ACM")))
+	indexFiles := addRoot(repo, filter(gofmtRequired, nonBlankLines(cmdOutput("git", "diff", "--name-only", "--diff-filter=ACM", "--cached", branchpt, "--"))))
+	localFiles := addRoot(repo, filter(gofmtRequired, nonBlankLines(cmdOutput("git", "diff", "--name-only", "--diff-filter=ACM"))))
 	localFilesMap := stringMap(localFiles)
 	isUnstaged := func(file string) bool {
 		return localFilesMap[file]
@@ -203,7 +203,7 @@ func runGofmt(flags int) (files []string, stderrText string) {
 			}
 			args := []string{"checkout-index", "--temp", "--"}
 			args = append(args, needTemp[:n]...)
-			for _, line := range getLines("git", args...) {
+			for _, line := range nonBlankLines(cmdOutput("git", args...)) {
 				i := strings.Index(line, "\t")
 				if i < 0 {
 					continue
@@ -266,10 +266,7 @@ func runGofmt(flags int) (files []string, stderrText string) {
 	}
 
 	// Build file list.
-	files = strings.Split(stdout.String(), "\n")
-	if len(files) > 0 && files[len(files)-1] == "" {
-		files = files[:len(files)-1]
-	}
+	files = lines(stdout.String())
 
 	// Restage files that need to be restaged.
 	if flags&gofmtWrite != 0 {
@@ -288,7 +285,7 @@ func runGofmt(flags int) (files []string, stderrText string) {
 			run("git", add...)
 		}
 		if len(updateIndex) > 0 {
-			hashes := getLines("git", write...)
+			hashes := nonBlankLines(cmdOutput("git", write...))
 			if len(hashes) != len(write)-3 {
 				dief("git hash-object -w did not write expected number of objects")
 			}

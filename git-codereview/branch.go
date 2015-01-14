@@ -41,7 +41,7 @@ type Commit struct {
 
 // CurrentBranch returns the current branch.
 func CurrentBranch() *Branch {
-	name := getOutput("git", "rev-parse", "--abbrev-ref", "HEAD")
+	name := trim(cmdOutput("git", "rev-parse", "--abbrev-ref", "HEAD"))
 	return &Branch{Name: name}
 }
 
@@ -113,7 +113,7 @@ func (b *Branch) loadPending() {
 	b.loadedPending = true
 
 	// In case of early return.
-	b.branchpoint = getOutput("git", "rev-parse", "HEAD")
+	b.branchpoint = trim(cmdOutput("git", "rev-parse", "HEAD"))
 
 	if b.DetachedHead() {
 		return
@@ -122,7 +122,7 @@ func (b *Branch) loadPending() {
 	// Note: --topo-order means child first, then parent.
 	origin := b.OriginBranch()
 	const numField = 5
-	all := getOutput("git", "log", "--topo-order", "--format=format:%H%x00%h%x00%P%x00%B%x00%s%x00", origin+".."+b.Name, "--")
+	all := trim(cmdOutput("git", "log", "--topo-order", "--format=format:%H%x00%h%x00%P%x00%B%x00%s%x00", origin+".."+b.Name, "--"))
 	fields := strings.Split(all, "\x00")
 	if len(fields) < numField {
 		return // nothing pending
@@ -149,16 +149,16 @@ func (b *Branch) loadPending() {
 			// even if we later see additional commits on a different branch leading down to
 			// a lower location on the same origin branch.
 			// Check c.Merge (the second parent) too, so we don't depend on the parent order.
-			if strings.Contains(getOutput("git", "branch", "-a", "--contains", c.Parent), " "+origin+"\n") {
+			if strings.Contains(cmdOutput("git", "branch", "-a", "--contains", c.Parent), " "+origin+"\n") {
 				foundMergeBranchpoint = true
 				b.branchpoint = c.Parent
 			}
-			if strings.Contains(getOutput("git", "branch", "-a", "--contains", c.Merge), " "+origin+"\n") {
+			if strings.Contains(cmdOutput("git", "branch", "-a", "--contains", c.Merge), " "+origin+"\n") {
 				foundMergeBranchpoint = true
 				b.branchpoint = c.Merge
 			}
 		}
-		for _, line := range strings.Split(c.Message, "\n") {
+		for _, line := range lines(c.Message) {
 			// Note: Keep going even if we find one, so that
 			// we take the last Change-Id line, just in case
 			// there is a commit message quoting another
@@ -175,7 +175,7 @@ func (b *Branch) loadPending() {
 		}
 	}
 	b.commitsAhead = len(b.pending)
-	b.commitsBehind = len(getOutput("git", "log", "--format=format:x", b.Name+".."+b.OriginBranch(), "--"))
+	b.commitsBehind = len(trim(cmdOutput("git", "log", "--format=format:x", b.Name+".."+b.OriginBranch(), "--")))
 }
 
 // Submitted reports whether some form of b's pending commit
@@ -185,7 +185,7 @@ func (b *Branch) Submitted(id string) bool {
 		return false
 	}
 	line := "Change-Id: " + id
-	out := getOutput("git", "log", "-n", "1", "-F", "--grep", line, b.Name+".."+b.OriginBranch(), "--")
+	out := cmdOutput("git", "log", "-n", "1", "-F", "--grep", line, b.Name+".."+b.OriginBranch(), "--")
 	return strings.Contains(out, line)
 }
 
@@ -193,7 +193,7 @@ var stagedRE = regexp.MustCompile(`^[ACDMR]  `)
 
 // HasStagedChanges reports whether the working directory contains staged changes.
 func HasStagedChanges() bool {
-	for _, s := range getLines("git", "status", "-b", "--porcelain") {
+	for _, s := range nonBlankLines(cmdOutput("git", "status", "-b", "--porcelain")) {
 		if stagedRE.MatchString(s) {
 			return true
 		}
@@ -205,7 +205,7 @@ var unstagedRE = regexp.MustCompile(`^.[ACDMR]`)
 
 // HasUnstagedChanges reports whether the working directory contains unstaged changes.
 func HasUnstagedChanges() bool {
-	for _, s := range getLines("git", "status", "-b", "--porcelain") {
+	for _, s := range nonBlankLines(cmdOutput("git", "status", "-b", "--porcelain")) {
 		if unstagedRE.MatchString(s) {
 			return true
 		}
@@ -220,8 +220,7 @@ func HasUnstagedChanges() bool {
 // the files (or the from, to fields of a rename or copy) are quoted C strings.
 // For now, we expect the caller only shows these to the user, so these exceptions are okay.
 func LocalChanges() (staged, unstaged, untracked []string) {
-	// NOTE: Cannot use getLines, because it throws away leading spaces.
-	for _, s := range strings.Split(getOutput("git", "status", "-b", "--porcelain"), "\n") {
+	for _, s := range lines(cmdOutput("git", "status", "-b", "--porcelain")) {
 		if len(s) < 4 || s[2] != ' ' {
 			continue
 		}
@@ -245,7 +244,7 @@ func LocalChanges() (staged, unstaged, untracked []string) {
 func LocalBranches() []*Branch {
 	var branches []*Branch
 	current := CurrentBranch()
-	for _, s := range getLines("git", "branch", "-q") {
+	for _, s := range nonBlankLines(cmdOutput("git", "branch", "-q")) {
 		s = strings.TrimSpace(s)
 		if strings.HasPrefix(s, "* ") {
 			// * marks current branch in output.
@@ -265,7 +264,7 @@ func LocalBranches() []*Branch {
 
 func OriginBranches() []string {
 	var branches []string
-	for _, line := range getLines("git", "branch", "-a", "-q") {
+	for _, line := range nonBlankLines(cmdOutput("git", "branch", "-a", "-q")) {
 		line = strings.TrimSpace(line)
 		if i := strings.Index(line, " -> "); i >= 0 {
 			line = line[:i]
