@@ -73,11 +73,16 @@ func (gt *gitTest) work(t *testing.T) {
 	trun(t, gt.client, "git", "commit", "-m", fmt.Sprintf("msg\n\nChange-Id: I%d23456789\n", gt.nwork))
 }
 
-func newGitTest(t *testing.T) *gitTest {
+func newGitTest(t *testing.T) (gt *gitTest) {
 	tmpdir, err := ioutil.TempDir("", "git-codereview-test")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if gt == nil {
+			os.RemoveAll(tmpdir)
+		}
+	}()
 
 	server := tmpdir + "/git-origin"
 
@@ -125,14 +130,12 @@ func newGitTest(t *testing.T) *gitTest {
 		t.Fatal(err)
 	}
 
-	gt := &gitTest{
+	return &gitTest{
 		pwd:    pwd,
 		tmpdir: tmpdir,
 		server: server,
 		client: client,
 	}
-
-	return gt
 }
 
 func (gt *gitTest) removeStubHooks() {
