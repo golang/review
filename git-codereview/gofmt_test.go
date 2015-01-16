@@ -59,6 +59,74 @@ func TestGofmt(t *testing.T) {
 	testPrintedStderr(t, "gofmt reported errors", "broken.go")
 }
 
+func TestGofmtSubdir(t *testing.T) {
+	// Check that gofmt prints relative paths for files in or below the current directory.
+	gt := newGitTest(t)
+	defer gt.done()
+
+	gt.work(t)
+
+	mkdir(t, gt.client+"/dir1")
+	mkdir(t, gt.client+"/longnamedir2")
+	write(t, gt.client+"/dir1/bad1.go", badGo)
+	write(t, gt.client+"/longnamedir2/bad2.go", badGo)
+	trun(t, gt.client, "git", "add", ".") // make files tracked
+
+	chdir(t, gt.client)
+	testMain(t, "gofmt", "-l")
+	testPrintedStdout(t, "dir1/bad1.go", "longnamedir2/bad2.go")
+
+	chdir(t, gt.client+"/dir1")
+	testMain(t, "gofmt", "-l")
+	testPrintedStdout(t, "bad1.go", "!/bad1.go", "longnamedir2/bad2.go")
+
+	chdir(t, gt.client+"/longnamedir2")
+	testMain(t, "gofmt", "-l")
+	testPrintedStdout(t, "bad2.go", "!/bad2.go", "dir1/bad1.go")
+
+	mkdir(t, gt.client+"/z")
+	chdir(t, gt.client+"/z")
+	testMain(t, "gofmt", "-l")
+	testPrintedStdout(t, "longnamedir2/bad2.go", "dir1/bad1.go")
+}
+
+func TestGofmtSubdirIndexCheckout(t *testing.T) {
+	// Like TestGofmtSubdir but bad Go files are only in index, not working copy.
+	// Check also that prints a correct path (relative or absolute) for files outside the
+	// current directory, even when running with Git before 2.3.0 which doesn't
+	// handle those right in git checkout-index --temp.
+
+	gt := newGitTest(t)
+	defer gt.done()
+
+	gt.work(t)
+
+	mkdir(t, gt.client+"/dir1")
+	mkdir(t, gt.client+"/longnamedir2")
+	write(t, gt.client+"/dir1/bad1.go", badGo)
+	write(t, gt.client+"/longnamedir2/bad2.go", badGo)
+	trun(t, gt.client, "git", "add", ".") // put files in index
+	write(t, gt.client+"/dir1/bad1.go", goodGo)
+	write(t, gt.client+"/longnamedir2/bad2.go", goodGo)
+
+	chdir(t, gt.client)
+	testMain(t, "gofmt", "-l")
+	testPrintedStdout(t, "dir1/bad1.go (staged)", "longnamedir2/bad2.go (staged)")
+
+	chdir(t, gt.client+"/dir1")
+	testMain(t, "gofmt", "-l")
+	testPrintedStdout(t, "bad1.go (staged)", "!/bad1.go", "longnamedir2/bad2.go (staged)")
+
+	chdir(t, gt.client+"/longnamedir2")
+	testMain(t, "gofmt", "-l")
+	testPrintedStdout(t, "bad2.go (staged)", "!/bad2.go", "dir1/bad1.go (staged)")
+
+	mkdir(t, gt.client+"/z")
+	chdir(t, gt.client+"/z")
+	testMain(t, "gofmt", "-l")
+	testPrintedStdout(t, "longnamedir2/bad2.go (staged)", "dir1/bad1.go (staged)")
+}
+
 func TestGofmtUnstaged(t *testing.T) {
 	// Test when unstaged files are different from staged ones.
 	// See TestHookPreCommitUnstaged for an explanation.

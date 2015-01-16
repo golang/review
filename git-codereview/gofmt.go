@@ -203,14 +203,18 @@ func runGofmt(flags int) (files []string, stderrText string) {
 			}
 			args := []string{"checkout-index", "--temp", "--"}
 			args = append(args, needTemp[:n]...)
-			for _, line := range nonBlankLines(cmdOutput("git", args...)) {
+			// Until Git 2.3.0, git checkout-index --temp is broken if not run in the repo root.
+			// Work around by running in the repo root.
+			// http://article.gmane.org/gmane.comp.version-control.git/261739
+			// https://github.com/git/git/commit/74c4de5
+			for _, line := range nonBlankLines(cmdOutputDir(repo, "git", args...)) {
 				i := strings.Index(line, "\t")
 				if i < 0 {
 					continue
 				}
 				temp, file := line[:i], line[i+1:]
 				temp = filepath.Join(repo, temp)
-				file = filepath.Join(pwd, file)
+				file = filepath.Join(repo, file)
 				tempToFile[temp] = file
 				fileToTemp[file] = temp
 			}

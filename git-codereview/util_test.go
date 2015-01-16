@@ -150,6 +150,12 @@ func mkdir(t *testing.T, dir string) {
 	}
 }
 
+func chdir(t *testing.T, dir string) {
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func write(t *testing.T, file, data string) {
 	if err := ioutil.WriteFile(file, []byte(data), 0666); err != nil {
 		t.Fatal(err)
