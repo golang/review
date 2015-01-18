@@ -197,7 +197,7 @@ func TestGofmtFastForwardMerge(t *testing.T) {
 	// update client
 	trun(t, gt.client, "git", "checkout", "master")
 	trun(t, gt.client, "git", "pull")
-	trun(t, gt.client, "git", "change", "dev.branch")
+	trun(t, gt.client, "git", "codereview", "change", "dev.branch")
 	trun(t, gt.client, "git", "pull")
 
 	// merge master into dev.branch, fast forward merge
