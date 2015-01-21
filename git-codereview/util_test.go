@@ -178,10 +178,14 @@ func trun(t *testing.T, dir string, cmdline ...string) string {
 	return string(out)
 }
 
-// fromSlash is like filepath.FromSlash, but it ignores ! at the start of the path.
+// fromSlash is like filepath.FromSlash, but it ignores ! at the start of the path
+// and " (staged)" at the end.
 func fromSlash(path string) string {
 	if len(path) > 0 && path[0] == '!' {
-		return "!" + filepath.FromSlash(path[1:])
+		return "!" + fromSlash(path[1:])
+	}
+	if strings.HasSuffix(path, " (staged)") {
+		return fromSlash(path[:len(path)-len(" (staged)")]) + " (staged)"
 	}
 	return filepath.FromSlash(path)
 }

@@ -74,20 +74,20 @@ func TestGofmtSubdir(t *testing.T) {
 
 	chdir(t, gt.client)
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "dir1/bad1.go", "longnamedir2/bad2.go")
+	testPrintedStdout(t, fromSlash("dir1/bad1.go"), fromSlash("longnamedir2/bad2.go"))
 
 	chdir(t, gt.client+"/dir1")
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "bad1.go", "!/bad1.go", "longnamedir2/bad2.go")
+	testPrintedStdout(t, "bad1.go", fromSlash("!/bad1.go"), fromSlash("longnamedir2/bad2.go"))
 
 	chdir(t, gt.client+"/longnamedir2")
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "bad2.go", "!/bad2.go", "dir1/bad1.go")
+	testPrintedStdout(t, "bad2.go", fromSlash("!/bad2.go"), fromSlash("dir1/bad1.go"))
 
 	mkdir(t, gt.client+"/z")
 	chdir(t, gt.client+"/z")
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "longnamedir2/bad2.go", "dir1/bad1.go")
+	testPrintedStdout(t, fromSlash("longnamedir2/bad2.go"), fromSlash("dir1/bad1.go"))
 }
 
 func TestGofmtSubdirIndexCheckout(t *testing.T) {
@@ -111,20 +111,20 @@ func TestGofmtSubdirIndexCheckout(t *testing.T) {
 
 	chdir(t, gt.client)
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "dir1/bad1.go (staged)", "longnamedir2/bad2.go (staged)")
+	testPrintedStdout(t, fromSlash("dir1/bad1.go (staged)"), fromSlash("longnamedir2/bad2.go (staged)"))
 
 	chdir(t, gt.client+"/dir1")
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "bad1.go (staged)", "!/bad1.go", "longnamedir2/bad2.go (staged)")
+	testPrintedStdout(t, "bad1.go (staged)", fromSlash("!/bad1.go"), fromSlash("longnamedir2/bad2.go (staged)"))
 
 	chdir(t, gt.client+"/longnamedir2")
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "bad2.go (staged)", "!/bad2.go", "dir1/bad1.go (staged)")
+	testPrintedStdout(t, "bad2.go (staged)", fromSlash("!/bad2.go"), fromSlash("dir1/bad1.go (staged)"))
 
 	mkdir(t, gt.client+"/z")
 	chdir(t, gt.client+"/z")
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "longnamedir2/bad2.go (staged)", "dir1/bad1.go (staged)")
+	testPrintedStdout(t, fromSlash("longnamedir2/bad2.go (staged)"), fromSlash("dir1/bad1.go (staged)"))
 }
 
 func TestGofmtUnstaged(t *testing.T) {
