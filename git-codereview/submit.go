@@ -12,7 +12,7 @@ import (
 
 // TODO(rsc): Add -tbr, along with standard exceptions (doc/go1.5.txt)
 
-func submit(args []string) {
+func cmdSubmit(args []string) {
 	flags.Usage = func() {
 		fmt.Fprintf(stderr(), "Usage: %s submit %s [commit-hash]\n", os.Args[0], globalFlags)
 	}

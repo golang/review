@@ -127,25 +127,25 @@ func main() {
 
 	switch command {
 	case "branchpoint":
-		branchpoint(args)
+		cmdBranchpoint(args)
 	case "change":
-		change(args)
+		cmdChange(args)
 	case "gofmt":
-		gofmt(args)
+		cmdGofmt(args)
 	case "hook-invoke":
-		hookInvoke(args)
+		cmdHookInvoke(args)
 	case "hooks":
 		// done - installHook already ran
 	case "mail", "m":
-		mail(args)
+		cmdMail(args)
 	case "pending":
-		pending(args)
+		cmdPending(args)
 	case "rebase-work":
-		rebasework(args)
+		cmdRebasework(args)
 	case "submit":
-		submit(args)
+		cmdSubmit(args)
 	case "sync":
-		doSync(args)
+		cmdSync(args)
 	case "test-loadAuth": // for testing only
 		loadAuth()
 	default:

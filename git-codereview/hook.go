@@ -97,7 +97,7 @@ var oldHookScript = `#!/bin/sh
 exec git-review hook-invoke %s "$@"
 `
 
-func hookInvoke(args []string) {
+func cmdHookInvoke(args []string) {
 	if len(args) == 0 {
 		dief("usage: git-codereview hook-invoke <hook-name> [args...]")
 	}

@@ -6,7 +6,7 @@ package main
 
 import "strings"
 
-func doSync(args []string) {
+func cmdSync(args []string) {
 	expectZeroArgs(args, "sync")
 
 	// Get current branch and commit ID for fixup after pull.

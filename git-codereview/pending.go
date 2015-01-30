@@ -52,7 +52,7 @@ func (b *pendingBranch) load() {
 	}
 }
 
-func pending(args []string) {
+func cmdPending(args []string) {
 	flags.BoolVar(&pendingCurrentOnly, "c", false, "show only current branch")
 	flags.BoolVar(&pendingLocal, "l", false, "use only local information - no network operations")
 	flags.BoolVar(&pendingShort, "s", false, "show short listing")

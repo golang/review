@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-func mail(args []string) {
+func cmdMail(args []string) {
 	var (
 		diff   = flags.Bool("diff", false, "show change commit diff and don't upload or mail")
 		force  = flags.Bool("f", false, "mail even if there are staged changes")

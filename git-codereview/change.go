@@ -14,7 +14,7 @@ import (
 var changeAuto bool
 var changeQuick bool
 
-func change(args []string) {
+func cmdChange(args []string) {
 	flags.BoolVar(&changeAuto, "a", false, "add changes to any tracked files")
 	flags.BoolVar(&changeQuick, "q", false, "do not edit pending commit msg")
 	flags.Parse(args)

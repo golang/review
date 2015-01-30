@@ -347,12 +347,12 @@ func (b *Branch) DefaultCommit(action string) *Commit {
 	return work[0]
 }
 
-func branchpoint(args []string) {
+func cmdBranchpoint(args []string) {
 	expectZeroArgs(args, "sync")
 	fmt.Fprintf(stdout(), "%s\n", CurrentBranch().Branchpoint())
 }
 
-func rebasework(args []string) {
+func cmdRebaseWork(args []string) {
 	expectZeroArgs(args, "rebase-work")
 	b := CurrentBranch()
 	if HasStagedChanges() || HasUnstagedChanges() {

@@ -17,7 +17,7 @@ import (
 
 var gofmtList bool
 
-func gofmt(args []string) {
+func cmdGofmt(args []string) {
 	flags.BoolVar(&gofmtList, "l", false, "list files that need to be formatted")
 	flags.Parse(args)
 	if len(flag.Args()) > 0 {
