@@ -130,12 +130,13 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 		t.Fatal(err)
 	}
 
-	return &gitTest{
+	gt = &gitTest{
 		pwd:    pwd,
 		tmpdir: tmpdir,
 		server: server,
 		client: client,
 	}
+	return gt
 }
 
 func (gt *gitTest) removeStubHooks() {
