@@ -140,6 +140,8 @@ func main() {
 		mail(args)
 	case "pending":
 		pending(args)
+	case "rebase-work":
+		rebasework(args)
 	case "submit":
 		submit(args)
 	case "sync":

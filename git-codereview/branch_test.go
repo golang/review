@@ -129,6 +129,32 @@ func TestBranchpoint(t *testing.T) {
 	}
 }
 
+func TestRebaseWork(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	// Get hash corresponding to checkout (known to server).
+	// Any work we do after this point should find hash as branchpoint.
+	hash := strings.TrimSpace(trun(t, gt.client, "git", "rev-parse", "HEAD"))
+
+	testMainDied(t, "rebase-work", "-n")
+	testPrintedStderr(t, "no pending work")
+
+	write(t, gt.client+"/file", "uncommitted")
+	testMainDied(t, "rebase-work", "-n")
+	testPrintedStderr(t, "cannot rebase with uncommitted work")
+
+	gt.work(t)
+
+	for i := 0; i < 4; i++ {
+		testMain(t, "rebase-work", "-n")
+		t.Logf("numCommits=%d", i)
+		testPrintedStderr(t, "git rebase -i "+hash)
+
+		gt.work(t)
+	}
+}
+
 func TestBranchpointMerge(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()

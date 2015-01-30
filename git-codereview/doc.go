@@ -32,6 +32,7 @@ aliases in their .gitconfig file:
 		gofmt = codereview gofmt
 		mail = codereview mail
 		pending = codereview pending
+		rebase-work = codereview rebase-work
 		submit = codereview submit
 		sync = codereview sync
 
@@ -50,7 +51,8 @@ Branchpoint
 The branchpoint command prints the commit hash of the most recent change
 on the current branch that is shared with the Gerrit server. This is the point
 where local work branched from the published tree. The command is intended
-mainly for use in scripts. For example, "git rebase -i $(git codereview branchpoint)".
+mainly for use in scripts. For example, "git diff $(git codereview branchpoint)"
+or "git log $(git codereview branchpoint)..HEAD".
 
 Change
 
@@ -155,6 +157,14 @@ and staged, unstaged, and untracked files in the local repository.
 The -l flag causes the command to use only locally available information.
 By default, it fetches recent commits and code review information from the
 Gerrit server.
+
+Rebase-work
+
+The rebase-work command runs git rebase in interactive mode over pending changes.
+It is shorthand for "git rebase -i $(git codereview branchpoint)".
+It differs from plain "git rebase -i" in that the latter will try to incorporate
+new commits from the origin branch during the rebase, and git rebase-work
+does not.
 
 Submit
 

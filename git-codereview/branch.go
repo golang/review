@@ -351,3 +351,15 @@ func branchpoint(args []string) {
 	expectZeroArgs(args, "sync")
 	fmt.Fprintf(stdout(), "%s\n", CurrentBranch().Branchpoint())
 }
+
+func rebasework(args []string) {
+	expectZeroArgs(args, "rebase-work")
+	b := CurrentBranch()
+	if HasStagedChanges() || HasUnstagedChanges() {
+		dief("cannot rebase with uncommitted work")
+	}
+	if len(b.Pending()) == 0 {
+		dief("no pending work")
+	}
+	run("git", "rebase", "-i", b.Branchpoint())
+}
