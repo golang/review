@@ -13,7 +13,7 @@ func cmdSync(args []string) {
 	b := CurrentBranch()
 	var id string
 	if work := b.Pending(); len(work) > 0 {
-		id = work[len(work)-1].ChangeID
+		id = work[0].ChangeID
 	}
 
 	// Don't sync with staged or unstaged changes.

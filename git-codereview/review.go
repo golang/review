@@ -141,7 +141,7 @@ func main() {
 	case "pending":
 		cmdPending(args)
 	case "rebase-work":
-		cmdRebasework(args)
+		cmdRebaseWork(args)
 	case "submit":
 		cmdSubmit(args)
 	case "sync":

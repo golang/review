@@ -20,11 +20,12 @@ import (
 )
 
 type gitTest struct {
-	pwd    string // current directory before test
-	tmpdir string // temporary directory holding repos
-	server string // server repo root
-	client string // client repo root
-	nwork  int    // number of calls to work method
+	pwd         string // current directory before test
+	tmpdir      string // temporary directory holding repos
+	server      string // server repo root
+	client      string // client repo root
+	nwork       int    // number of calls to work method
+	nworkServer int    // number of calls to serverWork method
 }
 
 // resetReadOnlyFlagAll resets windows read-only flag
@@ -71,7 +72,27 @@ func (gt *gitTest) work(t *testing.T) {
 	gt.nwork++
 	write(t, gt.client+"/file", fmt.Sprintf("new content %d", gt.nwork))
 	trun(t, gt.client, "git", "add", "file")
-	trun(t, gt.client, "git", "commit", "-m", fmt.Sprintf("msg\n\nChange-Id: I%d23456789\n", gt.nwork))
+	suffix := ""
+	if gt.nwork > 1 {
+		suffix = fmt.Sprintf(" #%d", gt.nwork)
+	}
+	trun(t, gt.client, "git", "commit", "-m", fmt.Sprintf("msg%s\n\nChange-Id: I%d23456789\n", suffix, gt.nwork))
+}
+
+func (gt *gitTest) serverWork(t *testing.T) {
+	// make change on server
+	// duplicating the changes of gt.work to simulate them
+	// having gone through Gerrit and submitted with
+	// different times and commit hashes but the same content.
+	gt.nworkServer++
+	write(t, gt.server+"/file", fmt.Sprintf("new content %d", gt.nworkServer))
+	trun(t, gt.server, "git", "add", "file")
+	suffix := ""
+	if gt.nworkServer > 1 {
+		suffix = fmt.Sprintf(" #%d", gt.nworkServer)
+	}
+	trun(t, gt.server, "git", "commit", "-m", fmt.Sprintf("msg%s\n\nChange-Id: I%d23456789\n", suffix, gt.nworkServer))
+
 }
 
 func newGitTest(t *testing.T) (gt *gitTest) {
