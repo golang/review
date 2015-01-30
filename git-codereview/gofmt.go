@@ -120,7 +120,7 @@ func runGofmt(flags int) (files []string, stderrText string) {
 
 	// Find files modified in the index compared to the branchpoint.
 	branchpt := b.Branchpoint()
-	if strings.Contains(cmdOutput("git", "branch", "-r", "--contains", b.Name), "origin/") {
+	if strings.Contains(cmdOutput("git", "branch", "-r", "--contains", b.FullName()), "origin/") {
 		// This is a branch tag move, not an actual change.
 		// Use HEAD as branch point, so nothing will appear changed.
 		// We don't want to think about gofmt on already published

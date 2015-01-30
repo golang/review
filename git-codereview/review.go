@@ -88,10 +88,12 @@ Available commands:
 	mail -diff
 		Show the changes but do not send mail or upload.
 
-	pending [-l]
+	pending [-c] [-l] [-s]
 		Show the status of all pending changes and staged, unstaged,
 		and untracked files in the local repository.
+		If -c is specified, show only changes on the current branch.
 		If -l is specified, only use locally available information.
+		If -s is specified, show short output.
 
 	submit
 		Push the pending change to the Gerrit server and tell Gerrit to

@@ -42,6 +42,7 @@ func TestPendingBasic(t *testing.T) {
 
 	testPending(t, `
 		work REVHASH..REVHASH (current branch)
+		+ REVHASH
 			msg
 			
 			Change-Id: I123456789
@@ -83,7 +84,26 @@ func TestPendingComplex(t *testing.T) {
 	write(t, gt.client+"/bfile", "untracked")
 
 	testPending(t, `
+		work2 REVHASH..REVHASH (current branch)
+		+ uncommitted changes
+			Files untracked:
+				bfile
+			Files unstaged:
+				file
+				file1
+			Files staged:
+				afile1
+				file1
+
+		+ REVHASH
+			some changes
+
+			Files in this change:
+				file
+				file1
+
 		work REVHASH..REVHASH (5 behind)
+		+ REVHASH
 			msg
 			
 			Change-Id: I123456789
@@ -91,38 +111,41 @@ func TestPendingComplex(t *testing.T) {
 			Files in this change:
 				file
 
-		work2 REVHASH..REVHASH (current branch)
-			some changes
-		
-			Files in this change:
-				file
-				file1
-			Files staged:
-				afile1
-				file1
-			Files unstaged:
-				file
-				file1
-			Files untracked:
-				bfile
-		
 	`)
 
 	testPendingArgs(t, []string{"-c"}, `
 		work2 REVHASH..REVHASH (current branch)
-			some changes
-		
-			Files in this change:
+		+ uncommitted changes
+			Files untracked:
+				bfile
+			Files unstaged:
 				file
 				file1
 			Files staged:
 				afile1
 				file1
+
+		+ REVHASH
+			some changes
+		
+			Files in this change:
+				file
+				file1
+		
+	`)
+
+	testPendingArgs(t, []string{"-c", "-s"}, `
+		work2 REVHASH..REVHASH (current branch)
+		+ uncommitted changes
+			Files untracked:
+				bfile
 			Files unstaged:
 				file
 				file1
-			Files untracked:
-				bfile
+			Files staged:
+				afile1
+				file1
+		+ REVHASH some changes
 		
 	`)
 }
@@ -140,10 +163,19 @@ func TestPendingErrors(t *testing.T) {
 			ERROR: Branch contains 1 commit not on origin/master.
 				Do not commit directly to master branch.
 		
+		+ REVHASH
 			v3
 		
 			Files in this change:
 				file
+
+	`)
+
+	testPendingArgs(t, []string{"-s"}, `
+		master REVHASH..REVHASH (current branch)
+			ERROR: Branch contains 1 commit not on origin/master.
+				Do not commit directly to master branch.
+		+ REVHASH v3
 
 	`)
 }
@@ -165,12 +197,12 @@ func TestPendingMultiChange(t *testing.T) {
 	testPending(t, `
 		work REVHASH..REVHASH (current branch)
 		+ uncommitted changes
-			Files staged:
-				file
-			Files unstaged:
-				file
 			Files untracked:
 				file2
+			Files unstaged:
+				file
+			Files staged:
+				file
 		
 		+ REVHASH
 			v2
@@ -187,6 +219,20 @@ func TestPendingMultiChange(t *testing.T) {
 				file
 
 	`)
+
+	testPendingArgs(t, []string{"-s"}, `
+		work REVHASH..REVHASH (current branch)
+		+ uncommitted changes
+			Files untracked:
+				file2
+			Files unstaged:
+				file
+			Files staged:
+				file
+		+ REVHASH v2
+		+ REVHASH msg
+
+	`)
 }
 
 func TestPendingGerrit(t *testing.T) {
@@ -200,6 +246,7 @@ func TestPendingGerrit(t *testing.T) {
 	// Test error from Gerrit server.
 	testPending(t, `
 		work REVHASH..REVHASH (current branch)
+		+ REVHASH
 			msg
 			
 			Change-Id: I123456789
@@ -219,6 +266,7 @@ func TestPendingGerrit(t *testing.T) {
 	trun(t, gt.server, "git", "commit", "-m", "msg")
 	testPendingArgs(t, []string{"-l"}, `
 		work REVHASH..REVHASH (current branch)
+		+ REVHASH
 			msg
 			
 			Change-Id: I123456789
@@ -228,9 +276,16 @@ func TestPendingGerrit(t *testing.T) {
 
 	`)
 
+	testPendingArgs(t, []string{"-l", "-s"}, `
+		work REVHASH..REVHASH (current branch)
+		+ REVHASH msg
+
+	`)
+
 	// Without -l, the 1 behind should appear, as should Gerrit information.
 	testPending(t, `
-		work REVHASH..REVHASH http://127.0.0.1:PORT/1234 (current branch, mailed, submitted, 1 behind)
+		work REVHASH..REVHASH (current branch, all mailed, all submitted, 1 behind)
+		+ REVHASH http://127.0.0.1:PORT/1234 (mailed, submitted)
 			msg
 			
 			Change-Id: I123456789
@@ -245,15 +300,27 @@ func TestPendingGerrit(t *testing.T) {
 
 	`)
 
+	testPendingArgs(t, []string{"-s"}, `
+		work REVHASH..REVHASH (current branch, all mailed, all submitted, 1 behind)
+		+ REVHASH msg (CL 1234 -2 +1, mailed, submitted)
+
+	`)
+
 	// Since pending did a fetch, 1 behind should show up even with -l.
 	testPendingArgs(t, []string{"-l"}, `
 		work REVHASH..REVHASH (current branch, 1 behind)
+		+ REVHASH
 			msg
 			
 			Change-Id: I123456789
 
 			Files in this change:
 				file
+
+	`)
+	testPendingArgs(t, []string{"-l", "-s"}, `
+		work REVHASH..REVHASH (current branch, 1 behind)
+		+ REVHASH msg
 
 	`)
 }
@@ -284,12 +351,12 @@ func TestPendingGerritMultiChange(t *testing.T) {
 	testPending(t, `
 		work REVHASH..REVHASH (current branch, all mailed)
 		+ uncommitted changes
-			Files staged:
-				file
-			Files unstaged:
-				file
 			Files untracked:
 				file2
+			Files unstaged:
+				file
+			Files staged:
+				file
 		
 		+ REVHASH http://127.0.0.1:PORT/1234 (mailed)
 			v2
@@ -316,6 +383,20 @@ func TestPendingGerritMultiChange(t *testing.T) {
 				+2 The Owner
 			Files in this change:
 				file
+
+	`)
+
+	testPendingArgs(t, []string{"-s"}, `
+		work REVHASH..REVHASH (current branch, all mailed)
+		+ uncommitted changes
+			Files untracked:
+				file2
+			Files unstaged:
+				file
+			Files staged:
+				file
+		+ REVHASH v2 (CL 1234 -2 +1, mailed)
+		+ REVHASH msg (CL 1234 -2 +1, mailed, submitted)
 
 	`)
 }

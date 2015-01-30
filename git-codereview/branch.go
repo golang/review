@@ -41,7 +41,7 @@ type Commit struct {
 
 // CurrentBranch returns the current branch.
 func CurrentBranch() *Branch {
-	name := trim(cmdOutput("git", "rev-parse", "--abbrev-ref", "HEAD"))
+	name := strings.TrimPrefix(trim(cmdOutput("git", "rev-parse", "--abbrev-ref", "HEAD")), "heads/")
 	return &Branch{Name: name}
 }
 
@@ -80,6 +80,13 @@ func (b *Branch) OriginBranch() string {
 	fmt.Fprintf(stderr(), "%v\n%s\n", commandString(argv[0], argv[1:]), out)
 	dief("%v", err)
 	panic("not reached")
+}
+
+func (b *Branch) FullName() string {
+	if b.Name != "HEAD" {
+		return "refs/heads/" + b.Name
+	}
+	return b.Name
 }
 
 // IsLocalOnly reports whether b is a local work branch (only local, not known to remote server).
@@ -122,7 +129,7 @@ func (b *Branch) loadPending() {
 	// Note: --topo-order means child first, then parent.
 	origin := b.OriginBranch()
 	const numField = 5
-	all := trim(cmdOutput("git", "log", "--topo-order", "--format=format:%H%x00%h%x00%P%x00%B%x00%s%x00", origin+".."+b.Name, "--"))
+	all := trim(cmdOutput("git", "log", "--topo-order", "--format=format:%H%x00%h%x00%P%x00%B%x00%s%x00", origin+".."+b.FullName(), "--"))
 	fields := strings.Split(all, "\x00")
 	if len(fields) < numField {
 		return // nothing pending
@@ -175,7 +182,7 @@ func (b *Branch) loadPending() {
 		}
 	}
 	b.commitsAhead = len(b.pending)
-	b.commitsBehind = len(trim(cmdOutput("git", "log", "--format=format:x", b.Name+".."+b.OriginBranch(), "--")))
+	b.commitsBehind = len(trim(cmdOutput("git", "log", "--format=format:x", b.FullName()+".."+b.OriginBranch(), "--")))
 }
 
 // Submitted reports whether some form of b's pending commit

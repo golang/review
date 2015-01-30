@@ -64,6 +64,7 @@ func (gt *gitTest) work(t *testing.T) {
 	if gt.nwork == 0 {
 		trun(t, gt.client, "git", "checkout", "-b", "work")
 		trun(t, gt.client, "git", "branch", "--set-upstream-to", "origin/master")
+		trun(t, gt.client, "git", "tag", "work") // make sure commands do the right thing when there is a tag of the same name
 	}
 
 	// make local change on client

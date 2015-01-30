@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	pendingLocal   bool // -l flag, use only local operations (no network)
-	pendingCurrent bool // -c flag, show only current branch
+	pendingLocal       bool // -l flag, use only local operations (no network)
+	pendingCurrentOnly bool // -c flag, show only current branch
+	pendingShort       bool // -s flag, short display
 )
 
 // A pendingBranch collects information about a single pending branch.
@@ -52,11 +53,12 @@ func (b *pendingBranch) load() {
 }
 
 func pending(args []string) {
-	flags.BoolVar(&pendingCurrent, "c", false, "show only current branch")
+	flags.BoolVar(&pendingCurrentOnly, "c", false, "show only current branch")
 	flags.BoolVar(&pendingLocal, "l", false, "use only local information - no network operations")
+	flags.BoolVar(&pendingShort, "s", false, "show short listing")
 	flags.Parse(args)
 	if len(flags.Args()) > 0 {
-		fmt.Fprintf(stderr(), "Usage: %s pending %s [-l]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s pending %s [-c] [-l] [-s]\n", os.Args[0], globalFlags)
 		os.Exit(2)
 	}
 
@@ -67,13 +69,15 @@ func pending(args []string) {
 	}
 
 	// Build list of pendingBranch structs to be filled in.
+	// The current branch is always first.
 	var branches []*pendingBranch
-	if pendingCurrent {
-		branches = []*pendingBranch{{Branch: CurrentBranch(), current: true}}
-	} else {
+	branches = []*pendingBranch{{Branch: CurrentBranch(), current: true}}
+	if !pendingCurrentOnly {
 		current := CurrentBranch().Name
 		for _, b := range LocalBranches() {
-			branches = append(branches, &pendingBranch{Branch: b, current: b.Name == current})
+			if b.Name != current {
+				branches = append(branches, &pendingBranch{Branch: b})
+			}
 		}
 	}
 
@@ -110,45 +114,11 @@ func pending(args []string) {
 		<-done
 	}
 
-	// Print output, like:
-	//	pending 2378abf..d8fcb99 https://go-review.googlesource.com/1620 (current branch, mailed, submitted, 1 behind)
-	//		git-codereview: expand pending output
-	//
-	//		for pending:
-	//		- show full commit message
-	//		- show information about being behind upstream
-	//		- show list of modified files
-	//		- for current branch, show staged, unstaged, untracked files
-	//		- warn about being ahead of upstream on master
-	//		- warn about being multiple commits ahead of upstream
-	//
-	//		- add same warnings to change
-	//		- add change -a (mostly unrelated, but prompted by this work)
-	//
-	//		Change-Id: Ie480ba5b66cc07faffca421ee6c9623d35204696
-	//
-	//		Code-Review:
-	//			+2 Andrew Gerrand, Rob Pike
-	//		Files in this change:
-	//			git-codereview/api.go
-	//			git-codereview/branch.go
-	//			git-codereview/change.go
-	//			git-codereview/pending.go
-	//			git-codereview/review.go
-	//			git-codereview/submit.go
-	//			git-codereview/sync.go
-	//		Files staged:
-	//			git-codereview/sync.go
-	//		Files unstaged:
-	//			git-codereview/submit.go
-	//		Files untracked:
-	//			git-codereview/doc.go
-	//			git-codereview/savedmail.go.txt
-	//
+	// Print output.
 	// If there are multiple changes in the current branch, the output splits them out into separate sections,
 	// in reverse commit order, to match git log output.
 	//
-	//	wbshadow 7a524a1..a496c1e (current branch, all mailed, 23 behind)
+	//	wbshadow 7a524a1..a496c1e (current branch, all mailed, 23 behind, tracking master)
 	//	+ uncommitted changes
 	//		Files unstaged:
 	//			src/runtime/proc1.go
@@ -189,13 +159,22 @@ func pending(args []string) {
 	//			src/runtime/runtime2.go
 	//			src/runtime/stack1.go
 	//
-	// In multichange mode, the first line only gives information that applies to the entire
-	// branch: the name, the commit range, whether this is the current branch, whether
-	// all the commits are mailed/submitted, how far behind.
+	// The first line only gives information that applies to the entire branch:
+	// the name, the commit range, whether this is the current branch, whether
+	// all the commits are mailed/submitted, how far behind, what remote branch
+	// it is tracking.
 	// The individual change sections have per-change information: the hash of that
 	// commit, the URL on the Gerrit server, whether it is mailed/submitted, the list of
 	// files in that commit. The uncommitted file modifications are shown as a separate
 	// section, at the beginning, to fit better into the reverse commit order.
+	//
+	// The short view compresses the listing down to two lines per commit:
+	//	wbshadow 7a524a1..a496c1e (current branch, all mailed, 23 behind, tracking master)
+	//	+ uncommitted changes
+	//		Files unstaged:
+	//			src/runtime/proc1.go
+	//	+ a496c1e runtime: add missing write barriers in append's copy of slice data (CL 2064, mailed)
+	//	+ 95390c7 runtime: add GODEBUG wbshadow for finding missing write barriers (CL 2061, mailed)
 
 	var buf bytes.Buffer
 	printFileList := func(name string, list []string) {
@@ -219,66 +198,79 @@ func pending(args []string) {
 		if len(work) > 0 {
 			fmt.Fprintf(&buf, " %.7s..%s", b.branchpoint, work[0].ShortHash)
 		}
-		if len(work) == 1 && work[0].g.Number != 0 {
-			fmt.Fprintf(&buf, " %s/%d", auth.url, work[0].g.Number)
-		}
 		var tags []string
 		if b.current {
 			tags = append(tags, "current branch")
 		}
-		if allMailed(work) {
-			if len(work) == 1 {
-				tags = append(tags, "mailed")
-			} else if len(work) > 1 {
-				tags = append(tags, "all mailed")
-			}
+		if allMailed(work) && len(work) > 0 {
+			tags = append(tags, "all mailed")
 		}
-		if allSubmitted(work) {
-			if len(work) == 1 {
-				tags = append(tags, "submitted")
-			} else if len(work) > 1 {
-				tags = append(tags, "all submitted")
-			}
+		if allSubmitted(work) && len(work) > 0 {
+			tags = append(tags, "all submitted")
 		}
 		if b.commitsBehind > 0 {
 			tags = append(tags, fmt.Sprintf("%d behind", b.commitsBehind))
+		}
+		if b.OriginBranch() != "origin/master" {
+			tags = append(tags, "tracking "+strings.TrimPrefix(b.OriginBranch(), "origin/"))
 		}
 		if len(tags) > 0 {
 			fmt.Fprintf(&buf, " (%s)", strings.Join(tags, ", "))
 		}
 		fmt.Fprintf(&buf, "\n")
+		printed := false
 		if text := b.errors(); text != "" {
-			fmt.Fprintf(&buf, "\tERROR: %s\n\n", strings.Replace(strings.TrimSpace(text), "\n", "\n\t", -1))
+			fmt.Fprintf(&buf, "\tERROR: %s\n", strings.Replace(strings.TrimSpace(text), "\n", "\n\t", -1))
+			if !pendingShort {
+				printed = true
+				fmt.Fprintf(&buf, "\n")
+			}
 		}
 
-		if b.current && len(work) > 1 && len(b.staged)+len(b.unstaged)+len(b.untracked) > 0 {
+		if b.current && len(b.staged)+len(b.unstaged)+len(b.untracked) > 0 {
+			printed = true
 			fmt.Fprintf(&buf, "+ uncommitted changes\n")
-			printFileList("staged", b.staged)
-			printFileList("unstaged", b.unstaged)
 			printFileList("untracked", b.untracked)
-			fmt.Fprintf(&buf, "\n")
+			printFileList("unstaged", b.unstaged)
+			printFileList("staged", b.staged)
+			if !pendingShort {
+				fmt.Fprintf(&buf, "\n")
+			}
 		}
 
 		for _, c := range work {
+			printed = true
 			g := c.g
-			if len(work) > 1 {
-				fmt.Fprintf(&buf, "+ %s", c.ShortHash)
+			msg := strings.TrimRight(c.Message, "\r\n")
+			fmt.Fprintf(&buf, "+ %s", c.ShortHash)
+			var tags []string
+			if pendingShort {
+				if i := strings.Index(msg, "\n"); i >= 0 {
+					msg = msg[:i]
+				}
+				fmt.Fprintf(&buf, " %s", msg)
+				if g.Number != 0 {
+					tags = append(tags, fmt.Sprintf("CL %d%s", g.Number, codeReviewScores(g)))
+				}
+			} else {
 				if g.Number != 0 {
 					fmt.Fprintf(&buf, " %s/%d", auth.url, g.Number)
 				}
-				var tags []string
-				if g.CurrentRevision == c.Hash {
-					tags = append(tags, "mailed")
-				}
-				if g.Status == "MERGED" {
-					tags = append(tags, "submitted")
-				}
-				if len(tags) > 0 {
-					fmt.Fprintf(&buf, " (%s)", strings.Join(tags, ", "))
-				}
-				fmt.Fprintf(&buf, "\n")
 			}
-			msg := strings.TrimRight(c.Message, "\r\n")
+			if g.CurrentRevision == c.Hash {
+				tags = append(tags, "mailed")
+			}
+			if g.Status == "MERGED" {
+				tags = append(tags, "submitted")
+			}
+			if len(tags) > 0 {
+				fmt.Fprintf(&buf, " (%s)", strings.Join(tags, ", "))
+			}
+			fmt.Fprintf(&buf, "\n")
+			if pendingShort {
+				continue
+			}
+
 			fmt.Fprintf(&buf, "\t%s\n", strings.Replace(msg, "\n", "\n\t", -1))
 			fmt.Fprintf(&buf, "\n")
 
@@ -312,21 +304,40 @@ func pending(args []string) {
 			}
 
 			printFileList("in this change", c.committed)
-			if b.current && len(work) == 1 {
-				// staged file list will be printed next
-			} else {
-				fmt.Fprintf(&buf, "\n")
-			}
+			fmt.Fprintf(&buf, "\n")
 		}
-		if b.current && len(work) <= 1 {
-			printFileList("staged", b.staged)
-			printFileList("unstaged", b.unstaged)
-			printFileList("untracked", b.untracked)
+		if pendingShort || !printed {
 			fmt.Fprintf(&buf, "\n")
 		}
 	}
 
 	stdout().Write(buf.Bytes())
+}
+
+// codeReviewScores reports the code review scores as tags for the short output.
+func codeReviewScores(g *GerritChange) string {
+	label := g.Labels["Code-Review"]
+	if label == nil {
+		return ""
+	}
+	minValue := 10000
+	maxValue := -10000
+	for _, x := range label.All {
+		if minValue > x.Value {
+			minValue = x.Value
+		}
+		if maxValue < x.Value {
+			maxValue = x.Value
+		}
+	}
+	var scores string
+	if minValue < 0 {
+		scores += fmt.Sprintf(" %d", minValue)
+	}
+	if maxValue > 0 {
+		scores += fmt.Sprintf(" %+d", maxValue)
+	}
+	return scores
 }
 
 // allMailed reports whether all commits in work have been posted to Gerrit.
