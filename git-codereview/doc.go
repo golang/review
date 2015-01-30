@@ -108,8 +108,8 @@ not present. It also checks that the message uses the convention established by
 the Go project that the first line has the form, pkg/path: summary.
 
 The hooks command will not overwrite an existing hook.
-If it is not installing hooks, use 'git review hooks -v' for details.
-This hook installation is also done at startup by all other git review
+If it is not installing hooks, use 'git codereview hooks -v' for details.
+This hook installation is also done at startup by all other git codereview
 commands, except 'help'.
 
 Hook-Invoke
@@ -118,7 +118,7 @@ The hook-invoke command is an internal command that invokes the named Git hook.
 
 	git codereview hook-invoke <hook> [args]
 
-It is run by the shell scripts installed by the "git review hooks" command.
+It is run by the shell scripts installed by the "git codereview hooks" command.
 
 Mail
 
@@ -178,7 +178,7 @@ part of the pending change.
 
 After submitting the change, the change command tries to synchronize the
 current branch to the submitted commit, if it can do so cleanly.
-If not, it will prompt the user to run 'git review sync' manually.
+If not, it will prompt the user to run 'git codereview sync' manually.
 
 After a successful sync, the branch can be used to prepare a new change.
 
