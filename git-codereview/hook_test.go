@@ -46,6 +46,40 @@ func TestHookCommitMsg(t *testing.T) {
 	if got := testStderr.String(); got != want {
 		t.Fatalf("unexpected output:\ngot: %q\nwant: %q", got, want)
 	}
+
+	// Check that hook inserts a blank line after the first line as needed.
+	rewrites := []struct {
+		in   string
+		want string
+	}{
+		{in: "all: gofmt", want: "all: gofmt"},
+		{in: "all: gofmt\n", want: "all: gofmt\n"},
+		{in: "all: gofmt\nahhh", want: "all: gofmt\n\nahhh"},
+		{in: "all: gofmt\n\nahhh", want: "all: gofmt\n\nahhh"},
+		{in: "all: gofmt\n\n\nahhh", want: "all: gofmt\n\n\nahhh"},
+	}
+	for _, tt := range rewrites {
+		write(t, gt.client+"/in.txt", tt.in)
+		testMain(t, "hook-invoke", "commit-msg", gt.client+"/in.txt")
+		write(t, gt.client+"/want.txt", tt.want)
+		testMain(t, "hook-invoke", "commit-msg", gt.client+"/want.txt")
+		got, err := ioutil.ReadFile(gt.client + "/in.txt")
+		if err != nil {
+			t.Fatal(err)
+		}
+		want, err := ioutil.ReadFile(gt.client + "/want.txt")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// pull off the Change-Id that got appended
+		const lenChangeId = len("\n\nChange-Id: I") + 2*20
+		got = got[:len(got)-lenChangeId]
+		want = want[:len(want)-lenChangeId]
+		if !bytes.Equal(got, want) {
+			t.Fatalf("failed to rewrite:\n%s\n\ngot:\n\n%s\n\nwant:\n\n%s\n", tt.in, got, want)
+		}
+	}
 }
 
 func TestHookCommitMsgBranchPrefix(t *testing.T) {

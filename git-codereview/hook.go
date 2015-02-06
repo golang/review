@@ -136,6 +136,14 @@ func hookCommitMsg(args []string) {
 		dief("empty commit message")
 	}
 
+	// Insert a blank line between first line and subsequent lines if not present.
+	eol := bytes.IndexByte(data, '\n')
+	if eol != -1 && len(data) > eol+1 && data[eol+1] != '\n' {
+		data = append(data, 0)
+		copy(data[eol+1:], data[eol:])
+		data[eol+1] = '\n'
+	}
+
 	// Add Change-Id to commit message if not present.
 	edited := false
 	if !bytes.Contains(data, []byte("\nChange-Id: ")) {
