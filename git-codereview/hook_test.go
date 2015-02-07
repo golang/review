@@ -14,6 +14,8 @@ import (
 	"testing"
 )
 
+const lenChangeId = len("\n\nChange-Id: I") + 2*20
+
 func TestHookCommitMsg(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
@@ -73,13 +75,57 @@ func TestHookCommitMsg(t *testing.T) {
 		}
 
 		// pull off the Change-Id that got appended
-		const lenChangeId = len("\n\nChange-Id: I") + 2*20
 		got = got[:len(got)-lenChangeId]
 		want = want[:len(want)-lenChangeId]
 		if !bytes.Equal(got, want) {
 			t.Fatalf("failed to rewrite:\n%s\n\ngot:\n\n%s\n\nwant:\n\n%s\n", tt.in, got, want)
 		}
 	}
+}
+
+func TestHookCommitMsgIssueRepoRewrite(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	// If there's no config, don't rewrite issue references.
+	const msg = "math/big: catch all the rats\n\nFixes #99999, at least for now\n"
+	write(t, gt.client+"/msg.txt", msg)
+	testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
+	got, err := ioutil.ReadFile(gt.client + "/msg.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got = got[:len(got)-lenChangeId]
+	if string(got) != msg {
+		t.Errorf("hook changed %s to %s", msg, got)
+	}
+
+	// Add issuerepo config.
+	write(t, gt.client+"/codereview.cfg", "issuerepo: golang/go")
+	trun(t, gt.client, "git", "add", "codereview.cfg")
+	trun(t, gt.client, "git", "commit", "-m", "add issuerepo codereview config")
+
+	// Look in master rather than origin/master for the config
+	savedConfigRef := configRef
+	configRef = "master:codereview.cfg"
+	cachedConfig = nil
+
+	// Check for the rewrite
+	write(t, gt.client+"/msg.txt", msg)
+	testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
+	got, err = ioutil.ReadFile(gt.client + "/msg.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got = got[:len(got)-lenChangeId]
+	const want = "math/big: catch all the rats\n\nFixes golang/go#99999, at least for now\n"
+	if string(got) != want {
+		t.Errorf("issue rewrite failed: got\n\n%s\nwant\n\n%s", got, want)
+	}
+
+	// Reset config state
+	configRef = savedConfigRef
+	cachedConfig = nil
 }
 
 func TestHookCommitMsgBranchPrefix(t *testing.T) {

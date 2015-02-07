@@ -98,6 +98,8 @@ exec git-review hook-invoke %s "$@"
 `
 
 func cmdHookInvoke(args []string) {
+	flags.Parse(args)
+	args = flags.Args()
 	if len(args) == 0 {
 		dief("usage: git-codereview hook-invoke <hook-name> [args...]")
 	}
@@ -108,6 +110,8 @@ func cmdHookInvoke(args []string) {
 		hookPreCommit(args[1:])
 	}
 }
+
+var issueRefRE = regexp.MustCompile(`(?P<space>\s)(?P<ref>#\d+\w)`)
 
 // hookCommitMsg is installed as the git commit-msg hook.
 // It adds a Change-Id line to the bottom of the commit message
@@ -142,6 +146,11 @@ func hookCommitMsg(args []string) {
 		data = append(data, 0)
 		copy(data[eol+1:], data[eol:])
 		data[eol+1] = '\n'
+	}
+
+	// Update issue references to point to issue repo, if set.
+	if issueRepo := config()["issuerepo"]; issueRepo != "" {
+		data = issueRefRE.ReplaceAll(data, []byte("${space}"+issueRepo+"${ref}"))
 	}
 
 	// Add Change-Id to commit message if not present.
