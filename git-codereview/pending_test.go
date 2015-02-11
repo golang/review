@@ -426,8 +426,22 @@ func testPendingReply(srv *gerritServer, id, rev, status string) {
 					}
 				]
 			},
+			"Trybot-Spam": {
+				"all": [
+					{
+						"_account_id": 42,
+						"name": "The Owner",
+						"value": 0
+					}
+				]
+			},
 			"Other-Label": {
 				"all": [
+					{
+						"_id": 43,
+						"name": "George Opher",
+						"value": 0
+					},
 					{
 						"_account_id": 42,
 						"name": "The Owner",

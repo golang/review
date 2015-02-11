@@ -292,10 +292,15 @@ func cmdPending(args []string) {
 						maxValue = x.Value
 					}
 				}
+				// Unless there are scores to report, do not show labels other than Code-Review.
+				// This hides Run-TryBot and TryBot-Result.
+				if minValue >= 0 && maxValue <= 0 && name != "Code-Review" {
+					continue
+				}
 				fmt.Fprintf(&buf, "\t%s:\n", name)
 				for score := maxValue; score >= minValue; score-- {
 					who := byScore[score]
-					if len(who) == 0 {
+					if len(who) == 0 || score == 0 && name != "Code-Review" {
 						continue
 					}
 					sort.Strings(who)
