@@ -16,6 +16,7 @@ func cmdMail(args []string) {
 	var (
 		diff   = flags.Bool("diff", false, "show change commit diff and don't upload or mail")
 		force  = flags.Bool("f", false, "mail even if there are staged changes")
+		topic  = flags.String("topic", "", "set Gerrit topic")
 		rList  = new(stringList) // installed below
 		ccList = new(stringList) // installed below
 	)
@@ -23,7 +24,7 @@ func cmdMail(args []string) {
 	flags.Var(ccList, "cc", "comma-separated list of people to CC:")
 
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [commit-hash]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-topic topic] [commit-hash]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
@@ -61,6 +62,16 @@ func cmdMail(args []string) {
 	}
 	if *ccList != "" {
 		refSpec += mailList(start, "cc", string(*ccList))
+		start = ","
+	}
+	if *topic != "" {
+		// There's no way to escape the topic, but the only
+		// ambiguous character is ',' (though other characters
+		// like ' ' will be rejected outright by git).
+		if strings.Contains(*topic, ",") {
+			dief("topic may not contain a comma")
+		}
+		refSpec += start + "topic=" + *topic
 	}
 	run("git", "push", "-q", "origin", refSpec)
 

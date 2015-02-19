@@ -105,3 +105,25 @@ func TestMailShort(t *testing.T) {
 	testMainDied(t, "mail", "-r", "other", "-r", "anon,r1,missing")
 	testPrintedStderr(t, "unknown reviewer: missing")
 }
+
+func TestMailTopic(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+
+	// fake auth information to avoid Gerrit error
+	auth.host = "gerrit.fake"
+	auth.user = "not-a-user"
+	defer func() {
+		auth.host = ""
+		auth.user = ""
+	}()
+
+	testMainDied(t, "mail", "-topic", "contains,comma")
+	testPrintedStderr(t, "topic may not contain a comma")
+
+	testMain(t, "mail", "-topic", "test-topic")
+	testRan(t,
+		"git push -q origin HEAD:refs/for/master%topic=test-topic",
+		"git tag -f work.mailed")
+}
