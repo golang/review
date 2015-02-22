@@ -159,11 +159,12 @@ func hookCommitMsg(args []string) {
 		data = append(data[:n], fmt.Sprintf("\n\nChange-Id: I%x\n", id[:])...)
 	}
 
-	// Add branch prefix to commit message if not present and not on master.
+	// Add branch prefix to commit message if not present and not on master
+	// and not a special Git fixup! or squash! commit message.
 	branch := strings.TrimPrefix(b.OriginBranch(), "origin/")
 	if branch != "master" {
 		prefix := "[" + branch + "] "
-		if !bytes.HasPrefix(data, []byte(prefix)) {
+		if !bytes.HasPrefix(data, []byte(prefix)) && !isFixup(data) {
 			edited = true
 			data = []byte(prefix + string(data))
 		}
@@ -175,6 +176,17 @@ func hookCommitMsg(args []string) {
 			dief("%v", err)
 		}
 	}
+}
+
+var (
+	fixupBang  = []byte("fixup!")
+	squashBang = []byte("squash!")
+)
+
+// isFixup reports whether text is a Git fixup! or squash! commit,
+// which must not have a prefix.
+func isFixup(text []byte) bool {
+	return bytes.HasPrefix(text, fixupBang) || bytes.HasPrefix(text, squashBang)
 }
 
 // stripComments strips lines that begin with "#".

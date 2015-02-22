@@ -96,6 +96,21 @@ func TestHookCommitMsgBranchPrefix(t *testing.T) {
 		if !bytes.HasPrefix(data, []byte(prefix)) {
 			t.Errorf("after hook-invoke commit-msg on %s, want prefix %q:\n%s", CurrentBranch().Name, prefix, data)
 		}
+
+		if i := strings.Index(prefix, "]"); i >= 0 {
+			prefix := prefix[:i+1]
+			for _, magic := range []string{"fixup!", "squash!"} {
+				write(t, gt.client+"/msg.txt", magic+" Test message.\n")
+				testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
+				data, err := ioutil.ReadFile(gt.client + "/msg.txt")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if bytes.HasPrefix(data, []byte(prefix)) {
+					t.Errorf("after hook-invoke commit-msg on %s with %s, found incorrect prefix %q:\n%s", CurrentBranch().Name, magic, prefix, data)
+				}
+			}
+		}
 	}
 
 	// Create server branch and switch to server branch on client.
