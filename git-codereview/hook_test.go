@@ -117,19 +117,19 @@ func TestHookCommitMsgBranchPrefix(t *testing.T) {
 	// Test that commit hook adds prefix.
 	trun(t, gt.server, "git", "checkout", "-b", "dev.cc")
 	trun(t, gt.client, "git", "fetch", "-q")
-	trun(t, gt.client, "git", "codereview", "change", "dev.cc")
+	testMain(t, "change", "dev.cc")
 	checkPrefix("[dev.cc] Test message.\n")
 
 	// Work branch with server branch as upstream.
-	trun(t, gt.client, "git", "codereview", "change", "ccwork")
+	testMain(t, "change", "ccwork")
 	checkPrefix("[dev.cc] Test message.\n")
 
 	// Master has no prefix.
-	trun(t, gt.client, "git", "codereview", "change", "master")
+	testMain(t, "change", "master")
 	checkPrefix("Test message.\n")
 
 	// Work branch from master has no prefix.
-	trun(t, gt.client, "git", "codereview", "change", "work")
+	testMain(t, "change", "work")
 	checkPrefix("Test message.\n")
 }
 
