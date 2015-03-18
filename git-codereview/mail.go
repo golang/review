@@ -86,7 +86,7 @@ func cmdMail(args []string) {
 	// There is no conflict with the branch names people are using
 	// for work, because git change rejects any name containing a dot.
 	// The space of names with dots is ours (the Go team's) to define.
-	run("git", "tag", "-f", b.Name+".mailed")
+	run("git", "tag", "-f", b.Name+".mailed", c.ShortHash)
 }
 
 // PushSpec returns the spec for a Gerrit push command to publish the change c in b.
