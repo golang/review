@@ -184,6 +184,14 @@ func write(t *testing.T, file, data string) {
 	}
 }
 
+func read(t *testing.T, file string) []byte {
+	b, err := ioutil.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
 func remove(t *testing.T, file string) {
 	if err := os.RemoveAll(file); err != nil {
 		t.Fatal(err)

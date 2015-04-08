@@ -153,9 +153,17 @@ func hookCommitMsg(args []string) {
 		data = issueRefRE.ReplaceAll(data, []byte("${space}"+issueRepo+"${ref}"))
 	}
 
+	// Complain if two Change-Ids are present.
+	// This can happen during an interactive rebase;
+	// it is easy to forget to remove one of them.
+	nChangeId := bytes.Count(data, []byte("\nChange-Id: "))
+	if nChangeId > 1 {
+		dief("multiple Change-Id lines")
+	}
+
 	// Add Change-Id to commit message if not present.
 	edited := false
-	if !bytes.Contains(data, []byte("\nChange-Id: ")) {
+	if nChangeId == 0 {
 		edited = true
 		n := len(data)
 		for n > 0 && data[n-1] == '\n' {

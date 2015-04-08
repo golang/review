@@ -23,30 +23,32 @@ func TestHookCommitMsg(t *testing.T) {
 	// Check that hook adds Change-Id.
 	write(t, gt.client+"/msg.txt", "Test message.\n")
 	testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
-	data, err := ioutil.ReadFile(gt.client + "/msg.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := read(t, gt.client+"/msg.txt")
 	if !bytes.Contains(data, []byte("\n\nChange-Id: ")) {
 		t.Fatalf("after hook-invoke commit-msg, missing Change-Id:\n%s", data)
 	}
 
 	// Check that hook is no-op when Change-Id is already present.
 	testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
-	data1, err := ioutil.ReadFile(gt.client + "/msg.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
+	data1 := read(t, gt.client+"/msg.txt")
 	if !bytes.Equal(data, data1) {
 		t.Fatalf("second hook-invoke commit-msg changed Change-Id:\nbefore:\n%s\n\nafter:\n%s", data, data1)
+	}
+
+	// Check that hook rejects multiple Change-Ids.
+	write(t, gt.client+"/msgdouble.txt", string(data)+string(data))
+	testMainDied(t, "hook-invoke", "commit-msg", gt.client+"/msgdouble.txt")
+	const multiple = "git-codereview: multiple Change-Id lines\n"
+	if got := testStderr.String(); got != multiple {
+		t.Fatalf("unexpected output:\ngot: %q\nwant: %q", got, multiple)
 	}
 
 	// Check that hook fails when message is empty.
 	write(t, gt.client+"/empty.txt", "\n\n# just a file with\n# comments\n")
 	testMainDied(t, "hook-invoke", "commit-msg", gt.client+"/empty.txt")
-	const want = "git-codereview: empty commit message\n"
-	if got := testStderr.String(); got != want {
-		t.Fatalf("unexpected output:\ngot: %q\nwant: %q", got, want)
+	const empty = "git-codereview: empty commit message\n"
+	if got := testStderr.String(); got != empty {
+		t.Fatalf("unexpected output:\ngot: %q\nwant: %q", got, empty)
 	}
 
 	// Check that hook inserts a blank line after the first line as needed.
