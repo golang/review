@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -26,6 +27,7 @@ type gitTest struct {
 	client      string // client repo root
 	nwork       int    // number of calls to work method
 	nworkServer int    // number of calls to serverWork method
+	nworkOther  int    // number of calls to serverWorkUnrelated method
 }
 
 // resetReadOnlyFlagAll resets windows read-only flag
@@ -61,6 +63,18 @@ func (gt *gitTest) done() {
 	os.RemoveAll(gt.tmpdir)
 }
 
+// doWork simulates commit 'n' touching 'file' in 'dir'
+func doWork(t *testing.T, n int, dir, file string) {
+	write(t, dir+"/"+file, fmt.Sprintf("new content %d", n))
+	trun(t, dir, "git", "add", file)
+	suffix := ""
+	if n > 1 {
+		suffix = fmt.Sprintf(" #%d", n)
+	}
+	changeid := hex.EncodeToString([]byte(file))
+	trun(t, dir, "git", "commit", "-m", fmt.Sprintf("msg%s\n\nChange-Id: I%d%s\n", suffix, n, changeid))
+}
+
 func (gt *gitTest) work(t *testing.T) {
 	if gt.nwork == 0 {
 		trun(t, gt.client, "git", "checkout", "-b", "work")
@@ -70,29 +84,23 @@ func (gt *gitTest) work(t *testing.T) {
 
 	// make local change on client
 	gt.nwork++
-	write(t, gt.client+"/file", fmt.Sprintf("new content %d", gt.nwork))
-	trun(t, gt.client, "git", "add", "file")
-	suffix := ""
-	if gt.nwork > 1 {
-		suffix = fmt.Sprintf(" #%d", gt.nwork)
-	}
-	trun(t, gt.client, "git", "commit", "-m", fmt.Sprintf("msg%s\n\nChange-Id: I%d23456789\n", suffix, gt.nwork))
+	doWork(t, gt.nwork, gt.client, "file")
 }
 
 func (gt *gitTest) serverWork(t *testing.T) {
 	// make change on server
-	// duplicating the changes of gt.work to simulate them
-	// having gone through Gerrit and submitted with
-	// different times and commit hashes but the same content.
+	// duplicating the sequence of changes in gt.work to simulate them
+	// having gone through Gerrit and submitted with possibly
+	// different commit hashes but the same content.
 	gt.nworkServer++
-	write(t, gt.server+"/file", fmt.Sprintf("new content %d", gt.nworkServer))
-	trun(t, gt.server, "git", "add", "file")
-	suffix := ""
-	if gt.nworkServer > 1 {
-		suffix = fmt.Sprintf(" #%d", gt.nworkServer)
-	}
-	trun(t, gt.server, "git", "commit", "-m", fmt.Sprintf("msg%s\n\nChange-Id: I%d23456789\n", suffix, gt.nworkServer))
+	doWork(t, gt.nworkServer, gt.server, "file")
+}
 
+func (gt *gitTest) serverWorkUnrelated(t *testing.T) {
+	// make unrelated change on server
+	// this makes history different on client and server
+	gt.nworkOther++
+	doWork(t, gt.nworkOther, gt.server, "otherfile")
 }
 
 func newGitTest(t *testing.T) (gt *gitTest) {
