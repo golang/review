@@ -14,6 +14,8 @@ func TestMail(t *testing.T) {
 	defer gt.done()
 	gt.work(t)
 
+	h := CurrentBranch().Pending()[0].ShortHash
+
 	// fake auth information to avoid Gerrit error
 	auth.host = "gerrit.fake"
 	auth.user = "not-a-user"
@@ -25,7 +27,7 @@ func TestMail(t *testing.T) {
 	testMain(t, "mail")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/master",
-		"git tag -f work.mailed")
+		"git tag -f work.mailed "+h)
 }
 
 func TestMailGitHub(t *testing.T) {
@@ -87,20 +89,22 @@ func TestMailShort(t *testing.T) {
 	// Do some work.
 	gt.work(t)
 
+	h := CurrentBranch().Pending()[0].ShortHash
+
 	testMain(t, "mail")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/master",
-		"git tag -f work.mailed")
+		"git tag -f work.mailed "+h)
 
 	testMain(t, "mail", "-r", "r1")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/master%r=r1@golang.org",
-		"git tag -f work.mailed")
+		"git tag -f work.mailed "+h)
 
 	testMain(t, "mail", "-r", "other,anon", "-cc", "r1,full@email.com")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/master%r=other@golang.org,r=anon@golang.org,cc=r1@golang.org,cc=full@email.com",
-		"git tag -f work.mailed")
+		"git tag -f work.mailed "+h)
 
 	testMainDied(t, "mail", "-r", "other", "-r", "anon,r1,missing")
 	testPrintedStderr(t, "unknown reviewer: missing")
@@ -110,6 +114,8 @@ func TestMailTopic(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 	gt.work(t)
+
+	h := CurrentBranch().Pending()[0].ShortHash
 
 	// fake auth information to avoid Gerrit error
 	auth.host = "gerrit.fake"
@@ -125,5 +131,5 @@ func TestMailTopic(t *testing.T) {
 	testMain(t, "mail", "-topic", "test-topic")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/master%topic=test-topic",
-		"git tag -f work.mailed")
+		"git tag -f work.mailed "+h)
 }
