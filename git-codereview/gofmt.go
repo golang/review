@@ -60,7 +60,7 @@ const (
 //
 // As a special case for the main repo (but applied everywhere)
 // *.go files under a top-level test directory are excluded from the
-// formatting requirement, except those in test/bench/.
+// formatting requirement, except run.go and those in test/bench/.
 //
 // If gofmtWrite is set (only with gofmtCommand, meaning this is 'git gofmt'),
 // runGofmt replaces the original files with their formatted equivalents.
@@ -341,8 +341,14 @@ func runGofmt(flags int) (files []string, stderrText string) {
 // for gofmt'dness by the pre-commit hook.
 // The file name is relative to the repo root.
 func gofmtRequired(file string) bool {
-	return strings.HasSuffix(file, ".go") &&
-		!(strings.HasPrefix(file, "test/") && !strings.HasPrefix(file, "test/bench/"))
+	// TODO: Consider putting this policy into codereview.cfg.
+	if !strings.HasSuffix(file, ".go") {
+		return false
+	}
+	if !strings.HasPrefix(file, "test/") {
+		return true
+	}
+	return strings.HasPrefix(file, "test/bench/") || file == "test/run.go"
 }
 
 // stringMap returns a map m such that m[s] == true if s was in the original list.
