@@ -73,10 +73,8 @@ func TestSyncRebase(t *testing.T) {
 		t.Fatalf("CL hashes changed during no-op sync")
 	}
 
-	// submit first two CLs - gt.serverWork does same thing gt.work does, but on server
-
+	// submit first two CLs - gt.serverWork does same thing gt.work does, but on client
 	gt.serverWork(t)
-	gt.serverWorkUnrelated(t) // wedge in unrelated work to get different hashes
 	gt.serverWork(t)
 
 	testMain(t, "sync")
