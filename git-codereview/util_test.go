@@ -20,6 +20,8 @@ import (
 	"testing"
 )
 
+var gitversion = "unknown git version" // git version for error logs
+
 type gitTest struct {
 	pwd         string // current directory before test
 	tmpdir      string // temporary directory holding repos
@@ -122,6 +124,8 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 			os.RemoveAll(tmpdir)
 		}
 	}()
+
+	gitversion = trun(t, tmpdir, "git", "--version")
 
 	server := tmpdir + "/git-origin"
 
@@ -227,6 +231,9 @@ func trun(t *testing.T, dir string, cmdline ...string) string {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
+		if cmdline[0] == "git" {
+			t.Fatalf("in %s/, ran %s with %s:\n%v\n%s", filepath.Base(dir), cmdline, gitversion, err, out)
+		}
 		t.Fatalf("in %s/, ran %s: %v\n%s", filepath.Base(dir), cmdline, err, out)
 	}
 	return string(out)
