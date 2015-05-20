@@ -40,8 +40,12 @@ func loadGerritOrigin() {
 		return
 	}
 
-	// Gerrit must be set as Git's origin remote.
-	origin := trim(cmdOutput("git", "config", "remote.origin.url"))
+	// Gerrit must be set, either explicitly via the code review config or
+	// implicitly as Git's origin remote.
+	origin := config()["gerrit"]
+	if origin == "" {
+		origin = trim(cmdOutput("git", "config", "remote.origin.url"))
+	}
 
 	if strings.Contains(origin, "github.com") {
 		dief("git origin must be a Gerrit host, not GitHub: %s", origin)
