@@ -65,7 +65,7 @@ func cmdPending(args []string) {
 	// Fetch info about remote changes, so that we can say which branches need sync.
 	if !pendingLocal {
 		run("git", "fetch", "-q")
-		http.DefaultClient.Timeout = 5 * time.Second
+		http.DefaultClient.Timeout = 60 * time.Second
 	}
 
 	// Build list of pendingBranch structs to be filled in.
