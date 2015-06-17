@@ -72,7 +72,9 @@ func (b *Branch) OriginBranch() string {
 		b.originBranch = string(bytes.TrimSpace(out))
 		return b.originBranch
 	}
-	if strings.Contains(string(out), "No upstream configured") {
+
+	// Have seen both "No upstream configured" and "no upstream configured".
+	if strings.Contains(string(out), "upstream configured") {
 		// Assume branch was created before we set upstream correctly.
 		b.originBranch = "origin/master"
 		return b.originBranch
