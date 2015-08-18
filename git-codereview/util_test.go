@@ -103,6 +103,14 @@ func (gt *gitTest) serverWorkUnrelated(t *testing.T) {
 }
 
 func newGitTest(t *testing.T) (gt *gitTest) {
+	// The Linux builders seem not to have git in their paths.
+	// That makes this whole repo a bit useless on such systems,
+	// but make sure the tests don't fail.
+	_, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("cannot find git in path: %v", err)
+	}
+
 	tmpdir, err := ioutil.TempDir("", "git-codereview-test")
 	if err != nil {
 		t.Fatal(err)
