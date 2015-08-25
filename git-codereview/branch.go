@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
-	"runtime"
 	"strings"
 )
 
@@ -52,16 +51,6 @@ func (b *Branch) DetachedHead() bool {
 	return b.Name == "HEAD"
 }
 
-// Workaround on windows. git for windows can't handle @{u} as same as given.
-// It removes parens. And option '--' to skip parsing arguments doesn't work
-// correctly on git 2.5.0.
-func quoteOnWindows(branch string) string {
-	if runtime.GOOS != "windows" {
-		return branch
-	}
-	return "'" + branch + "'"
-}
-
 // OriginBranch returns the name of the origin branch that branch b tracks.
 // The returned name is like "origin/master" or "origin/dev.garbage" or
 // "origin/release-branch.go1.4".
@@ -77,8 +66,7 @@ func (b *Branch) OriginBranch() string {
 	if b.originBranch != "" {
 		return b.originBranch
 	}
-	argv := []string{"git", "rev-parse", "--abbrev-ref", quoteOnWindows(b.Name + "@{u}")}
-
+	argv := []string{"git", "rev-parse", "--abbrev-ref", b.Name + "@{u}"}
 	out, err := exec.Command(argv[0], argv[1:]...).CombinedOutput()
 	if err == nil && len(out) > 0 {
 		b.originBranch = string(bytes.TrimSpace(out))
