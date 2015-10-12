@@ -156,20 +156,13 @@ func checkoutOrCreate(target string) {
 	printf("created branch %v tracking %s.", target, origin)
 }
 
-var (
-	messageRE  = regexp.MustCompile(`^(\[[a-zA-Z0-9.-]+\] )?[a-zA-Z0-9-/,. ]+: `)
-	oldFixesRE = regexp.MustCompile(`Fixes +(issue +#?)?([0-9]+)`)
-)
+var messageRE = regexp.MustCompile(`^(\[[a-zA-Z0-9.-]+\] )?[a-zA-Z0-9-/,. ]+: `)
 
 func commitMessageOK() bool {
 	body := cmdOutput("git", "log", "--format=format:%B", "-n", "1")
 	ok := true
 	if !messageRE.MatchString(body) {
 		fmt.Print(commitMessageWarning)
-		ok = false
-	}
-	if m := oldFixesRE.FindStringSubmatch(body); m != nil {
-		fmt.Printf(fixesIssueWarning, m[0], m[2])
 		ok = false
 	}
 	return ok

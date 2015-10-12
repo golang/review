@@ -111,7 +111,10 @@ func cmdHookInvoke(args []string) {
 	}
 }
 
-var issueRefRE = regexp.MustCompile(`(?P<space>\s)(?P<ref>#\d+\w)`)
+var (
+	issueRefRE         = regexp.MustCompile(`(?P<space>\s)(?P<ref>#\d+\w)`)
+	oldFixesRETemplate = `Fixes +(issue +(%s)?#?)?(?P<issueNum>[0-9]+)`
+)
 
 // hookCommitMsg is installed as the git commit-msg hook.
 // It adds a Change-Id line to the bottom of the commit message
@@ -129,10 +132,11 @@ func hookCommitMsg(args []string) {
 	}
 
 	file := args[0]
-	data, err := ioutil.ReadFile(file)
+	oldData, err := ioutil.ReadFile(file)
 	if err != nil {
 		dief("%v", err)
 	}
+	data := append([]byte{}, oldData...)
 	data = stripComments(data)
 
 	// Empty message not allowed.
@@ -148,10 +152,14 @@ func hookCommitMsg(args []string) {
 		data[eol+1] = '\n'
 	}
 
+	issueRepo := config()["issuerepo"]
 	// Update issue references to point to issue repo, if set.
-	if issueRepo := config()["issuerepo"]; issueRepo != "" {
+	if issueRepo != "" {
 		data = issueRefRE.ReplaceAll(data, []byte("${space}"+issueRepo+"${ref}"))
 	}
+	// TestHookCommitMsgIssueRepoRewrite makes sure the regex is valid
+	oldFixesRE := regexp.MustCompile(fmt.Sprintf(oldFixesRETemplate, regexp.QuoteMeta(issueRepo)))
+	data = oldFixesRE.ReplaceAll(data, []byte("Fixes "+issueRepo+"#${issueNum}"))
 
 	// Complain if two Change-Ids are present.
 	// This can happen during an interactive rebase;
@@ -162,9 +170,7 @@ func hookCommitMsg(args []string) {
 	}
 
 	// Add Change-Id to commit message if not present.
-	edited := false
 	if nChangeId == 0 {
-		edited = true
 		n := len(data)
 		for n > 0 && data[n-1] == '\n' {
 			n--
@@ -182,13 +188,12 @@ func hookCommitMsg(args []string) {
 	if branch != "master" {
 		prefix := "[" + branch + "] "
 		if !bytes.HasPrefix(data, []byte(prefix)) && !isFixup(data) {
-			edited = true
 			data = []byte(prefix + string(data))
 		}
 	}
 
 	// Write back.
-	if edited {
+	if !bytes.Equal(data, oldData) {
 		if err := ioutil.WriteFile(file, data, 0666); err != nil {
 			dief("%v", err)
 		}

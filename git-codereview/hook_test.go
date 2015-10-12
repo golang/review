@@ -89,17 +89,24 @@ func TestHookCommitMsgIssueRepoRewrite(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
-	// If there's no config, don't rewrite issue references.
-	const msg = "math/big: catch all the rats\n\nFixes #99999, at least for now\n"
-	write(t, gt.client+"/msg.txt", msg)
-	testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
-	got, err := ioutil.ReadFile(gt.client + "/msg.txt")
-	if err != nil {
-		t.Fatal(err)
+	msgs := []string{
+		// If there's no config, don't rewrite issue references.
+		"math/big: catch all the rats\n\nFixes #99999, at least for now\n",
+		// Fix the fix-message, even without config
+		"math/big: catch all the rats\n\nFixes issue #99999, at least for now\n",
+		"math/big: catch all the rats\n\nFixes issue 99999, at least for now\n",
+		// Don't forget to write back if Change-Id already exists
+		"math/big: catch all the rats\n\nFixes issue #99999, at least for now\n\nChange-Id: Ie77358867e38cf976a0688b6e2f80525dae3891e\n",
 	}
-	got = got[:len(got)-lenChangeId]
-	if string(got) != msg {
-		t.Errorf("hook changed %s to %s", msg, got)
+	for _, msg := range msgs {
+		write(t, gt.client+"/msg.txt", msg)
+		testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
+		got := read(t, gt.client+"/msg.txt")
+		got = got[:len(got)-lenChangeId]
+		const want = "math/big: catch all the rats\n\nFixes #99999, at least for now\n"
+		if string(got) != want {
+			t.Errorf("issue rewrite failed: got\n\n%s\nwant\n\n%s\nlen %d and %d", got, want, len(got), len(want))
+		}
 	}
 
 	// Add issuerepo config.
@@ -113,16 +120,22 @@ func TestHookCommitMsgIssueRepoRewrite(t *testing.T) {
 	cachedConfig = nil
 
 	// Check for the rewrite
-	write(t, gt.client+"/msg.txt", msg)
-	testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
-	got, err = ioutil.ReadFile(gt.client + "/msg.txt")
-	if err != nil {
-		t.Fatal(err)
+	msgs = []string{
+		"math/big: catch all the rats\n\nFixes #99999, at least for now\n",
+		"math/big: catch all the rats\n\nFixes issue #99999, at least for now\n",
+		"math/big: catch all the rats\n\nFixes issue 99999, at least for now\n",
+		"math/big: catch all the rats\n\nFixes issue golang/go#99999, at least for now\n",
+		"math/big: catch all the rats\n\nFixes issue #99999, at least for now\n\nChange-Id: Ie77358867e38cf976a0688b6e2f80525dae3891e\n",
 	}
-	got = got[:len(got)-lenChangeId]
-	const want = "math/big: catch all the rats\n\nFixes golang/go#99999, at least for now\n"
-	if string(got) != want {
-		t.Errorf("issue rewrite failed: got\n\n%s\nwant\n\n%s", got, want)
+	for _, msg := range msgs {
+		write(t, gt.client+"/msg.txt", msg)
+		testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
+		got := read(t, gt.client+"/msg.txt")
+		got = got[:len(got)-lenChangeId]
+		const want = "math/big: catch all the rats\n\nFixes golang/go#99999, at least for now\n"
+		if string(got) != want {
+			t.Errorf("issue rewrite failed: got\n\n%s\nwant\n\n%s", got, want)
+		}
 	}
 
 	// Reset config state
