@@ -5,6 +5,7 @@
 package main
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -171,6 +172,29 @@ func TestSubmitMultiple(t *testing.T) {
 	srv := newGerritServer(t)
 	defer srv.done()
 
+	cl1, cl2 := testSubmitMultiple(t, gt, srv)
+	testMain(t, "submit", cl1.CurrentRevision, cl2.CurrentRevision)
+}
+
+func TestSubmitInteractive(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	srv := newGerritServer(t)
+	defer srv.done()
+
+	cl1, cl2 := testSubmitMultiple(t, gt, srv)
+	os.Setenv("GIT_EDITOR", "echo "+cl1.CurrentRevision+" > ")
+	testMain(t, "submit", "-i")
+	if cl1.Status != "MERGED" {
+		t.Fatalf("want cl1.Status == MERGED; got %v", cl1.Status)
+	}
+	if cl2.Status != "NEW" {
+		t.Fatalf("want cl2.Status == NEW; got %v", cl1.Status)
+	}
+}
+
+func testSubmitMultiple(t *testing.T, gt *gitTest, srv *gerritServer) (*GerritChange, *GerritChange) {
 	write(t, gt.client+"/file1", "")
 	trun(t, gt.client, "git", "add", "file1")
 	trun(t, gt.client, "git", "commit", "-m", "msg\n\nChange-Id: I0000001\n")
@@ -218,5 +242,5 @@ func TestSubmitMultiple(t *testing.T) {
 		cl2.Status = "MERGED"
 		return gerritReply{json: cl2}
 	}})
-	testMain(t, "submit", hash1, hash2)
+	return &cl1, &cl2
 }

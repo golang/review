@@ -95,7 +95,7 @@ Available commands:
 		If -l is specified, only use locally available information.
 		If -s is specified, show short output.
 
-	submit [commit-hash...]
+	submit [-i | commit-hash...]
 		Push the pending change to the Gerrit server and tell Gerrit to
 		submit it to the master branch.
 

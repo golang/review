@@ -344,7 +344,11 @@ func (b *Branch) DefaultCommit(action string) *Commit {
 		for _, c := range work {
 			fmt.Fprintf(&buf, "\n\t%s %s", c.ShortHash, c.Subject)
 		}
-		dief("cannot %s: multiple changes pending; must specify commit hash on command line:%s", action, buf.String())
+		extra := ""
+		if action == "submit" {
+			extra = " or use submit -i"
+		}
+		dief("cannot %s: multiple changes pending; must specify commit hash on command line%s:%s", action, extra, buf.String())
 	}
 	return work[0]
 }

@@ -5,22 +5,39 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
 // TODO(rsc): Add -tbr, along with standard exceptions (doc/go1.5.txt)
 
 func cmdSubmit(args []string) {
+	var interactive bool
+	flags.BoolVar(&interactive, "i", false, "interactively select commits to submit")
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s submit %s [commit-hash...]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s submit %s [-i | commit-hash...]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
+	if interactive && flags.NArg() > 0 {
+		flags.Usage()
+		os.Exit(2)
+	}
 
 	b := CurrentBranch()
 	var cs []*Commit
-	if args := flags.Args(); len(args) >= 1 {
+	if interactive {
+		hashes := submitHashes(b)
+		if len(hashes) == 0 {
+			printf("nothing to submit")
+			return
+		}
+		for _, hash := range hashes {
+			cs = append(cs, b.CommitByHash("submit", hash))
+		}
+	} else if args := flags.Args(); len(args) >= 1 {
 		for _, arg := range args {
 			cs = append(cs, b.CommitByHash("submit", arg))
 		}
@@ -178,4 +195,58 @@ func submitCheck(g *GerritChange) error {
 	}
 
 	return nil
+}
+
+// submitHashes interactively prompts for commits to submit.
+func submitHashes(b *Branch) []string {
+	// Get pending commits on b.
+	pending := b.Pending()
+	for _, c := range pending {
+		// Note that DETAILED_LABELS does not imply LABELS.
+		c.g, c.gerr = b.GerritChange(c, "CURRENT_REVISION", "LABELS", "DETAILED_LABELS")
+		if c.g == nil {
+			c.g = new(GerritChange)
+		}
+	}
+
+	// Construct submit script.
+	var script bytes.Buffer
+	for i := len(pending) - 1; i >= 0; i-- {
+		c := pending[i]
+
+		if c.g.ID == "" {
+			fmt.Fprintf(&script, "# change not on Gerrit:\n#")
+		} else if err := submitCheck(c.g); err != nil {
+			fmt.Fprintf(&script, "# %v:\n#", err)
+		}
+
+		formatCommit(&script, c, true)
+	}
+
+	fmt.Fprintf(&script, `
+# The above commits will be submitted in order from top to bottom
+# when you exit the editor.
+#
+# These lines can be re-ordered, removed, and commented out.
+#
+# If you remove all lines, the submit will be aborted.
+`)
+
+	// Edit the script.
+	final := editor(script.String())
+
+	// Parse the final script.
+	var hashes []string
+	for _, line := range lines(final) {
+		line := strings.TrimSpace(line)
+		if len(line) == 0 || line[0] == '#' {
+			continue
+		}
+		if i := strings.Index(line, " "); i >= 0 {
+			line = line[:i]
+		}
+		hashes = append(hashes, line)
+	}
+
+	return hashes
 }
