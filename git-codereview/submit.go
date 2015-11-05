@@ -14,20 +14,18 @@ import (
 
 func cmdSubmit(args []string) {
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s submit %s [commit-hash]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s submit %s [commit-hash...]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
-	if n := len(flags.Args()); n > 1 {
-		flags.Usage()
-		os.Exit(2)
-	}
 
 	b := CurrentBranch()
-	var c *Commit
-	if len(flags.Args()) == 1 {
-		c = b.CommitByHash("submit", flags.Arg(0))
+	var cs []*Commit
+	if args := flags.Args(); len(args) >= 1 {
+		for _, arg := range args {
+			cs = append(cs, b.CommitByHash("submit", arg))
+		}
 	} else {
-		c = b.DefaultCommit("submit")
+		cs = append(cs, b.DefaultCommit("submit"))
 	}
 
 	// No staged changes.
@@ -37,13 +35,17 @@ func cmdSubmit(args []string) {
 	checkStaged("submit")
 	checkUnstaged("submit")
 
-	// Submit the change.
-	g := submit(b, c)
+	// Submit the changes.
+	var g *GerritChange
+	for _, c := range cs {
+		printf("submitting %s %s", c.ShortHash, c.Subject)
+		g = submit(b, c)
+	}
 
 	// Sync client to revision that Gerrit committed, but only if we can do it cleanly.
 	// Otherwise require user to run 'git sync' themselves (if they care).
 	run("git", "fetch", "-q")
-	if len(b.Pending()) == 1 {
+	if len(cs) == 1 && len(b.Pending()) == 1 {
 		if err := runErr("git", "checkout", "-q", "-B", b.Name, g.CurrentRevision, "--"); err != nil {
 			dief("submit succeeded, but cannot sync local branch\n"+
 				"\trun 'git sync' to sync, or\n"+
@@ -119,7 +121,8 @@ func submit(b *Branch, c *Commit) *GerritChange {
 	}
 
 	if *noRun {
-		dief("stopped before submit")
+		printf("stopped before submit")
+		return g
 	}
 
 	// Otherwise, try the submit. Sends back updated GerritChange,

@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -386,6 +387,7 @@ func (s *gerritServer) done() {
 type gerritReply struct {
 	status int
 	body   string
+	json   interface{}
 	f      func() gerritReply
 }
 
@@ -412,6 +414,13 @@ func (s *gerritServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if reply.status != 0 {
 		w.WriteHeader(reply.status)
+	}
+	if reply.json != nil {
+		body, err := json.Marshal(reply.json)
+		if err != nil {
+			dief("%v", err)
+		}
+		reply.body = ")]}'\n" + string(body)
 	}
 	if len(reply.body) > 0 {
 		w.Write([]byte(reply.body))
