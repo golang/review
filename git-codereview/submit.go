@@ -37,6 +37,28 @@ func cmdSubmit(args []string) {
 	checkStaged("submit")
 	checkUnstaged("submit")
 
+	// Submit the change.
+	g := submit(b, c)
+
+	// Sync client to revision that Gerrit committed, but only if we can do it cleanly.
+	// Otherwise require user to run 'git sync' themselves (if they care).
+	run("git", "fetch", "-q")
+	if len(b.Pending()) == 1 {
+		if err := runErr("git", "checkout", "-q", "-B", b.Name, g.CurrentRevision, "--"); err != nil {
+			dief("submit succeeded, but cannot sync local branch\n"+
+				"\trun 'git sync' to sync, or\n"+
+				"\trun 'git branch -D %s; git change master; git sync' to discard local branch", b.Name)
+		}
+	} else {
+		printf("submit succeeded; run 'git sync' to sync")
+	}
+
+	// Done! Change is submitted, branch is up to date, ready for new work.
+}
+
+// submit submits a single commit c on branch b and returns the
+// GerritChange for the submitted change. It dies if the submit fails.
+func submit(b *Branch, c *Commit) *GerritChange {
 	// Fetch Gerrit information about this change.
 	g, err := b.GerritChange(c, "LABELS", "CURRENT_REVISION")
 	if err != nil {
@@ -139,18 +161,5 @@ func cmdSubmit(args []string) {
 		dief("cannot submit: timed out waiting for change to be submitted by Gerrit")
 	}
 
-	// Sync client to revision that Gerrit committed, but only if we can do it cleanly.
-	// Otherwise require user to run 'git sync' themselves (if they care).
-	run("git", "fetch", "-q")
-	if len(b.Pending()) == 1 {
-		if err := runErr("git", "checkout", "-q", "-B", b.Name, g.CurrentRevision, "--"); err != nil {
-			dief("submit succeeded, but cannot sync local branch\n"+
-				"\trun 'git sync' to sync, or\n"+
-				"\trun 'git branch -D %s; git change master; git sync' to discard local branch", b.Name)
-		}
-	} else {
-		printf("submit succeeded; run 'git sync' to sync")
-	}
-
-	// Done! Change is submitted, branch is up to date, ready for new work.
+	return g
 }
