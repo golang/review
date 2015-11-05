@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"sort"
@@ -240,76 +241,12 @@ func cmdPending(args []string) {
 
 		for _, c := range work {
 			printed = true
-			g := c.g
-			msg := strings.TrimRight(c.Message, "\r\n")
-			fmt.Fprintf(&buf, "+ %s", c.ShortHash)
-			var tags []string
-			if pendingShort {
-				if i := strings.Index(msg, "\n"); i >= 0 {
-					msg = msg[:i]
-				}
-				fmt.Fprintf(&buf, " %s", msg)
-				if g.Number != 0 {
-					tags = append(tags, fmt.Sprintf("CL %d%s", g.Number, codeReviewScores(g)))
-				}
-			} else {
-				if g.Number != 0 {
-					fmt.Fprintf(&buf, " %s/%d", auth.url, g.Number)
-				}
+			fmt.Fprintf(&buf, "+ ")
+			formatCommit(&buf, c, pendingShort)
+			if !pendingShort {
+				printFileList("in this change", c.committed)
+				fmt.Fprintf(&buf, "\n")
 			}
-			if g.CurrentRevision == c.Hash {
-				tags = append(tags, "mailed")
-			}
-			if g.Status == "MERGED" {
-				tags = append(tags, "submitted")
-			}
-			if len(tags) > 0 {
-				fmt.Fprintf(&buf, " (%s)", strings.Join(tags, ", "))
-			}
-			fmt.Fprintf(&buf, "\n")
-			if pendingShort {
-				continue
-			}
-
-			fmt.Fprintf(&buf, "\t%s\n", strings.Replace(msg, "\n", "\n\t", -1))
-			fmt.Fprintf(&buf, "\n")
-
-			for _, name := range g.LabelNames() {
-				label := g.Labels[name]
-				minValue := 10000
-				maxValue := -10000
-				byScore := map[int][]string{}
-				for _, x := range label.All {
-					// Hide CL owner unless owner score is nonzero.
-					if g.Owner != nil && x.ID == g.Owner.ID && x.Value == 0 {
-						continue
-					}
-					byScore[x.Value] = append(byScore[x.Value], x.Name)
-					if minValue > x.Value {
-						minValue = x.Value
-					}
-					if maxValue < x.Value {
-						maxValue = x.Value
-					}
-				}
-				// Unless there are scores to report, do not show labels other than Code-Review.
-				// This hides Run-TryBot and TryBot-Result.
-				if minValue >= 0 && maxValue <= 0 && name != "Code-Review" {
-					continue
-				}
-				fmt.Fprintf(&buf, "\t%s:\n", name)
-				for score := maxValue; score >= minValue; score-- {
-					who := byScore[score]
-					if len(who) == 0 || score == 0 && name != "Code-Review" {
-						continue
-					}
-					sort.Strings(who)
-					fmt.Fprintf(&buf, "\t\t%+d %s\n", score, strings.Join(who, ", "))
-				}
-			}
-
-			printFileList("in this change", c.committed)
-			fmt.Fprintf(&buf, "\n")
 		}
 		if pendingShort || !printed {
 			fmt.Fprintf(&buf, "\n")
@@ -319,7 +256,87 @@ func cmdPending(args []string) {
 	stdout().Write(buf.Bytes())
 }
 
+// formatCommit writes detailed information about c to w. c.g must
+// have the "CURRENT_REVISION" (or "ALL_REVISIONS") and
+// "DETAILED_LABELS" options set.
+//
+// If short is true, this writes a single line overview.
+//
+// If short is false, this writes detailed information about the
+// commit and its Gerrit state.
+func formatCommit(w io.Writer, c *Commit, short bool) {
+	g := c.g
+	msg := strings.TrimRight(c.Message, "\r\n")
+	fmt.Fprintf(w, "%s", c.ShortHash)
+	var tags []string
+	if short {
+		if i := strings.Index(msg, "\n"); i >= 0 {
+			msg = msg[:i]
+		}
+		fmt.Fprintf(w, " %s", msg)
+		if g.Number != 0 {
+			tags = append(tags, fmt.Sprintf("CL %d%s", g.Number, codeReviewScores(g)))
+		}
+	} else {
+		if g.Number != 0 {
+			fmt.Fprintf(w, " %s/%d", auth.url, g.Number)
+		}
+	}
+	if g.CurrentRevision == c.Hash {
+		tags = append(tags, "mailed")
+	}
+	if g.Status == "MERGED" {
+		tags = append(tags, "submitted")
+	}
+	if len(tags) > 0 {
+		fmt.Fprintf(w, " (%s)", strings.Join(tags, ", "))
+	}
+	fmt.Fprintf(w, "\n")
+	if short {
+		return
+	}
+
+	fmt.Fprintf(w, "\t%s\n", strings.Replace(msg, "\n", "\n\t", -1))
+	fmt.Fprintf(w, "\n")
+
+	for _, name := range g.LabelNames() {
+		label := g.Labels[name]
+		minValue := 10000
+		maxValue := -10000
+		byScore := map[int][]string{}
+		for _, x := range label.All {
+			// Hide CL owner unless owner score is nonzero.
+			if g.Owner != nil && x.ID == g.Owner.ID && x.Value == 0 {
+				continue
+			}
+			byScore[x.Value] = append(byScore[x.Value], x.Name)
+			if minValue > x.Value {
+				minValue = x.Value
+			}
+			if maxValue < x.Value {
+				maxValue = x.Value
+			}
+		}
+		// Unless there are scores to report, do not show labels other than Code-Review.
+		// This hides Run-TryBot and TryBot-Result.
+		if minValue >= 0 && maxValue <= 0 && name != "Code-Review" {
+			continue
+		}
+		fmt.Fprintf(w, "\t%s:\n", name)
+		for score := maxValue; score >= minValue; score-- {
+			who := byScore[score]
+			if len(who) == 0 || score == 0 && name != "Code-Review" {
+				continue
+			}
+			sort.Strings(who)
+			fmt.Fprintf(w, "\t\t%+d %s\n", score, strings.Join(who, ", "))
+		}
+	}
+}
+
 // codeReviewScores reports the code review scores as tags for the short output.
+//
+// g must have the "DETAILED_LABELS" option set.
 func codeReviewScores(g *GerritChange) string {
 	label := g.Labels["Code-Review"]
 	if label == nil {
