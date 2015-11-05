@@ -67,39 +67,10 @@ func submit(b *Branch, c *Commit) *GerritChange {
 		dief("%v", err)
 	}
 
-	// Check Gerrit change status.
-	switch g.Status {
-	default:
-		dief("cannot submit: unexpected Gerrit change status %q", g.Status)
-
-	case "NEW", "SUBMITTED":
-		// Not yet "MERGED", so try the submit.
-		// "SUBMITTED" is a weird state. It means that Submit has been clicked once,
-		// but it hasn't happened yet, usually because of a merge failure.
-		// The user may have done git sync and may now have a mergable
-		// copy waiting to be uploaded, so continue on as if it were "NEW".
-
-	case "MERGED":
-		// Can happen if moving between different clients.
-		dief("cannot submit: change already submitted, run 'git sync'")
-
-	case "ABANDONED":
-		dief("cannot submit: change abandoned")
-	}
-
-	// Check for label approvals (like CodeReview+2).
-	// The final submit will check these too, but it is better to fail now.
-	for _, name := range g.LabelNames() {
-		label := g.Labels[name]
-		if label.Optional {
-			continue
-		}
-		if label.Rejected != nil {
-			dief("cannot submit: change has %s rejection", name)
-		}
-		if label.Approved == nil {
-			dief("cannot submit: change missing %s approval", name)
-		}
+	// Pre-check that this change appears submittable.
+	// The final submit will check this too, but it is better to fail now.
+	if err = submitCheck(g); err != nil {
+		dief("cannot submit: %v", err)
 	}
 
 	// Upload most recent revision if not already on server.
@@ -165,4 +136,46 @@ func submit(b *Branch, c *Commit) *GerritChange {
 	}
 
 	return g
+}
+
+// submitCheck checks that g should be submittable. This is
+// necessarily a best-effort check.
+//
+// g must have the "LABELS" option.
+func submitCheck(g *GerritChange) error {
+	// Check Gerrit change status.
+	switch g.Status {
+	default:
+		return fmt.Errorf("unexpected Gerrit change status %q", g.Status)
+
+	case "NEW", "SUBMITTED":
+		// Not yet "MERGED", so try the submit.
+		// "SUBMITTED" is a weird state. It means that Submit has been clicked once,
+		// but it hasn't happened yet, usually because of a merge failure.
+		// The user may have done git sync and may now have a mergable
+		// copy waiting to be uploaded, so continue on as if it were "NEW".
+
+	case "MERGED":
+		// Can happen if moving between different clients.
+		return fmt.Errorf("change already submitted, run 'git sync'")
+
+	case "ABANDONED":
+		return fmt.Errorf("change abandoned")
+	}
+
+	// Check for label approvals (like CodeReview+2).
+	for _, name := range g.LabelNames() {
+		label := g.Labels[name]
+		if label.Optional {
+			continue
+		}
+		if label.Rejected != nil {
+			return fmt.Errorf("change has %s rejection", name)
+		}
+		if label.Approved == nil {
+			return fmt.Errorf("change missing %s approval", name)
+		}
+	}
+
+	return nil
 }
