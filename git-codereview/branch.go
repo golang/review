@@ -184,7 +184,7 @@ func (b *Branch) loadPending() {
 		}
 	}
 	b.commitsAhead = len(b.pending)
-	b.commitsBehind = len(trim(cmdOutput("git", "log", "--format=format:x", b.FullName()+".."+b.OriginBranch(), "--")))
+	b.commitsBehind = len(lines(cmdOutput("git", "log", "--format=format:x", b.FullName()+".."+b.OriginBranch(), "--")))
 }
 
 // Submitted reports whether some form of b's pending commit

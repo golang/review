@@ -102,7 +102,7 @@ func TestPendingComplex(t *testing.T) {
 				file
 				file1
 
-		work REVHASH..REVHASH (5 behind)
+		work REVHASH..REVHASH (3 behind)
 		+ REVHASH
 			msg
 			
