@@ -6,6 +6,7 @@ package main
 
 import (
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -177,6 +178,10 @@ func TestSubmitMultiple(t *testing.T) {
 }
 
 func TestSubmitInteractive(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("see golang.org/issue/13406")
+	}
+
 	gt := newGitTest(t)
 	defer gt.done()
 
