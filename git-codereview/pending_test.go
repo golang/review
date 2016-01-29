@@ -152,6 +152,7 @@ func TestPendingComplex(t *testing.T) {
 
 func TestPendingErrors(t *testing.T) {
 	gt := newGitTest(t)
+	gt.enableGerrit(t)
 	defer gt.done()
 
 	trun(t, gt.client, "git", "checkout", "master")

@@ -387,7 +387,7 @@ func allSubmitted(work []*Commit) bool {
 func (b *Branch) errors() string {
 	b.loadPending()
 	var buf bytes.Buffer
-	if !b.IsLocalOnly() && b.commitsAhead > 0 {
+	if haveGerrit() && !b.IsLocalOnly() && b.commitsAhead > 0 {
 		fmt.Fprintf(&buf, "Branch contains %d commit%s not on origin/%s.\n", b.commitsAhead, suffix(b.commitsAhead, "s"), b.Name)
 		fmt.Fprintf(&buf, "\tDo not commit directly to %s branch.\n", b.Name)
 	}

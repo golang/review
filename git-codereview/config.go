@@ -36,6 +36,28 @@ func config() map[string]string {
 	return cachedConfig
 }
 
+func haveGerrit() bool {
+	gerrit := config()["gerrit"]
+	if gerrit == "off" {
+		return false
+	}
+	if gerrit != "" {
+		return true
+	}
+	origin := trim(cmdOutput("git", "config", "remote.origin.url"))
+	if strings.Contains(origin, "github.com") {
+		return false
+	}
+	if !strings.Contains(origin, "https://") {
+		return false
+	}
+	if strings.Count(origin, "/") != 3 {
+		return false
+	}
+	host := origin[:strings.LastIndex(origin, "/")]
+	return strings.HasSuffix(host, ".googlesource.com")
+}
+
 func parseConfig(raw string) (map[string]string, error) {
 	cfg := make(map[string]string)
 	for _, line := range nonBlankLines(raw) {

@@ -61,6 +61,7 @@ func (gt *gitTest) done() {
 	os.Chdir(gt.pwd) // change out of gt.tmpdir first, otherwise following os.RemoveAll fails on windows
 	resetReadOnlyFlagAll(gt.tmpdir)
 	os.RemoveAll(gt.tmpdir)
+	cachedConfig = nil
 }
 
 // doWork simulates commit 'n' touching 'file' in 'dir'
@@ -176,6 +177,13 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 	}
 }
 
+func (gt *gitTest) enableGerrit(t *testing.T) {
+	write(t, gt.server+"/codereview.cfg", "gerrit: myserver\n")
+	trun(t, gt.server, "git", "add", "codereview.cfg")
+	trun(t, gt.server, "git", "commit", "-m", "add gerrit")
+	trun(t, gt.client, "git", "pull", "-r")
+}
+
 func (gt *gitTest) removeStubHooks() {
 	for _, h := range hookFiles {
 		os.RemoveAll(gt.client + "/.git/hooks/" + h)
@@ -261,6 +269,7 @@ func testMainCanDie(t *testing.T, args ...string) {
 func testMain(t *testing.T, args ...string) {
 	*noRun = false
 	*verbose = 0
+	cachedConfig = nil
 
 	t.Logf("git-codereview %s", strings.Join(args, " "))
 

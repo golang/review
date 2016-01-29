@@ -125,7 +125,10 @@ func main() {
 		return
 	}
 
-	installHook()
+	// Install hooks automatically, but only if this is a Gerrit repo.
+	if haveGerrit() {
+		installHook()
+	}
 
 	switch command {
 	case "branchpoint":
@@ -137,7 +140,7 @@ func main() {
 	case "hook-invoke":
 		cmdHookInvoke(args)
 	case "hooks":
-		// done - installHook already ran
+		installHook() // in case above was bypassed
 	case "mail", "m":
 		cmdMail(args)
 	case "pending":
