@@ -25,7 +25,7 @@ func cmdMail(args []string) {
 	flags.Var(ccList, "cc", "comma-separated list of people to CC:")
 
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-topic topic] [-trybot] [commit-hash]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-topic topic] [-trybot] [commit]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
@@ -37,7 +37,7 @@ func cmdMail(args []string) {
 
 	var c *Commit
 	if len(flags.Args()) == 1 {
-		c = b.CommitByHash("mail", flags.Arg(0))
+		c = b.CommitByRev("mail", flags.Arg(0))
 	} else {
 		c = b.DefaultCommit("mail")
 	}

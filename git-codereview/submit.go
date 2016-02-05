@@ -18,7 +18,7 @@ func cmdSubmit(args []string) {
 	var interactive bool
 	flags.BoolVar(&interactive, "i", false, "interactively select commits to submit")
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s submit %s [-i | commit-hash...]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s submit %s [-i | commit...]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
 	if interactive && flags.NArg() > 0 {
@@ -35,11 +35,11 @@ func cmdSubmit(args []string) {
 			return
 		}
 		for _, hash := range hashes {
-			cs = append(cs, b.CommitByHash("submit", hash))
+			cs = append(cs, b.CommitByRev("submit", hash))
 		}
 	} else if args := flags.Args(); len(args) >= 1 {
 		for _, arg := range args {
-			cs = append(cs, b.CommitByHash("submit", arg))
+			cs = append(cs, b.CommitByRev("submit", arg))
 		}
 	} else {
 		cs = append(cs, b.DefaultCommit("submit"))

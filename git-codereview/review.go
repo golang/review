@@ -77,9 +77,11 @@ Available commands:
 		Every other operation except help also does this,
 		if they are not already installed.
 
-	mail [-f] [-r reviewer,...] [-cc mail,...]
+	mail [-f] [-r reviewer,...] [-cc mail,...] [commit]
 		Upload change commit to the code review server and send mail
 		requesting a code review.
+		If there are multiple commits on this branch, upload commits
+		up to and including the named commit.
 		If -f is specified, upload even if there are staged changes.
 		The -r and -cc flags identify the email addresses of people to
 		do the code review and to be CC'ed about the code review.
@@ -95,7 +97,7 @@ Available commands:
 		If -l is specified, only use locally available information.
 		If -s is specified, show short output.
 
-	submit [-i | commit-hash...]
+	submit [-i | commit...]
 		Push the pending change to the Gerrit server and tell Gerrit to
 		submit it to the master branch.
 

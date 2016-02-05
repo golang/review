@@ -177,6 +177,17 @@ func TestSubmitMultiple(t *testing.T) {
 	testMain(t, "submit", cl1.CurrentRevision, cl2.CurrentRevision)
 }
 
+func TestSubmitMultipleNamed(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	srv := newGerritServer(t)
+	defer srv.done()
+
+	_, _ = testSubmitMultiple(t, gt, srv)
+	testMain(t, "submit", "HEAD^", "HEAD")
+}
+
 func TestSubmitInteractive(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("see golang.org/issue/13406")
