@@ -47,6 +47,10 @@ func cmdMail(args []string) {
 		return
 	}
 
+	if len(ListFiles(c)) == 0 {
+		dief("cannot mail: commit %s is empty", c.ShortHash)
+	}
+
 	if !*force && HasStagedChanges() {
 		dief("there are staged changes; aborting.\n"+
 			"Use '%s change' to include them or '%s mail -f' to force it.", os.Args[0], os.Args[0])

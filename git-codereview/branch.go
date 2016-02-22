@@ -355,6 +355,11 @@ func (b *Branch) DefaultCommit(action string) *Commit {
 	return work[0]
 }
 
+// ListFiles returns the list of files in a given commit.
+func ListFiles(c *Commit) []string {
+	return nonBlankLines(cmdOutput("git", "diff", "--name-only", c.Parent, c.Hash, "--"))
+}
+
 func cmdBranchpoint(args []string) {
 	expectZeroArgs(args, "sync")
 	fmt.Fprintf(stdout(), "%s\n", CurrentBranch().Branchpoint())

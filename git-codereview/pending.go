@@ -43,7 +43,7 @@ func (b *pendingBranch) load() {
 		b.staged, b.unstaged, b.untracked = LocalChanges()
 	}
 	for _, c := range b.Pending() {
-		c.committed = nonBlankLines(cmdOutput("git", "diff", "--name-only", c.Parent, c.Hash, "--"))
+		c.committed = ListFiles(c)
 		if !pendingLocal {
 			c.g, c.gerr = b.GerritChange(c, "DETAILED_LABELS", "CURRENT_REVISION", "MESSAGES", "DETAILED_ACCOUNTS")
 		}
