@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -398,6 +399,36 @@ func TestHookPreCommitUnstaged(t *testing.T) {
 func TestHooks(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
+
+	gt.removeStubHooks()
+	testMain(t, "hooks") // install hooks
+
+	data, err := ioutil.ReadFile(gt.client + "/.git/hooks/commit-msg")
+	if err != nil {
+		t.Fatalf("hooks did not write commit-msg hook: %v", err)
+	}
+	if string(data) != "#!/bin/sh\nexec git-codereview hook-invoke commit-msg \"$@\"\n" {
+		t.Fatalf("invalid commit-msg hook:\n%s", string(data))
+	}
+}
+
+var worktreeRE = regexp.MustCompile(`\sworktree\s`)
+
+func mustHaveWorktree(t *testing.T) {
+	commands := trun(t, "", "git", "help", "-a")
+	if !worktreeRE.MatchString(commands) {
+		t.Skip("git doesn't support worktree")
+	}
+}
+
+func TestHooksInWorktree(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	mustHaveWorktree(t)
+
+	trun(t, gt.client, "git", "worktree", "add", "../worktree")
+	chdir(t, filepath.Join("..", "worktree"))
 
 	gt.removeStubHooks()
 	testMain(t, "hooks") // install hooks

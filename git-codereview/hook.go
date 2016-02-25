@@ -13,19 +13,18 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 )
 
-var hookPath = ".git/hooks/"
 var hookFiles = []string{
 	"commit-msg",
 	"pre-commit",
 }
 
 func installHook() {
+	hooksDir := gitPath("hooks")
 	for _, hookFile := range hookFiles {
-		filename := filepath.Join(repoRoot(), hookPath+hookFile)
+		filename := filepath.Join(hooksDir, hookFile)
 		hookContent := fmt.Sprintf(hookScript, hookFile)
 
 		if data, err := ioutil.ReadFile(filename); err == nil {
@@ -70,23 +69,22 @@ func installHook() {
 }
 
 func repoRoot() string {
-	dir, err := os.Getwd()
+	return filepath.Clean(trim(cmdOutput("git", "rev-parse", "--show-toplevel")))
+}
+
+// gitPath resolve the $GIT_DIR/path, taking in consideration
+// all other path relocations, e.g. hooks for linked worktrees
+// are not kept in their gitdir, but shared in the main one.
+func gitPath(path string) string {
+	p, err := trimErr(cmdOutputErr("git", "rev-parse", "--git-path", path))
 	if err != nil {
-		dief("could not get current directory: %v", err)
+		// When --git-path is not available, assume the common case.
+		p = filepath.Join(".git", path)
 	}
-	rootlen := 1
-	if runtime.GOOS == "windows" {
-		rootlen += len(filepath.VolumeName(dir))
+	if !filepath.IsAbs(p) {
+		p = filepath.Join(repoRoot(), p)
 	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			return dir
-		}
-		if len(dir) == rootlen && dir[rootlen-1] == filepath.Separator {
-			dief("git root not found. Rerun from within the Git tree.")
-		}
-		dir = filepath.Dir(dir)
-	}
+	return p
 }
 
 var hookScript = `#!/bin/sh
