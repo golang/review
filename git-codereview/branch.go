@@ -335,8 +335,9 @@ func (b *Branch) CommitByRev(action, rev string) *Commit {
 
 // DefaultCommit returns the default pending commit for this branch.
 // It dies if there is not exactly one pending commit,
-// using the action ("mail", "submit") in the failure message.
-func (b *Branch) DefaultCommit(action string) *Commit {
+// using the action (e.g. "mail", "submit") and optional extra instructions
+// in the failure message.
+func (b *Branch) DefaultCommit(action, extra string) *Commit {
 	work := b.Pending()
 	if len(work) == 0 {
 		dief("cannot %s: no changes pending", action)
@@ -346,11 +347,10 @@ func (b *Branch) DefaultCommit(action string) *Commit {
 		for _, c := range work {
 			fmt.Fprintf(&buf, "\n\t%s %s", c.ShortHash, c.Subject)
 		}
-		extra := ""
-		if action == "submit" {
-			extra = " or use submit -i"
+		if extra != "" {
+			extra = "; " + extra
 		}
-		dief("cannot %s: multiple changes pending; must specify commit on command line%s:%s", action, extra, buf.String())
+		dief("cannot %s: multiple changes pending%s:%s", action, extra, buf.String())
 	}
 	return work[0]
 }

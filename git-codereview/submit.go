@@ -42,7 +42,7 @@ func cmdSubmit(args []string) {
 			cs = append(cs, b.CommitByRev("submit", arg))
 		}
 	} else {
-		cs = append(cs, b.DefaultCommit("submit"))
+		cs = append(cs, b.DefaultCommit("submit", "must specify commit on command line or use submit -i"))
 	}
 
 	// No staged changes.

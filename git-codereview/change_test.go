@@ -76,3 +76,29 @@ func TestMessageRE(t *testing.T) {
 		}
 	}
 }
+
+func TestChangeAmendCommit(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	testCommitMsg = "foo: amended commit message"
+	gt.work(t)
+
+	write(t, gt.client+"/file", "new content in work to be amend")
+	trun(t, gt.client, "git", "add", "file")
+	testMain(t, "change")
+}
+
+func TestChangeFailAmendWithMultiplePending(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	testCommitMsg = "foo: amended commit message"
+	gt.work(t)
+	gt.work(t)
+
+	write(t, gt.client+"/file", "new content in work to be amend")
+	trun(t, gt.client, "git", "add", "file")
+	testMainDied(t, "change")
+	testPrintedStderr(t, "multiple changes pending")
+}

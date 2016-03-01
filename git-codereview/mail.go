@@ -39,7 +39,7 @@ func cmdMail(args []string) {
 	if len(flags.Args()) == 1 {
 		c = b.CommitByRev("mail", flags.Arg(0))
 	} else {
-		c = b.DefaultCommit("mail")
+		c = b.DefaultCommit("mail", "must specify commit on command line")
 	}
 
 	if *diff {

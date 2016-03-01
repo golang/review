@@ -43,6 +43,10 @@ func cmdChange(args []string) {
 	}
 
 	amend := b.HasPendingCommit()
+	if amend {
+		// Dies if there is not exactly one commit.
+		b.DefaultCommit("amend change", "")
+	}
 	commitChanges(amend)
 	b.loadedPending = false // force reload after commitChanges
 	b.check()
