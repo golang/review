@@ -4,7 +4,11 @@
 
 package main
 
-import "testing"
+import (
+	"fmt"
+	"strings"
+	"testing"
+)
 
 func TestChange(t *testing.T) {
 	gt := newGitTest(t)
@@ -101,4 +105,52 @@ func TestChangeFailAmendWithMultiplePending(t *testing.T) {
 	trun(t, gt.client, "git", "add", "file")
 	testMainDied(t, "change")
 	testPrintedStderr(t, "multiple changes pending")
+}
+
+func TestChangeCL(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	srv := newGerritServer(t)
+	defer srv.done()
+
+	// Ensure that 'change' with a CL accepts we have gerrit. Test address is injected by newGerritServer.
+	write(t, gt.server+"/codereview.cfg", "gerrit: on")
+	trun(t, gt.server, "git", "add", "codereview.cfg")
+	trun(t, gt.server, "git", "commit", "-m", "codereview.cfg on master")
+	trun(t, gt.client, "git", "pull")
+	defer srv.done()
+
+	hash1 := trim(trun(t, gt.server, "git", "rev-parse", "dev.branch"))
+	hash2 := trim(trun(t, gt.server, "git", "rev-parse", "release.branch"))
+	trun(t, gt.server, "git", "update-ref", "refs/changes/00/100/1", hash1)
+	trun(t, gt.server, "git", "update-ref", "refs/changes/00/100/2", hash2)
+	trun(t, gt.server, "git", "update-ref", "refs/changes/00/100/3", hash1)
+	srv.setReply("/a/changes/100", gerritReply{f: func() gerritReply {
+		changeJSON := `{
+			"current_revision": "HASH",
+			"revisions": {
+				"HASH": {
+					"_number": 3
+				}
+			}
+		}`
+		changeJSON = strings.Replace(changeJSON, "HASH", hash1, -1)
+		return gerritReply{body: ")]}'\n" + changeJSON}
+	}})
+
+	checkChangeCL := func(arg, ref, hash string) {
+		testMain(t, "change", "master")
+		testMain(t, "change", arg)
+		testRan(t,
+			fmt.Sprintf("git fetch -q origin %s", ref),
+			"git checkout -q FETCH_HEAD")
+		if hash != trim(trun(t, gt.client, "git", "rev-parse", "HEAD")) {
+			t.Fatalf("hash do not match for CL %s", arg)
+		}
+	}
+
+	checkChangeCL("100/1", "refs/changes/00/100/1", hash1)
+	checkChangeCL("100/2", "refs/changes/00/100/2", hash2)
+	checkChangeCL("100", "refs/changes/00/100/3", hash1)
 }

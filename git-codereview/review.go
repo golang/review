@@ -63,6 +63,11 @@ Available commands:
 		If -a is specified, automatically add any unstaged changes in
 		tracked files during commit.
 
+	change NNNN[/PP]
+		Checkout the commit corresponding to CL number NNNN and
+		patch set PP from Gerrit.
+		If the patch set is omitted, use the current patch set.
+
 	gofmt [-l]
 		Run gofmt on all tracked files in the staging area and the
 		working tree.

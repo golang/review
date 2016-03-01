@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -109,6 +110,19 @@ func commitChanges(amend bool) {
 }
 
 func checkoutOrCreate(target string) {
+	// If it's a valid Gerrit number, checkout the CL.
+	cl, ps, isCL := parseCL(target)
+	if isCL {
+		if !haveGerrit() {
+			dief("cannot change to a CL without gerrit")
+		}
+		if HasStagedChanges() || HasUnstagedChanges() {
+			dief("cannot change to a CL with uncommitted work")
+		}
+		checkoutCL(cl, ps)
+		return
+	}
+
 	if strings.ToUpper(target) == "HEAD" {
 		// Git gets very upset and confused if you 'git change head'
 		// on systems with case-insensitive file names: the branch
@@ -157,6 +171,55 @@ func checkoutOrCreate(target string) {
 	run("git", "checkout", "-q", "-b", target)
 	run("git", "branch", "-q", "--set-upstream-to", origin)
 	printf("created branch %v tracking %s.", target, origin)
+}
+
+// Checkout the patch set of the given CL. When patch set is empty, use the latest.
+func checkoutCL(cl, ps string) {
+	if ps == "" {
+		change, err := readGerritChange(cl + "?o=CURRENT_REVISION")
+		if err != nil {
+			dief("cannot change to CL %s: %v", cl, err)
+		}
+		rev, ok := change.Revisions[change.CurrentRevision]
+		if !ok {
+			dief("cannot change to CL %s: invalid current revision from gerrit", cl)
+		}
+		ps = strconv.Itoa(rev.Number)
+	}
+
+	var group string
+	if len(cl) > 1 {
+		group = cl[len(cl)-2:]
+	} else {
+		group = "0" + cl
+	}
+	ref := fmt.Sprintf("refs/changes/%s/%s/%s", group, cl, ps)
+
+	err := runErr("git", "fetch", "-q", "origin", ref)
+	if err != nil {
+		dief("cannot change to CL %s/%s: %v", cl, ps, err)
+	}
+	err = runErr("git", "checkout", "-q", "FETCH_HEAD")
+	if err != nil {
+		dief("cannot change to CL %s/%s: %v", cl, ps, err)
+	}
+	subject, err := trimErr(cmdOutputErr("git", "log", "--format=%s", "-1"))
+	if err != nil {
+		printf("changed to CL %s/%s.", cl, ps)
+		dief("cannot read change subject from git: %v", err)
+	}
+	printf("changed to CL %s/%s.\n\t%s", cl, ps, subject)
+}
+
+var parseCLRE = regexp.MustCompile(`^([0-9]+)(?:/([0-9]+))?$`)
+
+// parseCL validates and splits the CL number and patch set (if present).
+func parseCL(arg string) (cl, patchset string, ok bool) {
+	m := parseCLRE.FindStringSubmatch(arg)
+	if len(m) == 0 {
+		return "", "", false
+	}
+	return m[1], m[2], true
 }
 
 var messageRE = regexp.MustCompile(`^(\[[a-zA-Z0-9.-]+\] )?[a-zA-Z0-9-/,. ]+: `)
