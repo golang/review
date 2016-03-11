@@ -114,3 +114,71 @@ func TestLoadAuth(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadGerritOrigin(t *testing.T) {
+	list := []struct {
+		origin, originUrl string
+
+		fail               bool
+		host, url, project string
+	}{
+		{
+			// *.googlesource.com
+			origin:    "",
+			originUrl: "https://go.googlesource.com/crypto",
+			host:      "go.googlesource.com",
+			url:       "https://go-review.googlesource.com",
+			project:   "crypto",
+		},
+		{
+			// Gerrit origin is set.
+			// Gerrit is hosted on a sub-domain.
+			origin:    "https://gerrit.mysite.com",
+			originUrl: "https://gerrit.mysite.com/projectA",
+			host:      "gerrit.mysite.com",
+			url:       "https://gerrit.mysite.com",
+			project:   "projectA",
+		},
+		{
+			// Gerrit origin is set.
+			// Gerrit is hosted under sub-path under "/gerrit".
+			origin:    "https://mysite.com/gerrit",
+			originUrl: "https://mysite.com/gerrit/projectA",
+			host:      "mysite.com",
+			url:       "https://mysite.com/gerrit",
+			project:   "projectA",
+		},
+		{
+			// Gerrit origin is set.
+			// Gerrit is hosted under sub-path under "/gerrit" and repo is under
+			// sub-folder.
+			origin:    "https://mysite.com/gerrit",
+			originUrl: "https://mysite.com/gerrit/sub/projectA",
+			host:      "mysite.com",
+			url:       "https://mysite.com/gerrit",
+			project:   "sub/projectA",
+		},
+	}
+
+	for _, item := range list {
+		auth.host = ""
+		auth.url = ""
+		auth.project = ""
+		err := loadGerritOriginInternal(item.origin, item.originUrl)
+		if err != nil && !item.fail {
+			t.Errorf("unexpected error from item %q %q: %v", item.origin, item.originUrl, err)
+			continue
+		}
+		if auth.host != item.host || auth.url != item.url || auth.project != item.project {
+			t.Errorf("want %q %q %q, got %q %q %q", item.host, item.url, item.project, auth.host, auth.url, auth.project)
+			continue
+		}
+		if item.fail {
+			continue
+		}
+		have := haveGerritInternal(item.origin, item.originUrl)
+		if !have {
+			t.Errorf("for %q %q expect haveGerrit() == true, but got false", item.origin, item.originUrl)
+		}
+	}
+}

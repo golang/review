@@ -36,15 +36,25 @@ func config() map[string]string {
 	return cachedConfig
 }
 
+// haveGerrit returns true if gerrit should be used.
+// To enable gerrit, codereview.cfg must be present with "gerrit" property set to
+// the gerrit https URL or the git origin must be to
+// "https://<project>.googlesource.com/<repo>".
 func haveGerrit() bool {
 	gerrit := config()["gerrit"]
+	origin := trim(cmdOutput("git", "config", "remote.origin.url"))
+	return haveGerritInternal(gerrit, origin)
+}
+
+// haveGerritInternal is the same as haveGerrit but factored out
+// for testing.
+func haveGerritInternal(gerrit, origin string) bool {
 	if gerrit == "off" {
 		return false
 	}
 	if gerrit != "" {
 		return true
 	}
-	origin := trim(cmdOutput("git", "config", "remote.origin.url"))
 	if strings.Contains(origin, "github.com") {
 		return false
 	}

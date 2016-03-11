@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -43,38 +44,80 @@ func loadGerritOrigin() {
 	// Gerrit must be set, either explicitly via the code review config or
 	// implicitly as Git's origin remote.
 	origin := config()["gerrit"]
-	if origin == "" {
-		origin = trim(cmdOutput("git", "config", "remote.origin.url"))
-	}
+	originUrl := trim(cmdOutput("git", "config", "remote.origin.url"))
 
+	err := loadGerritOriginInternal(origin, originUrl)
+	if err != nil {
+		dief("failed to load Gerrit origin: %v", err)
+	}
+}
+
+// loadGerritOriginInternal does the work of loadGerritOrigin, just extracted out
+// for easier testing.
+func loadGerritOriginInternal(origin, remoteOrigin string) error {
+	originUrl, err := url.Parse(remoteOrigin)
+	if err != nil {
+		return fmt.Errorf("failed to parse git's remote.origin.url %q as a URL: %v", remoteOrigin, err)
+	} else {
+		originUrl.User = nil
+		remoteOrigin = originUrl.String()
+	}
+	hasGerritConfig := true
+	if origin == "" {
+		hasGerritConfig = false
+		origin = remoteOrigin
+	}
 	if strings.Contains(origin, "github.com") {
-		dief("git origin must be a Gerrit host, not GitHub: %s", origin)
+		return fmt.Errorf("git origin must be a Gerrit host, not GitHub: %s", origin)
 	}
 
 	if !strings.HasPrefix(origin, "https://") {
-		dief("git origin must be an https:// URL: %s", origin)
+		return fmt.Errorf("git origin must be an https:// URL: %s", origin)
 	}
-	// https:// prefix and then one slash between host and top-level name
-	if strings.Count(origin, "/") != 3 {
-		dief("git origin is malformed: %s", origin)
-	}
-	host := origin[len("https://"):strings.LastIndex(origin, "/")]
 
-	// In the case of Google's Gerrit, host is go.googlesource.com
-	// and apiURL uses go-review.googlesource.com, but the Gerrit
-	// setup instructions do not write down a cookie explicitly for
-	// go-review.googlesource.com, so we look for the non-review
-	// host name instead.
-	url := origin
-	if i := strings.Index(url, ".googlesource.com"); i >= 0 {
+	if googlesourceIndex := strings.Index(origin, ".googlesource.com"); googlesourceIndex >= 0 {
+		// https:// prefix and then one slash between host and top-level name
+		if strings.Count(origin, "/") != 3 {
+			return fmt.Errorf("git origin is malformed: %s", origin)
+		}
+		host := origin[len("https://"):strings.LastIndex(origin, "/")]
+
+		// In the case of Google's Gerrit, host is go.googlesource.com
+		// and apiURL uses go-review.googlesource.com, but the Gerrit
+		// setup instructions do not write down a cookie explicitly for
+		// go-review.googlesource.com, so we look for the non-review
+		// host name instead.
+		url := origin
+		i := googlesourceIndex
 		url = url[:i] + "-review" + url[i:]
-	}
-	i := strings.LastIndex(url, "/")
-	url, project := url[:i], url[i+1:]
 
-	auth.host = host
-	auth.url = url
-	auth.project = project
+		i = strings.LastIndex(url, "/")
+		url, project := url[:i], url[i+1:]
+
+		auth.host = host
+		auth.url = url
+		auth.project = project
+		return nil
+	}
+
+	// Origin is not *.googlesource.com.
+	//
+	// If the Gerrit origin is set from the codereview.cfg file than we handle it
+	// differently to allow for sub-path hosted Gerrit.
+	auth.host = originUrl.Host
+	if hasGerritConfig {
+		if !strings.HasPrefix(remoteOrigin, origin) {
+			return fmt.Errorf("Gerrit origin %q from %q different then git origin url %q", origin, configRef, originUrl)
+		}
+
+		auth.project = strings.Trim(strings.TrimPrefix(remoteOrigin, origin), "/")
+		auth.url = origin
+	} else {
+		auth.project = strings.Trim(originUrl.Path, "/")
+		auth.url = strings.TrimSuffix(remoteOrigin, originUrl.Path)
+	}
+
+	return nil
 }
 
 // loadAuth loads the authentication tokens for making API calls to
