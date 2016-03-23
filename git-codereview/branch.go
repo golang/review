@@ -7,8 +7,10 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -67,7 +69,17 @@ func (b *Branch) OriginBranch() string {
 		return b.originBranch
 	}
 	argv := []string{"git", "rev-parse", "--abbrev-ref", b.Name + "@{u}"}
-	out, err := exec.Command(argv[0], argv[1:]...).CombinedOutput()
+	cmd := exec.Command(argv[0], argv[1:]...)
+	if runtime.GOOS == "windows" {
+		// Workaround on windows. git for windows can't handle @{u} as same as
+		// given. Disable glob for this command if running on Cygwin or MSYS2.
+		envs := os.Environ()
+		envs = append(envs, "CYGWIN=noglob "+os.Getenv("CYGWIN"))
+		envs = append(envs, "MSYS=noglob "+os.Getenv("MSYS"))
+		cmd.Env = envs
+	}
+
+	out, err := cmd.CombinedOutput()
 	if err == nil && len(out) > 0 {
 		b.originBranch = string(bytes.TrimSpace(out))
 		return b.originBranch
