@@ -6,6 +6,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -75,6 +76,12 @@ func TestLoadAuth(t *testing.T) {
 
 	defer os.Setenv("HOME", os.Getenv("HOME"))
 	os.Setenv("HOME", gt.client)
+
+	testHomeDir = gt.client
+	netrc := filepath.Join(gt.client, netrcName())
+	defer func() {
+		testHomeDir = ""
+	}()
 	trun(t, gt.client, "git", "config", "remote.origin.url", "https://go.googlesource.com/go")
 
 	for i, tt := range authTests {
@@ -86,10 +93,10 @@ func TestLoadAuth(t *testing.T) {
 		trun(t, gt.client, "git", "config", "http.cookiefile", "XXX")
 		trun(t, gt.client, "git", "config", "--unset", "http.cookiefile")
 
-		remove(t, gt.client+"/.netrc")
+		remove(t, netrc)
 		remove(t, gt.client+"/.cookies")
 		if tt.netrc != "" {
-			write(t, gt.client+"/.netrc", tt.netrc)
+			write(t, netrc, tt.netrc)
 		}
 		if tt.cookiefile != "" {
 			if tt.cookiefile != "MISSING" {
@@ -99,7 +106,6 @@ func TestLoadAuth(t *testing.T) {
 		}
 
 		// Run command via testMain to trap stdout, stderr, death.
-		// mail -n will load auth info for us.
 		if tt.died {
 			testMainDied(t, "test-loadAuth")
 		} else {

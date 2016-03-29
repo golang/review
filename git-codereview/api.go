@@ -12,7 +12,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
+	"os/user"
+	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 )
@@ -120,6 +122,19 @@ func loadGerritOriginInternal(origin, remoteOrigin string) error {
 	return nil
 }
 
+// testHomeDir is empty for normal use. During tests it may be set and used
+// in place of the actual home directory. Tests may still need to
+// set the HOME var for sub-processes such as git.
+var testHomeDir = ""
+
+func netrcName() string {
+	// Git on Windows will look in $HOME\_netrc.
+	if runtime.GOOS == "windows" {
+		return "_netrc"
+	}
+	return ".netrc"
+}
+
 // loadAuth loads the authentication tokens for making API calls to
 // the Gerrit origin host.
 func loadAuth() {
@@ -152,7 +167,16 @@ func loadAuth() {
 	// If not there, then look in $HOME/.netrc, which is where Gerrit
 	// used to tell users to store the information, until the passwords
 	// got so long that old versions of curl couldn't handle them.
-	data, _ := ioutil.ReadFile(os.Getenv("HOME") + "/.netrc")
+	netrc := netrcName()
+	homeDir := testHomeDir
+	if homeDir == "" {
+		usr, err := user.Current()
+		if err != nil {
+			dief("failed to get current user home directory to look for %q: %v", netrc, err)
+		}
+		homeDir = usr.HomeDir
+	}
+	data, _ := ioutil.ReadFile(filepath.Join(homeDir, netrc))
 	for _, line := range lines(string(data)) {
 		if i := strings.Index(line, "#"); i >= 0 {
 			line = line[:i]
