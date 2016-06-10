@@ -18,7 +18,7 @@ func TestCurrentBranch(t *testing.T) {
 	checkCurrentBranch(t, "master", "origin/master", false, false, "", "")
 
 	t.Logf("on newbranch")
-	trun(t, gt.client, "git", "checkout", "-b", "newbranch")
+	trun(t, gt.client, "git", "checkout", "--no-track", "-b", "newbranch")
 	checkCurrentBranch(t, "newbranch", "origin/master", true, false, "", "")
 
 	t.Logf("making change")
