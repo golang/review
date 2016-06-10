@@ -27,7 +27,7 @@ func TestPendingNoneBranch(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
-	trun(t, gt.client, "git", "checkout", "-b", "work")
+	trun(t, gt.client, "git", "checkout", "--no-track", "-b", "work")
 
 	testPending(t, `
 		work (current branch)
