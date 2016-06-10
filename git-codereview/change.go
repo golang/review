@@ -21,7 +21,6 @@ func cmdChange(args []string) {
 	if len(flags.Args()) > 1 {
 		fmt.Fprintf(stderr(), "Usage: %s change %s [branch]\n", os.Args[0], globalFlags)
 		os.Exit(2)
-
 	}
 
 	// Checkout or create branch, if specified.

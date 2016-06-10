@@ -127,7 +127,17 @@ func main() {
 
 	// Install hooks automatically, but only if this is a Gerrit repo.
 	if haveGerrit() {
-		installHook()
+		// Don't pass installHook args directly,
+		// since args might contain args meant for other commands.
+		// Filter down to just global flags.
+		var hookArgs []string
+		for _, arg := range args {
+			switch arg {
+			case "-n", "-v":
+				hookArgs = append(hookArgs, arg)
+			}
+		}
+		installHook(hookArgs)
 	}
 
 	switch command {
@@ -140,7 +150,7 @@ func main() {
 	case "hook-invoke":
 		cmdHookInvoke(args)
 	case "hooks":
-		installHook() // in case above was bypassed
+		installHook(args) // in case above was bypassed
 	case "mail", "m":
 		cmdMail(args)
 	case "pending":

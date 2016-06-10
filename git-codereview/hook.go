@@ -21,7 +21,8 @@ var hookFiles = []string{
 	"pre-commit",
 }
 
-func installHook() {
+func installHook(args []string) {
+	flags.Parse(args)
 	hooksDir := gitPath("hooks")
 	for _, hookFile := range hookFiles {
 		filename := filepath.Join(hooksDir, hookFile)
