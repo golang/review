@@ -109,7 +109,7 @@ func loadGerritOriginInternal(origin, remoteOrigin string) error {
 	auth.host = originUrl.Host
 	if hasGerritConfig {
 		if !strings.HasPrefix(remoteOrigin, origin) {
-			return fmt.Errorf("Gerrit origin %q from %q different then git origin url %q", origin, configRef, originUrl)
+			return fmt.Errorf("Gerrit origin %q from %q different than git origin url %q", origin, configPath, originUrl)
 		}
 
 		auth.project = strings.Trim(strings.TrimPrefix(remoteOrigin, origin), "/")

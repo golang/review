@@ -109,14 +109,8 @@ func TestHookCommitMsgIssueRepoRewrite(t *testing.T) {
 		}
 	}
 
-	// Add issuerepo config.
+	// Add issuerepo config, clear any previous config.
 	write(t, gt.client+"/codereview.cfg", "issuerepo: golang/go")
-	trun(t, gt.client, "git", "add", "codereview.cfg")
-	trun(t, gt.client, "git", "commit", "-m", "add issuerepo codereview config")
-
-	// Look in master rather than origin/master for the config
-	savedConfigRef := configRef
-	configRef = "master:codereview.cfg"
 	cachedConfig = nil
 
 	// Check for the rewrite
@@ -137,7 +131,6 @@ func TestHookCommitMsgIssueRepoRewrite(t *testing.T) {
 	}
 
 	// Reset config state
-	configRef = savedConfigRef
 	cachedConfig = nil
 }
 

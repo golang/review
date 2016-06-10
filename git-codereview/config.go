@@ -6,11 +6,13 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 )
 
 var (
-	configRef    = "refs/remotes/origin/master:codereview.cfg"
+	configPath   string
 	cachedConfig map[string]string
 )
 
@@ -23,9 +25,11 @@ func config() map[string]string {
 	if cachedConfig != nil {
 		return cachedConfig
 	}
-	raw, err := cmdOutputErr("git", "show", configRef)
+	configPath = filepath.Join(repoRoot(), "codereview.cfg")
+	b, err := ioutil.ReadFile(configPath)
+	raw := string(b)
 	if err != nil {
-		verbosef("%sfailed to load config from %q: %v", raw, configRef, err)
+		verbosef("%sfailed to load config from %q: %v", raw, configPath, err)
 		cachedConfig = make(map[string]string)
 		return cachedConfig
 	}
