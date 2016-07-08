@@ -188,11 +188,12 @@ func hookCommitMsg(args []string) {
 			data = append(data[:n], fmt.Sprintf("\n\nChange-Id: I%x\n", id[:])...)
 		}
 
-		// Add branch prefix to commit message if not present and not on master
-		// and not a special Git fixup! or squash! commit message.
+		// Add branch prefix to commit message if not present and on a
+		// dev or release branch and not a special Git fixup! or
+		// squash! commit message.
 		b := CurrentBranch()
 		branch := strings.TrimPrefix(b.OriginBranch(), "origin/")
-		if strings.HasPrefix(branch, "dev.") {
+		if strings.HasPrefix(branch, "dev.") || strings.HasPrefix(branch, "release-branch.") {
 			prefix := "[" + branch + "] "
 			if !bytes.HasPrefix(data, []byte(prefix)) && !isFixup(data) {
 				data = []byte(prefix + string(data))
