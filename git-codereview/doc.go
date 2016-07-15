@@ -182,7 +182,7 @@ Mail
 
 The mail command starts the code review process for the pending change.
 
-	git codereview mail [-f] [-r email] [-cc email] [revision]
+	git codereview mail [-f] [-r email] [-cc email] [-trybot] [revision]
 
 It pushes the pending change commit in the current branch to the Gerrit code
 review server and prints the URL for the change on the server.
@@ -197,6 +197,9 @@ An email address passed to -r or -cc can be shortened from name@domain to name.
 The mail command resolves such shortenings by reading the list of past reviewers
 from the git repository log to find email addresses of the form name@somedomain
 and then, in case of ambiguity, using the reviewer who appears most often.
+
+The -trybot flag runs the trybots on all new or updated changes. It is
+equivalent to setting the Run-Trybot+1 label from Gerrit.
 
 The mail command fails if there are staged edits that are not committed.
 The -f flag overrides this behavior.
