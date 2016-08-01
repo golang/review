@@ -212,6 +212,8 @@ func hookCommitMsg(args []string) {
 var (
 	fixupBang  = []byte("fixup!")
 	squashBang = []byte("squash!")
+
+	ignoreBelow = []byte("\n# ------------------------ >8 ------------------------\n")
 )
 
 // isFixup reports whether text is a Git fixup! or squash! commit,
@@ -220,8 +222,14 @@ func isFixup(text []byte) bool {
 	return bytes.HasPrefix(text, fixupBang) || bytes.HasPrefix(text, squashBang)
 }
 
-// stripComments strips lines that begin with "#".
+// stripComments strips lines that begin with "#" and removes the
+// "everything below will be removed" section containing the diff when
+// using commit --verbose.
 func stripComments(in []byte) []byte {
+	// Issue 16376
+	if i := bytes.Index(in, ignoreBelow); i >= 0 {
+		in = in[:i+1]
+	}
 	return regexp.MustCompile(`(?m)^#.*\n`).ReplaceAll(in, nil)
 }
 

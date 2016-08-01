@@ -66,6 +66,11 @@ func TestHookCommitMsg(t *testing.T) {
 		{in: "all: gofmt\nahhh", want: "all: gofmt\n\nahhh"},
 		{in: "all: gofmt\n\nahhh", want: "all: gofmt\n\nahhh"},
 		{in: "all: gofmt\n\n\nahhh", want: "all: gofmt\n\n\nahhh"},
+		// Issue 16376
+		{
+			in:   "all: gofmt\n# ------------------------ >8 ------------------------\ndiff",
+			want: "all: gofmt\n",
+		},
 	}
 	for _, tt := range rewrites {
 		write(t, gt.client+"/in.txt", tt.in)
