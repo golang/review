@@ -274,5 +274,23 @@ The sync command updates the local repository.
 It fetches commits from the remote repository and merges them from the
 upstream branch to the current branch, rebasing any pending changes.
 
+Configuration
+
+If a file named codereview.cfg is present in the repository root,
+git-codereview will use it for configuration. It should contain lines
+of this format:
+
+	key: value
+
+The ``gerrit'' key sets the Gerrit URL for this project. Git-codereview
+automatically derives the Gerrit URL from repositories hosted in
+*.googlesource.com. If not set or derived, the repository is assumed to
+not have Gerrit, and certain features won't work.
+
+The ``issuerepo'' key specifies the GitHub repository to use for issues, if
+different from the source repository. If set to ``golang/go'', for example,
+lines such as ``Fixes #123'' in a commit message will be rewritten to ``Fixes
+golang/go#123''.
+
 */
 package main
