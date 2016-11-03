@@ -285,8 +285,11 @@ func formatCommit(w io.Writer, c *Commit, short bool) {
 	if g.CurrentRevision == c.Hash {
 		tags = append(tags, "mailed")
 	}
-	if g.Status == "MERGED" {
+	switch g.Status {
+	case "MERGED":
 		tags = append(tags, "submitted")
+	case "ABANDONED":
+		tags = append(tags, "abandoned")
 	}
 	if len(tags) > 0 {
 		fmt.Fprintf(w, " (%s)", strings.Join(tags, ", "))
