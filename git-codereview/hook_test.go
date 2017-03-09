@@ -440,6 +440,27 @@ func TestHooksInWorktree(t *testing.T) {
 	}
 }
 
+func TestHooksInSubdir(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	gt.removeStubHooks()
+	if err := os.MkdirAll(gt.client+"/test", 0755); err != nil {
+		t.Fatal(err)
+	}
+	chdir(t, gt.client+"/test")
+
+	testMain(t, "hooks") // install hooks
+
+	data, err := ioutil.ReadFile(gt.client + "/.git/hooks/commit-msg")
+	if err != nil {
+		t.Fatalf("hooks did not write commit-msg hook: %v", err)
+	}
+	if string(data) != "#!/bin/sh\nexec git-codereview hook-invoke commit-msg \"$@\"\n" {
+		t.Fatalf("invalid commit-msg hook:\n%s", string(data))
+	}
+}
+
 func TestHooksOverwriteOldCommitMsg(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()

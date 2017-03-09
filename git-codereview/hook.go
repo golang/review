@@ -77,13 +77,18 @@ func repoRoot() string {
 // all other path relocations, e.g. hooks for linked worktrees
 // are not kept in their gitdir, but shared in the main one.
 func gitPath(path string) string {
-	p, err := trimErr(cmdOutputErr("git", "rev-parse", "--git-path", path))
+	root := repoRoot()
+	// git 2.13.0 changed the behavior of --git-path from printing
+	// a path relative to the repo root to printing a path
+	// relative to the working directory (issue #19477). Normalize
+	// both behaviors by running the command from the repo root.
+	p, err := trimErr(cmdOutputErr("git", "-C", root, "rev-parse", "--git-path", path))
 	if err != nil {
 		// When --git-path is not available, assume the common case.
 		p = filepath.Join(".git", path)
 	}
 	if !filepath.IsAbs(p) {
-		p = filepath.Join(repoRoot(), p)
+		p = filepath.Join(root, p)
 	}
 	return p
 }
