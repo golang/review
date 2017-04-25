@@ -82,7 +82,7 @@ Available commands:
 		Every other operation except help also does this,
 		if they are not already installed.
 
-	mail [-f] [-r reviewer,...] [-cc mail,...] [commit]
+	mail [-f] [-r reviewer,...] [-cc mail,...] [-trybot] [commit]
 		Upload change commit to the code review server and send mail
 		requesting a code review.
 		If there are multiple commits on this branch, upload commits
@@ -91,6 +91,8 @@ Available commands:
 		The -r and -cc flags identify the email addresses of people to
 		do the code review and to be CC'ed about the code review.
 		Multiple addresses are given as a comma-separated list.
+		If -trybot is specified, the trybots are run on the changes,
+		if permitted.
 
 	mail -diff
 		Show the changes but do not send mail or upload.
