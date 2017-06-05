@@ -102,6 +102,12 @@ Available commands:
 		If -l is specified, only use locally available information.
 		If -s is specified, show short output.
 
+	rebase-work
+		Run git rebase in interactive mode over pending changes
+		(shorthand for "git rebase -i $(git codereview branchpoint)").
+		This rebase does not incorporate any new changes from the origin
+		branch, in contrast with a normal "git rebase -i".
+
 	submit [-i | commit...]
 		Push the pending change to the Gerrit server and tell Gerrit to
 		submit it to the master branch.
