@@ -159,6 +159,9 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 	// In any event, we wouldn't be testing what we want to test.
 	// Tests that want to exercise hooks need to arrange for a git-codereview
 	// in the path and replace these with the real ones.
+	if _, err := os.Stat(client + "/.git/hooks"); os.IsNotExist(err) {
+		mkdir(t, client+"/.git/hooks")
+	}
 	for _, h := range hookFiles {
 		write(t, client+"/.git/hooks/"+h, "#!/bin/bash\nexit 0\n")
 	}
@@ -189,9 +192,7 @@ func (gt *gitTest) enableGerrit(t *testing.T) {
 }
 
 func (gt *gitTest) removeStubHooks() {
-	for _, h := range hookFiles {
-		os.RemoveAll(gt.client + "/.git/hooks/" + h)
-	}
+	os.RemoveAll(gt.client + "/.git/hooks/")
 }
 
 func mkdir(t *testing.T, dir string) {
