@@ -20,12 +20,20 @@ var authTests = []struct {
 	died        bool
 }{
 	{
-		died: true,
+		// If we specify the empty string here, git will store an empty
+		// value for the local http.cookiefile, and fall back to the global
+		// http.cookiefile, which will fail this test on any machine that has
+		// a global http.cookiefile configured. If we write a local, invalid
+		// value, git will try to load the local cookie file (and then fail
+		// later).
+		cookiefile: " ",
+		died:       true,
 	},
 	{
-		netrc:    "machine go.googlesource.com login u1 password pw\n",
-		user:     "u1",
-		password: "pw",
+		netrc:      "machine go.googlesource.com login u1 password pw\n",
+		cookiefile: " ", // prevent global fallback
+		user:       "u1",
+		password:   "pw",
 	},
 	{
 		cookiefile: "go.googlesource.com	TRUE	/	TRUE	2147483647	o2	git-u2=pw\n",
