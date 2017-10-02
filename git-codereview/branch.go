@@ -21,7 +21,6 @@ type Branch struct {
 	loadedPending bool      // following fields are valid
 	originBranch  string    // upstream origin branch
 	commitsAhead  int       // number of commits ahead of origin branch
-	commitsBehind int       // number of commits behind origin branch
 	branchpoint   string    // latest commit hash shared with origin branch
 	pending       []*Commit // pending commits, newest first (children before parents)
 }
@@ -141,6 +140,12 @@ func (b *Branch) loadPending() {
 		return
 	}
 
+	// Note: This runs in parallel with "git fetch -q",
+	// so the commands may see a stale version of origin/master.
+	// The use of origin here is for identifying what the branch has
+	// in common with origin (what's old on the branch).
+	// Any new commits in origin do not affect that.
+
 	// Note: --topo-order means child first, then parent.
 	origin := b.OriginBranch()
 	const numField = 5
@@ -197,7 +202,12 @@ func (b *Branch) loadPending() {
 		}
 	}
 	b.commitsAhead = len(b.pending)
-	b.commitsBehind = len(lines(cmdOutput("git", "log", "--format=format:x", b.FullName()+".."+b.OriginBranch(), "--")))
+}
+
+// CommitsBehind reports the number of commits present upstream
+// that are not present in the current branch.
+func (b *Branch) CommitsBehind() int {
+	return len(lines(cmdOutput("git", "log", "--format=format:x", b.FullName()+".."+b.OriginBranch(), "--")))
 }
 
 // Submitted reports whether some form of b's pending commit

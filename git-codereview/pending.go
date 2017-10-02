@@ -90,9 +90,15 @@ func cmdPending(args []string) {
 	}
 
 	// Fetch info about remote changes, so that we can say which branches need sync.
-	if !pendingLocal {
-		run("git", "fetch", "-q")
+	doneFetch := make(chan bool, 1)
+	if pendingLocal {
+		doneFetch <- true
+	} else {
 		http.DefaultClient.Timeout = 60 * time.Second
+		go func() {
+			run("git", "fetch", "-q")
+			doneFetch <- true
+		}()
 	}
 
 	// Build list of pendingBranch structs to be filled in.
@@ -129,6 +135,7 @@ func cmdPending(args []string) {
 	for i := 0; i < n; i++ {
 		go func() {
 			for b := range work {
+				// This b.load may be using a stale origin/master ref, which is OK.
 				b.load()
 				done <- true
 			}
@@ -140,6 +147,7 @@ func cmdPending(args []string) {
 	for range branches {
 		<-done
 	}
+	<-doneFetch
 
 	// Print output.
 	// If there are multiple changes in the current branch, the output splits them out into separate sections,
@@ -235,8 +243,8 @@ func cmdPending(args []string) {
 		if allSubmitted(work) && len(work) > 0 {
 			tags = append(tags, "all submitted")
 		}
-		if b.commitsBehind > 0 {
-			tags = append(tags, fmt.Sprintf("%d behind", b.commitsBehind))
+		if n := b.CommitsBehind(); n > 0 {
+			tags = append(tags, fmt.Sprintf("%d behind", n))
 		}
 		if b.OriginBranch() != "origin/master" {
 			tags = append(tags, "tracking "+strings.TrimPrefix(b.OriginBranch(), "origin/"))

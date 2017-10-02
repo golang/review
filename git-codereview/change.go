@@ -61,8 +61,8 @@ func (b *Branch) check() {
 		// This applies to both local work branches and tracking branches.
 		// TODO(rsc): Test.
 		b.loadPending()
-		if b.commitsBehind > 0 {
-			printf("warning: %d commit%s behind %s; run 'git sync' to update.", b.commitsBehind, suffix(b.commitsBehind, "s"), b.OriginBranch())
+		if n := b.CommitsBehind(); n > 0 {
+			printf("warning: %d commit%s behind %s; run 'git sync' to update.", n, suffix(n, "s"), b.OriginBranch())
 		}
 	}
 
