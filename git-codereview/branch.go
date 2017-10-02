@@ -307,6 +307,9 @@ func (b *Branch) GerritChange(c *Commit, extra ...string) (*GerritChange, error)
 	if !b.HasPendingCommit() {
 		return nil, fmt.Errorf("no changes pending")
 	}
+	if c.ChangeID == "" {
+		return nil, fmt.Errorf("missing Change-Id")
+	}
 	id := fullChangeID(b, c)
 	for i, x := range extra {
 		if i == 0 {
