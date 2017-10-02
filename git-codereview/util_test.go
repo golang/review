@@ -419,6 +419,10 @@ func (s *gerritServer) setJSON(id, json string) {
 }
 
 func (s *gerritServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if req.URL.Path == "/a/changes/" {
+		s.serveChangesQuery(w, req)
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	reply, ok := s.reply[req.URL.Path]
@@ -442,4 +446,46 @@ func (s *gerritServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if len(reply.body) > 0 {
 		w.Write([]byte(reply.body))
 	}
+}
+
+func (s *gerritServer) serveChangesQuery(w http.ResponseWriter, req *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	qs := req.URL.Query()["q"]
+	if len(qs) > 10 {
+		http.Error(w, "too many queries", 500)
+	}
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, ")]}'\n")
+	end := ""
+	if len(qs) > 1 {
+		fmt.Fprintf(&buf, "[")
+		end = "]"
+	}
+	sep := ""
+	for _, q := range qs {
+		fmt.Fprintf(&buf, "%s[", sep)
+		if strings.HasPrefix(q, "change:") {
+			reply, ok := s.reply[req.URL.Path+strings.TrimPrefix(q, "change:")]
+			if ok {
+				if reply.json != nil {
+					body, err := json.Marshal(reply.json)
+					if err != nil {
+						dief("%v", err)
+					}
+					reply.body = ")]}'\n" + string(body)
+				}
+				body := reply.body
+				i := strings.Index(body, "\n")
+				if i > 0 {
+					body = body[i+1:]
+				}
+				fmt.Fprintf(&buf, "%s", body)
+			}
+		}
+		fmt.Fprintf(&buf, "]")
+		sep = ","
+	}
+	fmt.Fprintf(&buf, "%s", end)
+	w.Write(buf.Bytes())
 }

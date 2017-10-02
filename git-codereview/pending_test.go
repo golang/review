@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -402,8 +403,48 @@ func TestPendingGerritMultiChange(t *testing.T) {
 	`)
 }
 
+func TestPendingGerritMultiChange15(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+	srv := newGerritServer(t)
+	defer srv.done()
+
+	gt.work(t)
+	hash1 := CurrentBranch().Pending()[0].Hash
+	testPendingReply(srv, "I123456789", hash1, "MERGED")
+
+	for i := 1; i < 15; i++ {
+		write(t, gt.client+"/file", fmt.Sprintf("v%d", i))
+		trun(t, gt.client, "git", "commit", "-a", "-m", fmt.Sprintf("v%d\n\nChange-Id: I%010d", i, i))
+		hash2 := CurrentBranch().Pending()[0].Hash
+		testPendingReply(srv, fmt.Sprintf("I%010d", i), hash2, "NEW")
+	}
+
+	testPendingArgs(t, []string{"-s"}, `
+		work REVHASH..REVHASH (current branch, all mailed)
+		+ REVHASH v14 (CL 1234 -2 +1, mailed)
+		+ REVHASH v13 (CL 1234 -2 +1, mailed)
+		+ REVHASH v12 (CL 1234 -2 +1, mailed)
+		+ REVHASH v11 (CL 1234 -2 +1, mailed)
+		+ REVHASH v10 (CL 1234 -2 +1, mailed)
+		+ REVHASH v9 (CL 1234 -2 +1, mailed)
+		+ REVHASH v8 (CL 1234 -2 +1, mailed)
+		+ REVHASH v7 (CL 1234 -2 +1, mailed)
+		+ REVHASH v6 (CL 1234 -2 +1, mailed)
+		+ REVHASH v5 (CL 1234 -2 +1, mailed)
+		+ REVHASH v4 (CL 1234 -2 +1, mailed)
+		+ REVHASH v3 (CL 1234 -2 +1, mailed)
+		+ REVHASH v2 (CL 1234 -2 +1, mailed)
+		+ REVHASH v1 (CL 1234 -2 +1, mailed)
+		+ REVHASH msg (CL 1234 -2 +1, mailed, submitted)
+
+	`)
+}
+
 func testPendingReply(srv *gerritServer, id, rev, status string) {
 	srv.setJSON(id, `{
+		"id": "proj~master~`+id+`",
+		"project": "proj",
 		"current_revision": "`+rev+`",
 		"status": "`+status+`",
 		"_number": 1234,
@@ -455,10 +496,12 @@ func testPendingReply(srv *gerritServer, id, rev, status string) {
 }
 
 func testPending(t *testing.T, want string) {
+	t.Helper()
 	testPendingArgs(t, nil, want)
 }
 
 func testPendingArgs(t *testing.T, args []string, want string) {
+	t.Helper()
 	// fake auth information to avoid Gerrit error
 	if auth.host == "" {
 		auth.host = "gerrit.fake"

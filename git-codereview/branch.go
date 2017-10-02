@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"regexp"
@@ -320,6 +321,33 @@ func (b *Branch) GerritChange(c *Commit, extra ...string) (*GerritChange, error)
 		id += "o=" + x
 	}
 	return readGerritChange(id)
+}
+
+// GerritChange returns the change metadata from the Gerrit server
+// for the given changes, which each be be the result of fullChangeID(b, c) for some c.
+// The extra strings are passed to the Gerrit API request as o= parameters,
+// to enable additional information. Typical values include "LABELS" and "CURRENT_REVISION".
+// See https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html for details.
+func (b *Branch) GerritChanges(ids []string, extra ...string) ([][]*GerritChange, error) {
+	q := ""
+	for _, id := range ids {
+		if q != "" {
+			q += "&"
+		}
+		if strings.HasSuffix(id, "~") {
+			// result of fullChangeID(b, c) with missing Change-Id; don't send
+			q += "q=is:closed+is:open" // cannot match anything
+			continue
+		}
+		q += "q=change:" + url.QueryEscape(id)
+	}
+	if q == "" {
+		return nil, fmt.Errorf("no changes found")
+	}
+	for _, x := range extra {
+		q += "&o=" + url.QueryEscape(x)
+	}
+	return readGerritChanges(q)
 }
 
 // CommitByRev finds a unique pending commit by its git <rev>.

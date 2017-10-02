@@ -42,11 +42,37 @@ func (b *pendingBranch) load() {
 	if b.current {
 		b.staged, b.unstaged, b.untracked = LocalChanges()
 	}
+	var changeIDs []string
+	var commits []*Commit
 	for _, c := range b.Pending() {
 		c.committed = ListFiles(c)
-		if !pendingLocal {
-			c.g, c.gerr = b.GerritChange(c, "DETAILED_LABELS", "CURRENT_REVISION", "MESSAGES", "DETAILED_ACCOUNTS")
+		if c.ChangeID == "" {
+			c.gerr = fmt.Errorf("missing Change-Id in commit message")
+		} else {
+			changeIDs = append(changeIDs, fullChangeID(b.Branch, c))
+			commits = append(commits, c)
 		}
+	}
+	if !pendingLocal {
+		gs, err := b.GerritChanges(changeIDs, "DETAILED_LABELS", "CURRENT_REVISION", "MESSAGES", "DETAILED_ACCOUNTS")
+		if len(gs) != len(commits) && err == nil {
+			err = fmt.Errorf("invalid response from Gerrit server - %d queries but %d results", len(changeIDs), len(gs))
+		}
+		if err != nil {
+			for _, c := range commits {
+				if c.gerr != nil {
+					c.gerr = err
+				}
+			}
+		} else {
+			for i, c := range commits {
+				if len(gs[i]) == 1 {
+					c.g = gs[i][0]
+				}
+			}
+		}
+	}
+	for _, c := range b.Pending() {
 		if c.g == nil {
 			c.g = new(GerritChange) // easier for formatting code
 		}

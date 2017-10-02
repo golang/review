@@ -269,7 +269,7 @@ func gerritAPI(path string, requestBody []byte, target interface{}) error {
 	if target != nil {
 		i := bytes.IndexByte(body, '\n')
 		if i < 0 {
-			return fmt.Errorf("%s: malformed json response", url)
+			return fmt.Errorf("%s: malformed json response - bad header", url)
 		}
 		body = body[i:]
 		if err := json.Unmarshal(body, target); err != nil {
@@ -300,6 +300,63 @@ func readGerritChange(changeID string) (*GerritChange, error) {
 		return nil, err
 	}
 	return &c, nil
+}
+
+// readGerritChanges is like readGerritChange but expects changeID
+// to be a query parameter list like q=change:XXX&q=change:YYY&o=OPTIONS,
+// and it expects to receive a JSON array of GerritChanges, not just one.
+func readGerritChanges(query string) ([][]*GerritChange, error) {
+	// The Gerrit server imposes a limit of at most 10 q= parameters.
+	v, err := url.ParseQuery(query)
+	if err != nil {
+		return nil, err
+	}
+	var results []chan gerritChangeResult
+	for len(v["q"]) > 0 {
+		n := len(v["q"])
+		if n > 10 {
+			n = 10
+		}
+		all := v["q"]
+		v["q"] = all[:n]
+		query := v.Encode()
+		v["q"] = all[n:]
+		ch := make(chan gerritChangeResult, 1)
+		go readGerritChangesBatch(query, n, ch)
+		results = append(results, ch)
+	}
+
+	var c [][]*GerritChange
+	for _, ch := range results {
+		res := <-ch
+		if res.err != nil {
+			return nil, res.err
+		}
+		c = append(c, res.c...)
+	}
+	return c, nil
+}
+
+type gerritChangeResult struct {
+	c   [][]*GerritChange
+	err error
+}
+
+func readGerritChangesBatch(query string, n int, ch chan gerritChangeResult) {
+	var c [][]*GerritChange
+	// If there are multiple q=, the server sends back an array of arrays of results.
+	// If there is a single q=, it only sends back an array of results; in that case
+	// we need to do the wrapping ourselves.
+	var arg interface{} = &c
+	if n == 1 {
+		c = append(c, nil)
+		arg = &c[0]
+	}
+	err := gerritAPI("/a/changes/?"+query, nil, arg)
+	if len(c) != n && err == nil {
+		err = fmt.Errorf("gerrit result count mismatch")
+	}
+	ch <- gerritChangeResult{c, err}
 }
 
 // GerritChange is the JSON struct returned by a Gerrit CL query.

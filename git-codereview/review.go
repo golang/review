@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -207,8 +208,13 @@ func runErr(command string, args ...string) error {
 var runLogTrap []string
 
 func runDirErr(dir, command string, args ...string) error {
-	if *verbose > 0 || *noRun {
+	if *noRun || *verbose == 1 {
 		fmt.Fprintln(stderr(), commandString(command, args))
+	} else if *verbose > 1 {
+		start := time.Now()
+		defer func() {
+			fmt.Fprintf(stderr(), "%s # %.3fs\n", commandString(command, args), time.Since(start).Seconds())
+		}()
 	}
 	if *noRun {
 		return nil
@@ -272,7 +278,10 @@ func cmdOutputDirErr(dir, command string, args ...string) (string, error) {
 	// the git repo" commands, which is confusing if you are just trying to find
 	// out what git sync means.
 	if *verbose > 1 {
-		fmt.Fprintln(stderr(), commandString(command, args))
+		start := time.Now()
+		defer func() {
+			fmt.Fprintf(stderr(), "%s # %.3fs\n", commandString(command, args), time.Since(start).Seconds())
+		}()
 	}
 	cmd := exec.Command(command, args...)
 	if dir != "." {
