@@ -23,7 +23,13 @@ func TestSubmitErrors(t *testing.T) {
 	testPrintedStderr(t, "cannot submit: no changes pending")
 	write(t, gt.client+"/file1", "")
 	trun(t, gt.client, "git", "add", "file1")
-	trun(t, gt.client, "git", "commit", "-m", "msg\n\nChange-Id: I123456789\n")
+	trun(t, gt.client, "git", "commit", "-m", "msg\n\nDO NOT SUBMIT\n\nChange-Id: I123456789\n")
+
+	// Gerrit checks this too, but add a local check.
+	t.Logf("> do not submit")
+	testMainDied(t, "submit")
+	testPrintedStderr(t, "DO NOT SUBMIT")
+	trun(t, gt.client, "git", "commit", "--amend", "-m", "msg\n\nChange-Id: I123456789\n")
 
 	t.Logf("> staged changes")
 	write(t, gt.client+"/file1", "asdf")

@@ -30,6 +30,33 @@ func TestMail(t *testing.T) {
 		"git tag -f work.mailed "+h)
 }
 
+func TestDoNotMail(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+	trun(t, gt.client, "git", "commit", "--amend", "-m", "This is my commit.\n\nDO NOT MAIL\n")
+
+	testMainDied(t, "mail")
+	testPrintedStderr(t, "DO NOT MAIL")
+
+	trun(t, gt.client, "git", "commit", "--amend", "-m", "fixup! This is my commit.")
+
+	testMainDied(t, "mail")
+	testPrintedStderr(t, "fixup! commit")
+
+	trun(t, gt.client, "git", "commit", "--amend", "-m", "squash! This is my commit.")
+
+	testMainDied(t, "mail")
+	testPrintedStderr(t, "squash! commit")
+
+	trun(t, gt.client, "git", "commit", "--amend", "-m", "This is my commit.\n\nDO NOT MAIL\n")
+
+	// Do not mail even when the DO NOT MAIL is a parent of the thing we asked to mail.
+	gt.work(t)
+	testMainDied(t, "mail", "HEAD")
+	testPrintedStderr(t, "DO NOT MAIL")
+}
+
 func TestMailGitHub(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()

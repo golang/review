@@ -51,6 +51,29 @@ func cmdMail(args []string) {
 		dief("cannot mail: commit %s is empty", c.ShortHash)
 	}
 
+	foundCommit := false
+	for _, c1 := range b.Pending() {
+		if c1 == c {
+			foundCommit = true
+		}
+		if !foundCommit {
+			continue
+		}
+		if strings.Contains(strings.ToLower(c1.Message), "do not mail") {
+			dief("%s: CL says DO NOT MAIL", c1.ShortHash)
+		}
+		if strings.HasPrefix(c1.Message, "fixup!") {
+			dief("%s: CL is a fixup! commit", c1.ShortHash)
+		}
+		if strings.HasPrefix(c1.Message, "squash!") {
+			dief("%s: CL is a squash! commit", c1.ShortHash)
+		}
+	}
+	if !foundCommit {
+		// b.CommitByRev and b.DefaultCommit both return a commit on b.
+		dief("internal error: did not find chosen commit on current branch")
+	}
+
 	if !*force && HasStagedChanges() {
 		dief("there are staged changes; aborting.\n"+
 			"Use '%s change' to include them or '%s mail -f' to force it.", os.Args[0], os.Args[0])

@@ -212,6 +212,10 @@ If there are multiple pending commits, the revision argument is mandatory.
 If no revision is specified, the mail command prints a short summary of
 the pending commits for use in deciding which to mail.
 
+If any commit that would be pushed to the server contains the text
+"DO NOT MAIL" (case insensitive) in its commit message, the mail command
+will refuse to send the commit to the server.
+
 Pending
 
 The pending command prints to standard output the status of all pending changes

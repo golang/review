@@ -78,6 +78,10 @@ func cmdSubmit(args []string) {
 // submit submits a single commit c on branch b and returns the
 // GerritChange for the submitted change. It dies if the submit fails.
 func submit(b *Branch, c *Commit) *GerritChange {
+	if strings.Contains(strings.ToLower(c.Message), "do not submit") {
+		dief("%s: CL says DO NOT SUBMIT", c.ShortHash)
+	}
+
 	// Fetch Gerrit information about this change.
 	g, err := b.GerritChange(c, "LABELS", "CURRENT_REVISION")
 	if err != nil {
