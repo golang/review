@@ -14,6 +14,9 @@ import (
 	"testing"
 )
 
+// setHelper calls t.Helper() for Go 1.9+ (see go19_test.go) and does nothing otherwise.
+var setHelper = func(t *testing.T) {}
+
 func TestPendingNone(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
@@ -496,12 +499,12 @@ func testPendingReply(srv *gerritServer, id, rev, status string) {
 }
 
 func testPending(t *testing.T, want string) {
-	t.Helper()
+	setHelper(t)
 	testPendingArgs(t, nil, want)
 }
 
 func testPendingArgs(t *testing.T, args []string, want string) {
-	t.Helper()
+	setHelper(t)
 	// fake auth information to avoid Gerrit error
 	if auth.host == "" {
 		auth.host = "gerrit.fake"
