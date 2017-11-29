@@ -9,5 +9,5 @@ package main
 import "testing"
 
 func init() {
-	setHelper = func(t *testing.T) { t.Helper() }
+	setHelper = (*testing.T).Helper
 }
