@@ -16,20 +16,21 @@ import (
 
 func cmdMail(args []string) {
 	var (
-		diff    = flags.Bool("diff", false, "show change commit diff and don't upload or mail")
-		force   = flags.Bool("f", false, "mail even if there are staged changes")
-		topic   = flags.String("topic", "", "set Gerrit topic")
-		trybot  = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
-		rList   = new(stringList) // installed below
-		ccList  = new(stringList) // installed below
-		tagList = new(stringList) // installed below
+		diff       = flags.Bool("diff", false, "show change commit diff and don't upload or mail")
+		force      = flags.Bool("f", false, "mail even if there are staged changes")
+		topic      = flags.String("topic", "", "set Gerrit topic")
+		trybot     = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
+		rList      = new(stringList) // installed below
+		ccList     = new(stringList) // installed below
+		tagList    = new(stringList) // installed below
+		noKeyCheck = flags.Bool("nokeycheck", false, "set 'git push -o nokeycheck', to prevent Gerrit from checking for private keys")
 	)
 	flags.Var(rList, "r", "comma-separated list of reviewers")
 	flags.Var(ccList, "cc", "comma-separated list of people to CC:")
 	flags.Var(tagList, "hashtag", "comma-separated list of tags to set")
 
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-topic topic] [-trybot] [-hashtag tag,...] [commit]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-nokeycheck] [-topic topic] [-trybot] [commit]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
@@ -135,7 +136,12 @@ func cmdMail(args []string) {
 		refSpec += start + "l=Run-TryBot"
 		start = ","
 	}
-	run("git", "push", "-q", "origin", refSpec)
+	args = []string{"push", "-q"}
+	if *noKeyCheck {
+		args = append(args, "-o", "nokeycheck")
+	}
+	args = append(args, "origin", refSpec)
+	run("git", args...)
 
 	// Create local tag for mailed change.
 	// If in the 'work' branch, this creates or updates work.mailed.
