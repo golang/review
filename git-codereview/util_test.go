@@ -112,7 +112,7 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 	// but make sure the tests don't fail.
 	_, err := exec.LookPath("git")
 	if err != nil {
-		t.Skip("cannot find git in path: %v", err)
+		t.Skipf("cannot find git in path: %v", err)
 	}
 
 	tmpdir, err := ioutil.TempDir("", "git-codereview-test")
