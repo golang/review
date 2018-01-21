@@ -96,7 +96,8 @@ Command Details
 
 All commands accept these global flags:
 
-The -v flag prints all commands that make changes.
+The -v flag prints all commands that make changes. Multiple occurrences
+trigger more verbosity in some commands, including sync.
 
 The -n flag prints all commands that would be run, but does not run them.
 
