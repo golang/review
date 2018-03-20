@@ -57,6 +57,60 @@ func TestDoNotMail(t *testing.T) {
 	testPrintedStderr(t, "DO NOT MAIL")
 }
 
+func TestDoNotMailTempFiles(t *testing.T) {
+	// fake auth information to avoid Gerrit error
+	auth.host = "gerrit.fake"
+	auth.user = "not-a-user"
+	defer func() {
+		auth.host = ""
+		auth.user = ""
+	}()
+
+	testFile := func(file string) {
+		gt := newGitTest(t)
+		defer gt.done()
+		gt.work(t)
+		gt.workFile(t, file)
+		testMainDied(t, "mail", "HEAD")
+		testPrintedStderr(t, "cannot mail temporary")
+	}
+
+	testFile("vim-backup.go~")
+	testFile("#emacs-auto-save.go#")
+	testFile(".#emacs-lock.go")
+
+	// Do not mail when a parent of the thing we asked to mail has temporary files.
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+	gt.workFile(t, "backup~")
+	gt.work(t)
+	testMainDied(t, "mail", "HEAD")
+	testPrintedStderr(t, "cannot mail temporary")
+}
+
+func TestMailNonPrintables(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+
+	// fake auth information to avoid Gerrit error
+	auth.host = "gerrit.fake"
+	auth.user = "not-a-user"
+	defer func() {
+		auth.host = ""
+		auth.user = ""
+	}()
+
+	trun(t, gt.client, "git", "commit", "--amend", "-m", "This is my commit.\x10\n\n")
+	testMainDied(t, "mail")
+	testPrintedStderr(t, "message with non-printable")
+
+	// This should be mailed.
+	trun(t, gt.client, "git", "commit", "--amend", "-m", "Printable unicode: \u263A \u0020. Spaces: \v \f \r \t\n\n")
+	testMain(t, "mail", "HEAD")
+}
+
 func TestMailGitHub(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()

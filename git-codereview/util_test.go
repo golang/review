@@ -90,6 +90,12 @@ func (gt *gitTest) work(t *testing.T) {
 	doWork(t, gt.nwork, gt.client, "file", "23456789")
 }
 
+func (gt *gitTest) workFile(t *testing.T, file string) {
+	// make local change on client in the specific file
+	gt.nwork++
+	doWork(t, gt.nwork, gt.client, file, "23456789")
+}
+
 func (gt *gitTest) serverWork(t *testing.T) {
 	// make change on server
 	// duplicating the sequence of changes in gt.work to simulate them

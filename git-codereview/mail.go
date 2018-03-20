@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 func cmdMail(args []string) {
@@ -68,6 +70,13 @@ func cmdMail(args []string) {
 		if strings.HasPrefix(c1.Message, "squash!") {
 			dief("%s: CL is a squash! commit", c1.ShortHash)
 		}
+
+		for _, f := range ListFiles(c1) {
+			if strings.HasPrefix(f, ".#") || strings.HasSuffix(f, "~") ||
+				(strings.HasPrefix(f, "#") && strings.HasSuffix(f, "#")) {
+				dief("cannot mail temporary files: %s", f)
+			}
+		}
 	}
 	if !foundCommit {
 		// b.CommitByRev and b.DefaultCommit both return a commit on b.
@@ -77,6 +86,15 @@ func cmdMail(args []string) {
 	if !*force && HasStagedChanges() {
 		dief("there are staged changes; aborting.\n"+
 			"Use '%s change' to include them or '%s mail -f' to force it.", os.Args[0], os.Args[0])
+	}
+
+	if !utf8.ValidString(c.Message) {
+		dief("cannot mail message with invalid UTF-8")
+	}
+	for _, r := range c.Message {
+		if !unicode.IsPrint(r) && !unicode.IsSpace(r) {
+			dief("cannot mail message with non-printable rune %q", r)
+		}
 	}
 
 	// for side effect of dying with a good message if origin is GitHub
