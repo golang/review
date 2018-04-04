@@ -7,7 +7,7 @@ Git-codereview manages the code review process for Git changes using a Gerrit
 server.
 
 The git-codereview tool manages ``change branches'' in the local git repository.
-Each such branch tracks a single commit, or ``pending change,''
+Each such branch tracks a single commit, or ``pending change'',
 that is reviewed using a Gerrit server; the Gerrit remote must be
 named ``origin'' in the local git repo.
 
@@ -47,9 +47,9 @@ either no pending change beyond origin/master (when there's no local work)
 or exactly one pending change beyond origin/master (the change being developed).
 
 When there is no pending change on the work branch,
-``git codereview change'' creates one by running ``git commit.''
+``git codereview change'' creates one by running ``git commit''.
 Otherwise, when there is already a pending change,
-``git codereview change'' revises it by running ``git commit --amend.''
+``git codereview change'' revises it by running ``git commit --amend''.
 
 The ``git codereview mail'' and ``git codereview submit'' commands
 implicitly operate on the lone pending change.
@@ -67,10 +67,10 @@ multiple pending changes.
 
 The ``git codereview change'' command amends the top commit in the stack (HEAD).
 To amend a commit further down the stack, use Git's rebase support,
-for example by using ``git commit --fixup'' followed by ``git codereview rebase-work.''
+for example by using ``git commit --fixup'' followed by ``git codereview rebase-work''.
 
 The ``git codereview mail'' command requires an explicit revision argument,
-but note that since ``git codereview mail'' is implemented as a ``git push,''
+but note that since ``git codereview mail'' is implemented as a ``git push'',
 any commits earlier in the stack are necessarily also mailed.
 
 The ``git codereview submit'' command also requires an explicit revision argument,
@@ -81,7 +81,7 @@ effectively runs ``git codereview sync'' automatically.
 In a multiple-commit work branch, it does not, because
 the implied ``git rebase'' may conflict with the remaining pending commits.
 Instead it is necessary to run ``git codereview sync'' explicitly
-(when ready) after ``git codereview submit.''
+(when ready) after ``git codereview submit''.
 
 Reusing Work Branches
 
