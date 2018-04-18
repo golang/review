@@ -154,3 +154,12 @@ func TestChangeCL(t *testing.T) {
 	checkChangeCL("100/2", "refs/changes/00/100/2", hash2)
 	checkChangeCL("100", "refs/changes/00/100/3", hash1)
 }
+
+func TestChangeWithMessage(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	testMain(t, "change", "new_branch")
+	testMain(t, "change", "-m", "foo: some commit message")
+	testRan(t, "git commit -q --allow-empty -m foo: some commit message")
+}

@@ -63,6 +63,8 @@ Available commands:
 		change's commit message.
 		If -a is specified, automatically add any unstaged changes in
 		tracked files during commit.
+		If -m is specified and a message given, a commit is created
+		and the editor prompt is skipped.
 
 	change NNNN[/PP]
 		Checkout the commit corresponding to CL number NNNN and

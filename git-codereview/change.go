@@ -12,10 +12,12 @@ import (
 	"strings"
 )
 
+var commitMsg string
 var changeAuto bool
 var changeQuick bool
 
 func cmdChange(args []string) {
+	flags.StringVar(&commitMsg, "m", "", "specify a commit message")
 	flags.BoolVar(&changeAuto, "a", false, "add changes to any tracked files")
 	flags.BoolVar(&changeQuick, "q", false, "do not edit pending commit msg")
 	flags.Parse(args)
@@ -90,7 +92,9 @@ func commitChanges(amend bool) {
 				args = append(args, "--no-edit")
 			}
 		}
-		if testCommitMsg != "" {
+		if commitMsg != "" {
+			args = append(args, "-m", commitMsg)
+		} else if testCommitMsg != "" {
 			args = append(args, "-m", testCommitMsg)
 		}
 		if changeAuto {

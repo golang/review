@@ -120,7 +120,7 @@ Change
 The change command creates and moves between Git branches and maintains the
 pending changes on work branches.
 
-	git codereview change [-a] [-q] [branchname]
+	git codereview change [-a] [-q] [-m <message>] [branchname]
 
 Given a branch name as an argument, the change command switches to the named
 branch, creating it if necessary. If the branch is created and there are staged
@@ -132,9 +132,15 @@ staged changes in the current branch or, if there is already a pending change,
 amends that change.
 
 The -q option skips the editing of an extant pending change's commit message.
+If -m is present, -q is ignored.
 
 The -a option automatically adds any unstaged edits in tracked files during
 commit; it is equivalent to the 'git commit' -a option.
+
+The -m option specifies a commit message and skips the editor prompt. This
+option is only useful when creating commits (e.g. if there are unstaged
+changes). If a commit already exists, it is overwritten. If -q is also
+present, -q will be ignored.
 
 Gofmt
 
