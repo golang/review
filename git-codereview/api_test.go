@@ -110,7 +110,7 @@ func TestLoadAuth(t *testing.T) {
 			if tt.cookiefile != "MISSING" {
 				write(t, gt.client+"/.cookies", tt.cookiefile)
 			}
-			trun(t, gt.client, "git", "config", "http.cookiefile", gt.client+"/.cookies")
+			trun(t, gt.client, "git", "config", "http.cookiefile", "~/.cookies")
 		}
 
 		// Run command via testMain to trap stdout, stderr, death.
