@@ -143,21 +143,9 @@ func loadAuth() {
 
 	loadGerritOrigin()
 
-	homeDir := testHomeDir
-	if homeDir == "" {
-		usr, err := user.Current()
-		if err != nil {
-			dief("failed to get current user home directory to look for auth tokens: %v", err)
-		}
-		homeDir = usr.HomeDir
-	}
-
 	// First look in Git's http.cookiefile, which is where Gerrit
 	// now tells users to store this information.
-	if cookieFile, _ := trimErr(cmdOutputErr("git", "config", "http.cookiefile")); cookieFile != "" {
-		if strings.HasPrefix(cookieFile, "~/") {
-			cookieFile = filepath.Join(homeDir, strings.TrimPrefix(cookieFile, "~/"))
-		}
+	if cookieFile, _ := trimErr(cmdOutputErr("git", "config", "--path", "http.cookiefile")); cookieFile != "" {
 		data, _ := ioutil.ReadFile(cookieFile)
 		maxMatch := -1
 		for _, line := range lines(string(data)) {
@@ -179,6 +167,14 @@ func loadAuth() {
 	// used to tell users to store the information, until the passwords
 	// got so long that old versions of curl couldn't handle them.
 	netrc := netrcName()
+	homeDir := testHomeDir
+	if homeDir == "" {
+		usr, err := user.Current()
+		if err != nil {
+			dief("failed to get current user home directory to look for %q: %v", netrc, err)
+		}
+		homeDir = usr.HomeDir
+	}
 	data, _ := ioutil.ReadFile(filepath.Join(homeDir, netrc))
 	for _, line := range lines(string(data)) {
 		if i := strings.Index(line, "#"); i >= 0 {
