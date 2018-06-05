@@ -73,11 +73,10 @@ func loadGerritOriginInternal(origin, remoteOrigin string) error {
 		return fmt.Errorf("git origin must be a Gerrit host, not GitHub: %s", origin)
 	}
 
-	if !strings.HasPrefix(origin, "https://") {
-		return fmt.Errorf("git origin must be an https:// URL: %s", origin)
-	}
-
 	if googlesourceIndex := strings.Index(origin, ".googlesource.com"); googlesourceIndex >= 0 {
+		if !strings.HasPrefix(origin, "https://") {
+			return fmt.Errorf("git origin must be an https:// URL: %s", origin)
+		}
 		// https:// prefix and then one slash between host and top-level name
 		if strings.Count(origin, "/") != 3 {
 			return fmt.Errorf("git origin is malformed: %s", origin)
