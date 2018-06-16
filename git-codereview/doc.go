@@ -105,13 +105,15 @@ Descriptions of each command follow.
 
 Branchpoint
 
+The branchpoint command prints the commit hash of the most recent commit
+on the current branch that is shared with the Gerrit server.
+
 	git codereview branchpoint
 
-The branchpoint command prints the commit hash of the most recent commit
-on the current branch that is shared with the Gerrit server. This is the point
-where local work branched from the published tree. The command is intended
-mainly for use in scripts. For example, ``git diff $(git codereview branchpoint)''
-or ``git log $(git codereview branchpoint)..HEAD''.
+This commit is the point where local work branched from the published tree.
+The command is intended mainly for use in scripts. For example,
+``git diff $(git codereview branchpoint)'' or
+``git log $(git codereview branchpoint)..HEAD''.
 
 Change
 
