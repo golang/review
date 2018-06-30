@@ -244,6 +244,34 @@ func TestMailTopic(t *testing.T) {
 		"git tag -f work.mailed "+h)
 }
 
+func TestMailHashtag(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+
+	h := CurrentBranch().Pending()[0].ShortHash
+
+	// fake auth information to avoid Gerrit error
+	auth.host = "gerrit.fake"
+	auth.user = "not-a-user"
+	defer func() {
+		auth.host = ""
+		auth.user = ""
+	}()
+
+	testMain(t, "mail", "-hashtag", "test1,test2")
+	testRan(t,
+		"git push -q origin HEAD:refs/for/master%hashtag=test1,hashtag=test2",
+		"git tag -f work.mailed "+h)
+	testMain(t, "mail", "-hashtag", "")
+	testRan(t,
+		"git push -q origin HEAD:refs/for/master",
+		"git tag -f work.mailed "+h)
+
+	testMainDied(t, "mail", "-hashtag", "test1,,test3")
+	testPrintedStderr(t, "hashtag may not contain empty tags")
+}
+
 func TestMailEmpty(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()

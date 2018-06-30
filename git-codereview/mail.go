@@ -16,18 +16,20 @@ import (
 
 func cmdMail(args []string) {
 	var (
-		diff   = flags.Bool("diff", false, "show change commit diff and don't upload or mail")
-		force  = flags.Bool("f", false, "mail even if there are staged changes")
-		topic  = flags.String("topic", "", "set Gerrit topic")
-		trybot = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
-		rList  = new(stringList) // installed below
-		ccList = new(stringList) // installed below
+		diff    = flags.Bool("diff", false, "show change commit diff and don't upload or mail")
+		force   = flags.Bool("f", false, "mail even if there are staged changes")
+		topic   = flags.String("topic", "", "set Gerrit topic")
+		trybot  = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
+		rList   = new(stringList) // installed below
+		ccList  = new(stringList) // installed below
+		tagList = new(stringList) // installed below
 	)
 	flags.Var(rList, "r", "comma-separated list of reviewers")
 	flags.Var(ccList, "cc", "comma-separated list of people to CC:")
+	flags.Var(tagList, "hashtag", "comma-separated list of tags to set")
 
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-topic topic] [-trybot] [commit]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-topic topic] [-trybot] [-hashtag tag,...] [commit]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
@@ -109,6 +111,15 @@ func cmdMail(args []string) {
 	if *ccList != "" {
 		refSpec += mailList(start, "cc", string(*ccList))
 		start = ","
+	}
+	if *tagList != "" {
+		for _, tag := range strings.Split(string(*tagList), ",") {
+			if tag == "" {
+				dief("hashtag may not contain empty tags")
+			}
+			refSpec += start + "hashtag=" + tag
+			start = ","
+		}
 	}
 	if *topic != "" {
 		// There's no way to escape the topic, but the only
