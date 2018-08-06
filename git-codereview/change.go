@@ -62,7 +62,7 @@ func (b *Branch) check() {
 		// TODO(rsc): Test.
 		b.loadPending()
 		if n := b.CommitsBehind(); n > 0 {
-			printf("warning: %d commit%s behind %s; run 'git sync' to update.", n, suffix(n, "s"), b.OriginBranch())
+			printf("warning: %d commit%s behind %s; run 'git codereview sync' to update.", n, suffix(n, "s"), b.OriginBranch())
 		}
 	}
 
