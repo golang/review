@@ -253,14 +253,6 @@ Examples:
 
 `
 
-const fixesIssueWarning = `
-Your CL description contains the string %q, which is
-the old Google Code way of linking commits to issues.
-
-You should rewrite it to use the GitHub convention: "Fixes #%v".
-
-`
-
 func scanYes() bool {
 	var s string
 	fmt.Scan(&s)

@@ -275,11 +275,6 @@ func testMainDied(t *testing.T, args ...string) {
 	}
 }
 
-func testMainCanDie(t *testing.T, args ...string) {
-	mainCanDie = true
-	testMain(t, args...)
-}
-
 func testMain(t *testing.T, args ...string) {
 	*noRun = false
 	*verbose = 0
