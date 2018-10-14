@@ -4,10 +4,9 @@ The git-codereview tool is a command-line tool for working with Gerrit.
 
 ## Download/Install
 
-The easiest way to install is to run `go get -u golang.org/x/review`. You can
+The easiest way to install is to run `go get -u golang.org/x/review/git-codereview`. You can
 also manually git clone the repository to `$GOPATH/src/golang.org/x/review`.
 
-The review binary itself is available at `golang.org/x/review/git-codereview`.
 Run `git codereview hooks` to install Gerrit hooks for your git repository.
 
 ## Report Issues / Send Patches
