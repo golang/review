@@ -62,6 +62,9 @@ func haveGerritInternal(gerrit, origin string) bool {
 	if strings.Contains(origin, "github.com") {
 		return false
 	}
+	if strings.HasPrefix(origin, "sso://") || strings.HasPrefix(origin, "rpc://") {
+		return true
+	}
 	if !strings.Contains(origin, "https://") {
 		return false
 	}
