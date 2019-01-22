@@ -345,6 +345,9 @@ func gofmtRequired(file string) bool {
 	if !strings.HasSuffix(file, ".go") {
 		return false
 	}
+	if strings.HasPrefix(file, "vendor/") || strings.Contains(file, "/vendor/") {
+		return false
+	}
 	if !strings.HasPrefix(file, "test/") {
 		return true
 	}

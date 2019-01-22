@@ -31,8 +31,12 @@ func TestGofmt(t *testing.T) {
 	if err := os.MkdirAll(gt.client+"/test/bench", 0755); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.MkdirAll(gt.client+"/vendor", 0755); err != nil {
+		t.Fatal(err)
+	}
 	write(t, gt.client+"/bad.go", badGo)
 	write(t, gt.client+"/good.go", goodGo)
+	write(t, gt.client+"/vendor/bad.go", badGo)
 	write(t, gt.client+"/test/bad.go", badGo)
 	write(t, gt.client+"/test/good.go", goodGo)
 	write(t, gt.client+"/test/bench/bad.go", badGo)
@@ -40,10 +44,9 @@ func TestGofmt(t *testing.T) {
 	trun(t, gt.client, "git", "add", ".") // make files tracked
 
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "bad.go\n", "!good.go", fromSlash("!test/bad"), fromSlash("test/bench/bad.go"))
-
+	testPrintedStdout(t, "bad.go\n", "!good.go", fromSlash("!test/bad"), fromSlash("test/bench/bad.go"), fromSlash("!vendor/bad.go"))
 	testMain(t, "gofmt", "-l")
-	testPrintedStdout(t, "bad.go\n", "!good.go", fromSlash("!test/bad"), fromSlash("test/bench/bad.go"))
+	testPrintedStdout(t, "bad.go\n", "!good.go", fromSlash("!test/bad"), fromSlash("test/bench/bad.go"), fromSlash("!vendor/bad.go"))
 
 	testMain(t, "gofmt")
 	testNoStdout(t)
