@@ -42,6 +42,16 @@ func TestHookCommitMsgGerrit(t *testing.T) {
 	if got := testStderr.String(); got != multiple {
 		t.Fatalf("unexpected output:\ngot: %q\nwant: %q", got, multiple)
 	}
+
+	// Check that hook doesn't add two line feeds before Change-Id
+	// if the exsting message ends with a metadata line.
+	write(t, gt.client+"/msg.txt", "Test message.\n\nBug: 1234\n")
+	testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
+	data = read(t, gt.client+"/msg.txt")
+	if !bytes.Contains(data, []byte("Bug: 1234\nChange-Id: ")) {
+		t.Fatalf("after hook-invoke commit-msg, missing Change-Id: directly after Bug line\n%s", data)
+	}
+
 }
 
 func TestHookCommitMsg(t *testing.T) {

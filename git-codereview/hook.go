@@ -189,15 +189,12 @@ func hookCommitMsg(args []string) {
 
 		// Add Change-Id to commit message if not present.
 		if nChangeId == 0 {
-			n := len(data)
-			for n > 0 && data[n-1] == '\n' {
-				n--
+			data = bytes.TrimRight(data, "\n")
+			sep := "\n\n"
+			if endsWithMetadataLine(data) {
+				sep = "\n"
 			}
-			var id [20]byte
-			if _, err := io.ReadFull(rand.Reader, id[:]); err != nil {
-				dief("generating Change-Id: %v", err)
-			}
-			data = append(data[:n], fmt.Sprintf("\n\nChange-Id: I%x\n", id[:])...)
+			data = append(data, fmt.Sprintf("%sChange-Id: I%x\n", sep, randomBytes())...)
 		}
 
 		// Add branch prefix to commit message if not present and on a
@@ -219,6 +216,24 @@ func hookCommitMsg(args []string) {
 			dief("%v", err)
 		}
 	}
+}
+
+// randomBytes returns 20 random bytes suitable for use in a Change-Id line.
+func randomBytes() []byte {
+	var id [20]byte
+	if _, err := io.ReadFull(rand.Reader, id[:]); err != nil {
+		dief("generating Change-Id: %v", err)
+	}
+	return id[:]
+}
+
+var metadataLineRE = regexp.MustCompile(`^[a-zA-Z0-9-]+: `)
+
+// endsWithMetadataLine reports whether the given commit message ends with a
+// metadata line such as "Bug: #42" or "Signed-off-by: Al <al@example.com>".
+func endsWithMetadataLine(msg []byte) bool {
+	i := bytes.LastIndexByte(msg, '\n')
+	return i >= 0 && metadataLineRE.Match(msg[i+1:])
 }
 
 var (
