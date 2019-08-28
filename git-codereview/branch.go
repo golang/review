@@ -78,6 +78,7 @@ func (b *Branch) OriginBranch() string {
 		envs = append(envs, "MSYS=noglob "+os.Getenv("MSYS"))
 		cmd.Env = envs
 	}
+	setEnglishLocale(cmd)
 
 	out, err := cmd.CombinedOutput()
 	if err == nil && len(out) > 0 {

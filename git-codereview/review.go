@@ -196,6 +196,15 @@ func expectZeroArgs(args []string, command string) {
 	}
 }
 
+func setEnglishLocale(cmd *exec.Cmd) {
+	// Override the existing locale to prevent non-English locales from
+	// interfering with string parsing. See golang.org/issue/33895.
+	if cmd.Env == nil {
+		cmd.Env = os.Environ()
+	}
+	cmd.Env = append(cmd.Env, "LC_ALL=C")
+}
+
 func run(command string, args ...string) {
 	if err := runErr(command, args...); err != nil {
 		if *verbose == 0 {
@@ -232,6 +241,7 @@ func runDirErr(dir, command string, args ...string) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = stdout()
 	cmd.Stderr = stderr()
+	setEnglishLocale(cmd)
 	return cmd.Run()
 }
 
@@ -293,6 +303,7 @@ func cmdOutputDirErr(dir, command string, args ...string) (string, error) {
 	if dir != "." {
 		cmd.Dir = dir
 	}
+	setEnglishLocale(cmd)
 	b, err := cmd.CombinedOutput()
 	return string(b), err
 }

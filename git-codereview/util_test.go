@@ -236,6 +236,7 @@ func remove(t *testing.T, file string) {
 func trun(t *testing.T, dir string, cmdline ...string) string {
 	cmd := exec.Command(cmdline[0], cmdline[1:]...)
 	cmd.Dir = dir
+	setEnglishLocale(cmd)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		if cmdline[0] == "git" {
