@@ -137,9 +137,37 @@ func main() {
 	}
 	command, args := os.Args[1], os.Args[2:]
 
-	if command == "help" {
+	var cmd func([]string)
+	switch command {
+	case "help":
 		fmt.Fprintf(stdout(), help, os.Args[0])
-		return
+		return // avoid installing hooks.
+	case "hooks": // in case hooks weren't installed.
+		installHook(args)
+		return // avoid invoking installHook twice.
+	case "branchpoint":
+		cmd = cmdBranchpoint
+	case "change":
+		cmd = cmdChange
+	case "gofmt":
+		cmd = cmdGofmt
+	case "hook-invoke":
+		cmd = cmdHookInvoke
+	case "mail", "m":
+		cmd = cmdMail
+	case "pending":
+		cmd = cmdPending
+	case "rebase-work":
+		cmd = cmdRebaseWork
+	case "submit":
+		cmd = cmdSubmit
+	case "sync":
+		cmd = cmdSync
+	case "test-loadAuth": // for testing only.
+		cmd = func([]string) { loadAuth() }
+	default:
+		flags.Usage()
+		return // avoid installing hooks.
 	}
 
 	// Install hooks automatically, but only if this is a Gerrit repo.
@@ -157,32 +185,7 @@ func main() {
 		installHook(hookArgs)
 	}
 
-	switch command {
-	case "branchpoint":
-		cmdBranchpoint(args)
-	case "change":
-		cmdChange(args)
-	case "gofmt":
-		cmdGofmt(args)
-	case "hook-invoke":
-		cmdHookInvoke(args)
-	case "hooks":
-		installHook(args) // in case above was bypassed
-	case "mail", "m":
-		cmdMail(args)
-	case "pending":
-		cmdPending(args)
-	case "rebase-work":
-		cmdRebaseWork(args)
-	case "submit":
-		cmdSubmit(args)
-	case "sync":
-		cmdSync(args)
-	case "test-loadAuth": // for testing only
-		loadAuth()
-	default:
-		flags.Usage()
-	}
+	cmd(args)
 }
 
 func expectZeroArgs(args []string, command string) {
