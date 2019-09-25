@@ -118,7 +118,7 @@ The command is intended mainly for use in scripts. For example,
 Change
 
 The change command creates and moves between Git branches and maintains the
-pending changes on work branches.
+pending changes on work branches. It can also be used to checkout Gerrit CLs.
 
 	git codereview change [-a] [-q] [-m <message>] [branchname]
 
@@ -141,6 +141,13 @@ The -m option specifies a commit message and skips the editor prompt. This
 option is only useful when creating commits (e.g. if there are unstaged
 changes). If a commit already exists, it is overwritten. If -q is also
 present, -q will be ignored.
+
+	git codereview change NNNN[/PP]
+
+When the provided argument takes the form NNNN or NNNN/PP, which are numbers,
+the change command considers it to refer to the Gerrit CL number NNNN, patch
+set PP, and checks out the corresponding commit in detached HEAD mode.
+If the patch set is omitted, the current patch set is chosen.
 
 Gofmt
 
