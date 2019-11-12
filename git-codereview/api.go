@@ -145,7 +145,7 @@ func loadAuth() {
 
 	// First look in Git's http.cookiefile, which is where Gerrit
 	// now tells users to store this information.
-	if cookieFile, _ := trimErr(cmdOutputErr("git", "config", "--path", "http.cookiefile")); cookieFile != "" {
+	if cookieFile, _ := trimErr(cmdOutputErr("git", "config", "--path", "--get-urlmatch", "http.cookiefile", auth.url)); cookieFile != "" {
 		data, _ := ioutil.ReadFile(cookieFile)
 		maxMatch := -1
 		for _, line := range lines(string(data)) {
