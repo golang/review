@@ -29,7 +29,7 @@ func TestChange(t *testing.T) {
 	testRan(t, "git checkout -q master")
 
 	t.Logf("master -> work with staged changes")
-	write(t, gt.client+"/file", "new content")
+	write(t, gt.client+"/file", "new content", 0644)
 	trun(t, gt.client, "git", "add", "file")
 	testMain(t, "change", "work")
 	testRan(t, "git checkout -q work",
@@ -53,7 +53,7 @@ func TestChangeAhead(t *testing.T) {
 	defer gt.done()
 
 	// commit to master (mistake)
-	write(t, gt.client+"/file", "new content")
+	write(t, gt.client+"/file", "new content", 0644)
 	trun(t, gt.client, "git", "add", "file")
 	trun(t, gt.client, "git", "commit", "-m", "msg")
 
@@ -88,7 +88,7 @@ func TestChangeAmendCommit(t *testing.T) {
 	testCommitMsg = "foo: amended commit message"
 	gt.work(t)
 
-	write(t, gt.client+"/file", "new content in work to be amend")
+	write(t, gt.client+"/file", "new content in work to be amend", 0644)
 	trun(t, gt.client, "git", "add", "file")
 	testMain(t, "change")
 }
@@ -101,7 +101,7 @@ func TestChangeFailAmendWithMultiplePending(t *testing.T) {
 	gt.work(t)
 	gt.work(t)
 
-	write(t, gt.client+"/file", "new content in work to be amend")
+	write(t, gt.client+"/file", "new content in work to be amend", 0644)
 	trun(t, gt.client, "git", "add", "file")
 	testMainDied(t, "change")
 	testPrintedStderr(t, "multiple changes pending")
@@ -115,7 +115,7 @@ func TestChangeCL(t *testing.T) {
 	defer srv.done()
 
 	// Ensure that 'change' with a CL accepts we have gerrit. Test address is injected by newGerritServer.
-	write(t, gt.server+"/codereview.cfg", "gerrit: on")
+	write(t, gt.server+"/codereview.cfg", "gerrit: on", 0644)
 	trun(t, gt.server, "git", "add", "codereview.cfg")
 	trun(t, gt.server, "git", "commit", "-m", "codereview.cfg on master")
 	trun(t, gt.client, "git", "pull")

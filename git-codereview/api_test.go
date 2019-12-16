@@ -104,11 +104,11 @@ func TestLoadAuth(t *testing.T) {
 		remove(t, netrc)
 		remove(t, gt.client+"/.cookies")
 		if tt.netrc != "" {
-			write(t, netrc, tt.netrc)
+			write(t, netrc, tt.netrc, 0644)
 		}
 		if tt.cookiefile != "" {
 			if tt.cookiefile != "MISSING" {
-				write(t, gt.client+"/.cookies", tt.cookiefile)
+				write(t, gt.client+"/.cookies", tt.cookiefile, 0644)
 			}
 			trun(t, gt.client, "git", "config", "http.cookiefile", "~/.cookies")
 		}

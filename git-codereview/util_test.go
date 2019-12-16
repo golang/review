@@ -68,7 +68,8 @@ func (gt *gitTest) done() {
 
 // doWork simulates commit 'n' touching 'file' in 'dir'
 func doWork(t *testing.T, n int, dir, file, changeid string) {
-	write(t, dir+"/"+file, fmt.Sprintf("new content %d", n))
+	t.Helper()
+	write(t, dir+"/"+file, fmt.Sprintf("new content %d", n), 0644)
 	trun(t, dir, "git", "add", file)
 	suffix := ""
 	if n > 1 {
@@ -79,6 +80,7 @@ func doWork(t *testing.T, n int, dir, file, changeid string) {
 }
 
 func (gt *gitTest) work(t *testing.T) {
+	t.Helper()
 	if gt.nwork == 0 {
 		trun(t, gt.client, "git", "checkout", "-b", "work")
 		trun(t, gt.client, "git", "branch", "--set-upstream-to", "origin/master")
@@ -91,12 +93,14 @@ func (gt *gitTest) work(t *testing.T) {
 }
 
 func (gt *gitTest) workFile(t *testing.T, file string) {
+	t.Helper()
 	// make local change on client in the specific file
 	gt.nwork++
 	doWork(t, gt.nwork, gt.client, file, "23456789")
 }
 
 func (gt *gitTest) serverWork(t *testing.T) {
+	t.Helper()
 	// make change on server
 	// duplicating the sequence of changes in gt.work to simulate them
 	// having gone through Gerrit and submitted with possibly
@@ -106,6 +110,7 @@ func (gt *gitTest) serverWork(t *testing.T) {
 }
 
 func (gt *gitTest) serverWorkUnrelated(t *testing.T) {
+	t.Helper()
 	// make unrelated change on server
 	// this makes history different on client and server
 	gt.nworkOther++
@@ -113,6 +118,7 @@ func (gt *gitTest) serverWorkUnrelated(t *testing.T) {
 }
 
 func newGitTest(t *testing.T) (gt *gitTest) {
+	t.Helper()
 	// The Linux builders seem not to have git in their paths.
 	// That makes this whole repo a bit useless on such systems,
 	// but make sure the tests don't fail.
@@ -136,8 +142,8 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 	server := tmpdir + "/git-origin"
 
 	mkdir(t, server)
-	write(t, server+"/file", "this is master")
-	write(t, server+"/.gitattributes", "* -text\n")
+	write(t, server+"/file", "this is master", 0644)
+	write(t, server+"/.gitattributes", "* -text\n", 0644)
 	trun(t, server, "git", "init", ".")
 	trun(t, server, "git", "config", "user.name", "gopher")
 	trun(t, server, "git", "config", "user.email", "gopher@example.com")
@@ -147,7 +153,7 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 	for _, name := range []string{"dev.branch", "release.branch"} {
 		trun(t, server, "git", "checkout", "master")
 		trun(t, server, "git", "checkout", "-b", name)
-		write(t, server+"/file."+name, "this is "+name)
+		write(t, server+"/file."+name, "this is "+name, 0644)
 		trun(t, server, "git", "add", "file."+name)
 		trun(t, server, "git", "commit", "-m", "on "+name)
 	}
@@ -169,7 +175,7 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 		mkdir(t, client+"/.git/hooks")
 	}
 	for _, h := range hookFiles {
-		write(t, client+"/.git/hooks/"+h, "#!/bin/bash\nexit 0\n")
+		write(t, client+"/.git/hooks/"+h, "#!/bin/sh\nexit 0\n", 0755)
 	}
 
 	trun(t, client, "git", "config", "core.editor", "false")
@@ -191,7 +197,8 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 }
 
 func (gt *gitTest) enableGerrit(t *testing.T) {
-	write(t, gt.server+"/codereview.cfg", "gerrit: myserver\n")
+	t.Helper()
+	write(t, gt.server+"/codereview.cfg", "gerrit: myserver\n", 0644)
 	trun(t, gt.server, "git", "add", "codereview.cfg")
 	trun(t, gt.server, "git", "commit", "-m", "add gerrit")
 	trun(t, gt.client, "git", "pull", "-r")
@@ -203,18 +210,21 @@ func (gt *gitTest) removeStubHooks() {
 
 func mkdir(t *testing.T, dir string) {
 	if err := os.Mkdir(dir, 0777); err != nil {
+		t.Helper()
 		t.Fatal(err)
 	}
 }
 
 func chdir(t *testing.T, dir string) {
 	if err := os.Chdir(dir); err != nil {
+		t.Helper()
 		t.Fatal(err)
 	}
 }
 
-func write(t *testing.T, file, data string) {
-	if err := ioutil.WriteFile(file, []byte(data), 0666); err != nil {
+func write(t *testing.T, file, data string, perm os.FileMode) {
+	if err := ioutil.WriteFile(file, []byte(data), perm); err != nil {
+		t.Helper()
 		t.Fatal(err)
 	}
 }
@@ -222,6 +232,7 @@ func write(t *testing.T, file, data string) {
 func read(t *testing.T, file string) []byte {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
+		t.Helper()
 		t.Fatal(err)
 	}
 	return b
@@ -229,6 +240,7 @@ func read(t *testing.T, file string) []byte {
 
 func remove(t *testing.T, file string) {
 	if err := os.RemoveAll(file); err != nil {
+		t.Helper()
 		t.Fatal(err)
 	}
 }
@@ -239,6 +251,7 @@ func trun(t *testing.T, dir string, cmdline ...string) string {
 	setEnglishLocale(cmd)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
+		t.Helper()
 		if cmdline[0] == "git" {
 			t.Fatalf("in %s/, ran %s with %s:\n%v\n%s", filepath.Base(dir), cmdline, gitversion, err, out)
 		}
@@ -269,6 +282,7 @@ var (
 var mainCanDie bool
 
 func testMainDied(t *testing.T, args ...string) {
+	t.Helper()
 	mainCanDie = true
 	testMain(t, args...)
 	if !died {
@@ -277,6 +291,7 @@ func testMainDied(t *testing.T, args ...string) {
 }
 
 func testMain(t *testing.T, args ...string) {
+	t.Helper()
 	*noRun = false
 	*verbose = 0
 	cachedConfig = nil
@@ -327,6 +342,7 @@ func testRan(t *testing.T, cmds ...string) {
 		cmds = []string{}
 	}
 	if !reflect.DeepEqual(runLog, cmds) {
+		t.Helper()
 		t.Errorf("ran:\n%s", strings.Join(runLog, "\n"))
 		t.Errorf("wanted:\n%s", strings.Join(cmds, "\n"))
 	}
@@ -347,26 +363,31 @@ func testPrinted(t *testing.T, buf *bytes.Buffer, name string, messages ...strin
 		}
 	}
 	if errors.Len() > 0 {
+		t.Helper()
 		t.Fatalf("wrong output\n%s%s:\n%s", &errors, name, all)
 	}
 }
 
 func testPrintedStdout(t *testing.T, messages ...string) {
+	t.Helper()
 	testPrinted(t, testStdout, "stdout", messages...)
 }
 
 func testPrintedStderr(t *testing.T, messages ...string) {
+	t.Helper()
 	testPrinted(t, testStderr, "stderr", messages...)
 }
 
 func testNoStdout(t *testing.T) {
 	if testStdout.Len() != 0 {
+		t.Helper()
 		t.Fatalf("unexpected stdout:\n%s", testStdout)
 	}
 }
 
 func testNoStderr(t *testing.T) {
 	if testStderr.Len() != 0 {
+		t.Helper()
 		t.Fatalf("unexpected stderr:\n%s", testStderr)
 	}
 }
@@ -380,6 +401,7 @@ type gerritServer struct {
 func newGerritServer(t *testing.T) *gerritServer {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
+		t.Helper()
 		t.Fatalf("starting fake gerrit: %v", err)
 	}
 

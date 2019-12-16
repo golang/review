@@ -130,7 +130,7 @@ func TestMailAmbiguousRevision(t *testing.T) {
 	t.Logf("creating file that conflicts with revision parameter")
 	b := CurrentBranch()
 	mkdir(t, gt.client+"/origin")
-	write(t, gt.client+"/"+b.Branchpoint()+"..HEAD", "foo")
+	write(t, gt.client+"/"+b.Branchpoint()+"..HEAD", "foo", 0644)
 
 	testMain(t, "mail", "-diff")
 }
@@ -191,7 +191,7 @@ func TestMailShort(t *testing.T) {
 
 	// Seed commit history with reviewers.
 	for i, addr := range reviewerLog {
-		write(t, gt.server+"/file", fmt.Sprintf("v%d", i))
+		write(t, gt.server+"/file", fmt.Sprintf("v%d", i), 0644)
 		trun(t, gt.server, "git", "commit", "-a", "-m", "msg\n\nReviewed-by: "+addr+"\n")
 	}
 	trun(t, gt.client, "git", "pull")

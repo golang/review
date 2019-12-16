@@ -13,9 +13,9 @@ func TestSync(t *testing.T) {
 	testMain(t, "change", "work")
 
 	// check for error with unstaged changes
-	write(t, gt.client+"/file1", "")
+	write(t, gt.client+"/file1", "", 0644)
 	trun(t, gt.client, "git", "add", "file1")
-	write(t, gt.client+"/file1", "actual content")
+	write(t, gt.client+"/file1", "actual content", 0644)
 	testMainDied(t, "sync")
 	testPrintedStderr(t, "cannot sync: unstaged changes exist",
 		"git status", "git stash", "git add", "git-codereview change")
@@ -35,7 +35,7 @@ func TestSync(t *testing.T) {
 	testNoStderr(t)
 
 	// make server 1 step ahead of client
-	write(t, gt.server+"/file", "new content")
+	write(t, gt.server+"/file", "new content", 0644)
 	trun(t, gt.server, "git", "add", "file")
 	trun(t, gt.server, "git", "commit", "-m", "msg")
 

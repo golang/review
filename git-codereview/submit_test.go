@@ -21,7 +21,7 @@ func TestSubmitErrors(t *testing.T) {
 	t.Logf("> no commit")
 	testMainDied(t, "submit")
 	testPrintedStderr(t, "cannot submit: no changes pending")
-	write(t, gt.client+"/file1", "")
+	write(t, gt.client+"/file1", "", 0644)
 	trun(t, gt.client, "git", "add", "file1")
 	trun(t, gt.client, "git", "commit", "-m", "msg\n\nDO NOT SUBMIT\n\nChange-Id: I123456789\n")
 
@@ -32,7 +32,7 @@ func TestSubmitErrors(t *testing.T) {
 	trun(t, gt.client, "git", "commit", "--amend", "-m", "msg\n\nChange-Id: I123456789\n")
 
 	t.Logf("> staged changes")
-	write(t, gt.client+"/file1", "asdf")
+	write(t, gt.client+"/file1", "asdf", 0644)
 	trun(t, gt.client, "git", "add", "file1")
 	testMainDied(t, "submit")
 	testPrintedStderr(t, "cannot submit: staged changes exist",
@@ -40,7 +40,7 @@ func TestSubmitErrors(t *testing.T) {
 	testNoStdout(t)
 
 	t.Logf("> unstaged changes")
-	write(t, gt.client+"/file1", "actual content")
+	write(t, gt.client+"/file1", "actual content", 0644)
 	testMainDied(t, "submit")
 	testPrintedStderr(t, "cannot submit: unstaged changes exist",
 		"git status", "git stash", "git add", "git-codereview change")
@@ -137,7 +137,7 @@ func TestSubmit(t *testing.T) {
 	trun(t, gt.client, "git", "tag", "-f", "work.mailed")
 	clientHead := strings.TrimSpace(trun(t, gt.client, "git", "log", "-n", "1", "--format=format:%H"))
 
-	write(t, gt.server+"/file", "another change")
+	write(t, gt.server+"/file", "another change", 0644)
 	trun(t, gt.server, "git", "add", "file")
 	trun(t, gt.server, "git", "commit", "-m", "conflict")
 	serverHead := strings.TrimSpace(trun(t, gt.server, "git", "log", "-n", "1", "--format=format:%H"))
@@ -217,12 +217,12 @@ func TestSubmitInteractive(t *testing.T) {
 }
 
 func testSubmitMultiple(t *testing.T, gt *gitTest, srv *gerritServer) (*GerritChange, *GerritChange) {
-	write(t, gt.client+"/file1", "")
+	write(t, gt.client+"/file1", "", 0644)
 	trun(t, gt.client, "git", "add", "file1")
 	trun(t, gt.client, "git", "commit", "-m", "msg\n\nChange-Id: I0000001\n")
 	hash1 := strings.TrimSpace(trun(t, gt.client, "git", "log", "-n", "1", "--format=format:%H"))
 
-	write(t, gt.client+"/file2", "")
+	write(t, gt.client+"/file2", "", 0644)
 	trun(t, gt.client, "git", "add", "file2")
 	trun(t, gt.client, "git", "commit", "-m", "msg\n\nChange-Id: I0000002\n")
 	hash2 := strings.TrimSpace(trun(t, gt.client, "git", "log", "-n", "1", "--format=format:%H"))

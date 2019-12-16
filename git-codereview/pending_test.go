@@ -62,30 +62,30 @@ func TestPendingComplex(t *testing.T) {
 	defer gt.done()
 	gt.work(t)
 
-	write(t, gt.server+"/file", "v2")
+	write(t, gt.server+"/file", "v2", 0644)
 	trun(t, gt.server, "git", "commit", "-a", "-m", "v2")
 
-	write(t, gt.server+"/file", "v3")
+	write(t, gt.server+"/file", "v3", 0644)
 	trun(t, gt.server, "git", "commit", "-a", "-m", "v3")
 
 	trun(t, gt.client, "git", "fetch")
 	trun(t, gt.client, "git", "checkout", "-b", "work3ignored", "-t", "origin/master")
 
-	write(t, gt.server+"/file", "v4")
+	write(t, gt.server+"/file", "v4", 0644)
 	trun(t, gt.server, "git", "commit", "-a", "-m", "v4")
 
 	trun(t, gt.client, "git", "fetch")
 	trun(t, gt.client, "git", "checkout", "-b", "work2", "-t", "origin/master")
-	write(t, gt.client+"/file", "modify")
-	write(t, gt.client+"/file1", "new")
+	write(t, gt.client+"/file", "modify", 0644)
+	write(t, gt.client+"/file1", "new", 0644)
 	trun(t, gt.client, "git", "add", "file", "file1")
 	trun(t, gt.client, "git", "commit", "-m", "some changes")
-	write(t, gt.client+"/file1", "modify")
-	write(t, gt.client+"/afile1", "new")
+	write(t, gt.client+"/file1", "modify", 0644)
+	write(t, gt.client+"/afile1", "new", 0644)
 	trun(t, gt.client, "git", "add", "file1", "afile1")
-	write(t, gt.client+"/file1", "modify again")
-	write(t, gt.client+"/file", "modify again")
-	write(t, gt.client+"/bfile", "untracked")
+	write(t, gt.client+"/file1", "modify again", 0644)
+	write(t, gt.client+"/file", "modify again", 0644)
+	write(t, gt.client+"/bfile", "untracked", 0644)
 
 	testPending(t, `
 		work2 REVHASH..REVHASH (current branch)
@@ -160,7 +160,7 @@ func TestPendingErrors(t *testing.T) {
 	defer gt.done()
 
 	trun(t, gt.client, "git", "checkout", "master")
-	write(t, gt.client+"/file", "v3")
+	write(t, gt.client+"/file", "v3", 0644)
 	trun(t, gt.client, "git", "commit", "-a", "-m", "v3")
 
 	testPending(t, `
@@ -190,14 +190,14 @@ func TestPendingMultiChange(t *testing.T) {
 	defer gt.done()
 
 	gt.work(t)
-	write(t, gt.client+"/file", "v2")
+	write(t, gt.client+"/file", "v2", 0644)
 	trun(t, gt.client, "git", "commit", "-a", "-m", "v2")
 
-	write(t, gt.client+"/file", "v4")
+	write(t, gt.client+"/file", "v4", 0644)
 	trun(t, gt.client, "git", "add", "file")
 
-	write(t, gt.client+"/file", "v5")
-	write(t, gt.client+"/file2", "v6")
+	write(t, gt.client+"/file", "v5", 0644)
+	write(t, gt.client+"/file2", "v6", 0644)
 
 	testPending(t, `
 		work REVHASH..REVHASH (current branch)
@@ -266,7 +266,7 @@ func TestPendingGerrit(t *testing.T) {
 	// Test local mode does not talk to any server.
 	// Make client 1 behind server.
 	// The '1 behind' should not show up, nor any Gerrit information.
-	write(t, gt.server+"/file", "v4")
+	write(t, gt.server+"/file", "v4", 0644)
 	trun(t, gt.server, "git", "add", "file")
 	trun(t, gt.server, "git", "commit", "-m", "msg")
 	testPendingArgs(t, []string{"-l"}, `
@@ -337,15 +337,15 @@ func TestPendingGerritMultiChange(t *testing.T) {
 	gt.work(t)
 	hash1 := CurrentBranch().Pending()[0].Hash
 
-	write(t, gt.client+"/file", "v2")
+	write(t, gt.client+"/file", "v2", 0644)
 	trun(t, gt.client, "git", "commit", "-a", "-m", "v2\n\nChange-Id: I2345")
 	hash2 := CurrentBranch().Pending()[0].Hash
 
-	write(t, gt.client+"/file", "v4")
+	write(t, gt.client+"/file", "v4", 0644)
 	trun(t, gt.client, "git", "add", "file")
 
-	write(t, gt.client+"/file", "v5")
-	write(t, gt.client+"/file2", "v6")
+	write(t, gt.client+"/file", "v5", 0644)
+	write(t, gt.client+"/file2", "v6", 0644)
 
 	srv := newGerritServer(t)
 	defer srv.done()
@@ -417,7 +417,7 @@ func TestPendingGerritMultiChange15(t *testing.T) {
 	testPendingReply(srv, "I123456789", hash1, "MERGED")
 
 	for i := 1; i < 15; i++ {
-		write(t, gt.client+"/file", fmt.Sprintf("v%d", i))
+		write(t, gt.client+"/file", fmt.Sprintf("v%d", i), 0644)
 		trun(t, gt.client, "git", "commit", "-a", "-m", fmt.Sprintf("v%d\n\nChange-Id: I%010d", i, i))
 		hash2 := CurrentBranch().Pending()[0].Hash
 		testPendingReply(srv, fmt.Sprintf("I%010d", i), hash2, "NEW")

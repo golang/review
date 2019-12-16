@@ -22,7 +22,7 @@ func TestCurrentBranch(t *testing.T) {
 	checkCurrentBranch(t, "newbranch", "origin/master", true, false, "", "")
 
 	t.Logf("making change")
-	write(t, gt.client+"/file", "i made a change")
+	write(t, gt.client+"/file", "i made a change", 0644)
 	trun(t, gt.client, "git", "commit", "-a", "-m", "My change line.\n\nChange-Id: I0123456789abcdef0123456789abcdef\n")
 	checkCurrentBranch(t, "newbranch", "origin/master", true, true, "I0123456789abcdef0123456789abcdef", "My change line.")
 
@@ -35,7 +35,7 @@ func TestCurrentBranch(t *testing.T) {
 	checkCurrentBranch(t, "newdev", "origin/dev.branch", true, false, "", "")
 
 	t.Logf("making change")
-	write(t, gt.client+"/file", "i made another change")
+	write(t, gt.client+"/file", "i made another change", 0644)
 	trun(t, gt.client, "git", "commit", "-a", "-m", "My other change line.\n\nChange-Id: I1123456789abcdef0123456789abcdef\n")
 	checkCurrentBranch(t, "newdev", "origin/dev.branch", true, true, "I1123456789abcdef0123456789abcdef", "My other change line.")
 
@@ -103,9 +103,9 @@ func TestAmbiguousRevision(t *testing.T) {
 
 	t.Logf("creating file paths that conflict with revision parameters")
 	mkdir(t, gt.client+"/origin")
-	write(t, gt.client+"/origin/master..work", "Uh-Oh! SpaghettiOs")
+	write(t, gt.client+"/origin/master..work", "Uh-Oh! SpaghettiOs", 0644)
 	mkdir(t, gt.client+"/work..origin")
-	write(t, gt.client+"/work..origin/master", "Be sure to drink your Ovaltine")
+	write(t, gt.client+"/work..origin/master", "Be sure to drink your Ovaltine", 0644)
 
 	b := CurrentBranch()
 	b.Submitted("I123456789")
@@ -140,7 +140,7 @@ func TestRebaseWork(t *testing.T) {
 	testMainDied(t, "rebase-work", "-n")
 	testPrintedStderr(t, "no pending work")
 
-	write(t, gt.client+"/file", "uncommitted")
+	write(t, gt.client+"/file", "uncommitted", 0644)
 	testMainDied(t, "rebase-work", "-n")
 	testPrintedStderr(t, "cannot rebase with uncommitted work")
 
@@ -160,7 +160,7 @@ func TestBranchpointMerge(t *testing.T) {
 	defer gt.done()
 
 	// commit more work on master
-	write(t, gt.server+"/file", "more work")
+	write(t, gt.server+"/file", "more work", 0644)
 	trun(t, gt.server, "git", "commit", "-m", "work", "file")
 
 	// update client

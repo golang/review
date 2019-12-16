@@ -34,13 +34,13 @@ func TestGofmt(t *testing.T) {
 	if err := os.MkdirAll(gt.client+"/vendor", 0755); err != nil {
 		t.Fatal(err)
 	}
-	write(t, gt.client+"/bad.go", badGo)
-	write(t, gt.client+"/good.go", goodGo)
-	write(t, gt.client+"/vendor/bad.go", badGo)
-	write(t, gt.client+"/test/bad.go", badGo)
-	write(t, gt.client+"/test/good.go", goodGo)
-	write(t, gt.client+"/test/bench/bad.go", badGo)
-	write(t, gt.client+"/test/bench/good.go", goodGo)
+	write(t, gt.client+"/bad.go", badGo, 0644)
+	write(t, gt.client+"/good.go", goodGo, 0644)
+	write(t, gt.client+"/vendor/bad.go", badGo, 0644)
+	write(t, gt.client+"/test/bad.go", badGo, 0644)
+	write(t, gt.client+"/test/good.go", goodGo, 0644)
+	write(t, gt.client+"/test/bench/bad.go", badGo, 0644)
+	write(t, gt.client+"/test/bench/good.go", goodGo, 0644)
 	trun(t, gt.client, "git", "add", ".") // make files tracked
 
 	testMain(t, "gofmt", "-l")
@@ -54,8 +54,8 @@ func TestGofmt(t *testing.T) {
 	testMain(t, "gofmt", "-l")
 	testNoStdout(t)
 
-	write(t, gt.client+"/bad.go", badGo)
-	write(t, gt.client+"/broken.go", brokenGo)
+	write(t, gt.client+"/bad.go", badGo, 0644)
+	write(t, gt.client+"/broken.go", brokenGo, 0644)
 	trun(t, gt.client, "git", "add", ".")
 	testMainDied(t, "gofmt", "-l")
 	testPrintedStdout(t, "bad.go")
@@ -71,8 +71,8 @@ func TestGofmtSubdir(t *testing.T) {
 
 	mkdir(t, gt.client+"/dir1")
 	mkdir(t, gt.client+"/longnamedir2")
-	write(t, gt.client+"/dir1/bad1.go", badGo)
-	write(t, gt.client+"/longnamedir2/bad2.go", badGo)
+	write(t, gt.client+"/dir1/bad1.go", badGo, 0644)
+	write(t, gt.client+"/longnamedir2/bad2.go", badGo, 0644)
 	trun(t, gt.client, "git", "add", ".") // make files tracked
 
 	chdir(t, gt.client)
@@ -106,11 +106,11 @@ func TestGofmtSubdirIndexCheckout(t *testing.T) {
 
 	mkdir(t, gt.client+"/dir1")
 	mkdir(t, gt.client+"/longnamedir2")
-	write(t, gt.client+"/dir1/bad1.go", badGo)
-	write(t, gt.client+"/longnamedir2/bad2.go", badGo)
+	write(t, gt.client+"/dir1/bad1.go", badGo, 0644)
+	write(t, gt.client+"/longnamedir2/bad2.go", badGo, 0644)
 	trun(t, gt.client, "git", "add", ".") // put files in index
-	write(t, gt.client+"/dir1/bad1.go", goodGo)
-	write(t, gt.client+"/longnamedir2/bad2.go", goodGo)
+	write(t, gt.client+"/dir1/bad1.go", goodGo, 0644)
+	write(t, gt.client+"/longnamedir2/bad2.go", goodGo, 0644)
 
 	chdir(t, gt.client)
 	testMain(t, "gofmt", "-l")
@@ -160,7 +160,7 @@ func TestGofmtUnstaged(t *testing.T) {
 			text := orig[j%N]
 			file := fmt.Sprintf("%s-%s-%s.go", name[i/N/N], name[(i/N)%N], name[i%N])
 			allFiles = append(allFiles, file)
-			write(t, gt.client+"/"+file, text)
+			write(t, gt.client+"/"+file, text, 0644)
 
 			if (i/N)%N != i%N {
 				staged := file + " (staged)"
@@ -246,7 +246,7 @@ func TestGofmtAmbiguousRevision(t *testing.T) {
 	defer gt.done()
 
 	t.Logf("creating file that conflicts with revision parameter")
-	write(t, gt.client+"/HEAD", "foo")
+	write(t, gt.client+"/HEAD", "foo", 0644)
 
 	testMain(t, "gofmt")
 }
@@ -256,12 +256,12 @@ func TestGofmtFastForwardMerge(t *testing.T) {
 	defer gt.done()
 
 	// merge dev.branch into master
-	write(t, gt.server+"/file", "more work")
+	write(t, gt.server+"/file", "more work", 0644)
 	trun(t, gt.server, "git", "commit", "-m", "work", "file")
 	trun(t, gt.server, "git", "merge", "-m", "merge", "dev.branch")
 
 	// add bad go file on master
-	write(t, gt.server+"/bad.go", "package {\n")
+	write(t, gt.server+"/bad.go", "package {\n", 0644)
 	trun(t, gt.server, "git", "add", "bad.go")
 	trun(t, gt.server, "git", "commit", "-m", "bad go")
 
