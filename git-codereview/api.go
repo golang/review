@@ -368,7 +368,6 @@ type GerritChange struct {
 	Status          string
 	Created         string
 	Updated         string
-	Mergeable       bool
 	Insertions      int
 	Deletions       int
 	Number          int `json:"_number"`

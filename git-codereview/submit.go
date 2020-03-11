@@ -106,12 +106,6 @@ func submit(b *Branch, c *Commit) *GerritChange {
 		}
 	}
 
-	// Don't bother if the server can't merge the changes.
-	if !g.Mergeable {
-		// Server cannot merge; explicit sync is needed.
-		dief("cannot submit: conflicting changes submitted, run 'git sync'")
-	}
-
 	if *noRun {
 		printf("stopped before submit")
 		return g

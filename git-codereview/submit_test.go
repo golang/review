@@ -91,14 +91,8 @@ func TestSubmitErrors(t *testing.T) {
 	testRan(t) // nothing
 	testPrintedStderr(t, "cannot submit: change has Code-Review rejection")
 
-	t.Logf("> unmergeable")
-	srv.setJSON(id, `{"status": "NEW", "mergeable": false, "labels": {"Code-Review": {"approved": {}}}}`)
-	testMainDied(t, "submit")
-	testRan(t, "git push -q origin HEAD:refs/for/master")
-	testPrintedStderr(t, "cannot submit: conflicting changes submitted, run 'git sync'")
-
 	t.Logf("> submit with unexpected status")
-	const newJSON = `{"status": "NEW", "mergeable": true, "labels": {"Code-Review": {"approved": {}}}}`
+	const newJSON = `{"status": "NEW", "labels": {"Code-Review": {"approved": {}}}}`
 	srv.setJSON(id, newJSON)
 	srv.setReply("/a/changes/proj~master~I123456789/submit", gerritReply{body: ")]}'\n" + newJSON})
 	testMainDied(t, "submit")
@@ -232,13 +226,11 @@ func testSubmitMultiple(t *testing.T, gt *gitTest, srv *gerritServer) (*GerritCh
 
 	cl1 := GerritChange{
 		Status:          "NEW",
-		Mergeable:       true,
 		CurrentRevision: hash1,
 		Labels:          map[string]*GerritLabel{"Code-Review": &GerritLabel{Approved: new(GerritAccount)}},
 	}
 	cl2 := GerritChange{
 		Status:          "NEW",
-		Mergeable:       false,
 		CurrentRevision: hash2,
 		Labels:          map[string]*GerritLabel{"Code-Review": &GerritLabel{Approved: new(GerritAccount)}},
 	}
@@ -251,14 +243,13 @@ func testSubmitMultiple(t *testing.T, gt *gitTest, srv *gerritServer) (*GerritCh
 			return gerritReply{status: 409}
 		}
 		cl1.Status = "MERGED"
-		cl2.Mergeable = true
 		return gerritReply{json: cl1}
 	}})
 	srv.setReply("/a/changes/proj~master~I0000002", gerritReply{f: func() gerritReply {
 		return gerritReply{json: cl2}
 	}})
 	srv.setReply("/a/changes/proj~master~I0000002/submit", gerritReply{f: func() gerritReply {
-		if cl2.Status != "NEW" || !cl2.Mergeable {
+		if cl2.Status != "NEW" {
 			return gerritReply{status: 409}
 		}
 		cl2.Status = "MERGED"
