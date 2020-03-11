@@ -27,6 +27,7 @@ func cmdMail(args []string) {
 		trust       = flags.Bool("trust", false, "add a Trust+1 vote to the CL")
 		trybot      = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
 		wip         = flags.Bool("wip", false, "set the status of a change to Work-in-Progress")
+		noverify    = flags.Bool("no-verify", false, "disable presubmits")
 	)
 	flags.Var(rList, "r", "comma-separated list of reviewers")
 	flags.Var(ccList, "cc", "comma-separated list of people to CC:")
@@ -154,6 +155,9 @@ func cmdMail(args []string) {
 	args = []string{"push", "-q"}
 	if *noKeyCheck {
 		args = append(args, "-o", "nokeycheck")
+	}
+	if *noverify {
+		args = append(args, "--no-verify")
 	}
 	args = append(args, "origin", refSpec)
 	run("git", args...)
