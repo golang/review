@@ -18,6 +18,7 @@ func cmdMail(args []string) {
 	var (
 		diff       = flags.Bool("diff", false, "show change commit diff and don't upload or mail")
 		force      = flags.Bool("f", false, "mail even if there are staged changes")
+		wip        = flags.Bool("wip", false, "set the status of a change to Work-in-Progress")
 		topic      = flags.String("topic", "", "set Gerrit topic")
 		trybot     = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
 		rList      = new(stringList) // installed below
@@ -30,7 +31,7 @@ func cmdMail(args []string) {
 	flags.Var(tagList, "hashtag", "comma-separated list of tags to set")
 
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-nokeycheck] [-topic topic] [-trybot] [commit]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-nokeycheck] [-topic topic] [-trybot] [-wip] [commit]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
@@ -134,6 +135,10 @@ func cmdMail(args []string) {
 	}
 	if *trybot {
 		refSpec += start + "l=Run-TryBot"
+		start = ","
+	}
+	if *wip {
+		refSpec += start + "wip"
 		start = ","
 	}
 	args = []string{"push", "-q"}

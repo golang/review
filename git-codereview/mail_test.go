@@ -220,6 +220,19 @@ func TestMailShort(t *testing.T) {
 	testPrintedStderr(t, "unknown reviewer: missing")
 }
 
+func TestWIP(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t)
+
+	h := CurrentBranch().Pending()[0].ShortHash
+
+	testMain(t, "mail", "-wip")
+	testRan(t,
+		"git push -q origin HEAD:refs/for/master%wip",
+		"git tag -f work.mailed "+h)
+}
+
 func TestMailTopic(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
