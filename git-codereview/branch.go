@@ -89,6 +89,18 @@ func (b *Branch) OriginBranch() string {
 	// Have seen both "No upstream configured" and "no upstream configured".
 	if strings.Contains(string(out), "upstream configured") {
 		// Assume branch was created before we set upstream correctly.
+		// See if origin/main exists; if so, use it.
+		// Otherwise, fall back to origin/master.
+		argv := []string{"git", "rev-parse", "--abbrev-ref", "origin/main"}
+		cmd := exec.Command(argv[0], argv[1:]...)
+		setEnglishLocale(cmd)
+		if out, err := cmd.CombinedOutput(); err == nil {
+			b.originBranch = string(bytes.TrimSpace(out))
+			// Best effort attempt to correct setting for next time,
+			// and for "git status".
+			exec.Command("git", "branch", "-u", "origin/main").Run()
+			return b.originBranch
+		}
 		b.originBranch = "origin/master"
 		return b.originBranch
 	}
