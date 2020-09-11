@@ -21,6 +21,7 @@ func cmdMail(args []string) {
 		wip        = flags.Bool("wip", false, "set the status of a change to Work-in-Progress")
 		topic      = flags.String("topic", "", "set Gerrit topic")
 		trybot     = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
+		trust      = flags.Bool("trust", false, "add a Trust+1 vote to the CL")
 		rList      = new(stringList) // installed below
 		ccList     = new(stringList) // installed below
 		tagList    = new(stringList) // installed below
@@ -31,7 +32,7 @@ func cmdMail(args []string) {
 	flags.Var(tagList, "hashtag", "comma-separated list of tags to set")
 
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-nokeycheck] [-topic topic] [-trybot] [-wip] [commit]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-f] [-diff] [-hashtag tag,...] [-nokeycheck] [-topic topic] [-trust] [-trybot] [-wip] [commit]\n", os.Args[0], globalFlags)
 	}
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
@@ -45,7 +46,7 @@ func cmdMail(args []string) {
 	if len(flags.Args()) == 1 {
 		c = b.CommitByRev("mail", flags.Arg(0))
 	} else {
-		c = b.DefaultCommit("mail", "must specify commit on command line or use mail HEAD for everything")
+		c = b.DefaultCommit("mail", "must specify commit on command line; use HEAD to mail all pending changes")
 	}
 
 	if *diff {
@@ -131,6 +132,10 @@ func cmdMail(args []string) {
 			dief("topic may not contain a comma")
 		}
 		refSpec += start + "topic=" + *topic
+		start = ","
+	}
+	if *trust {
+		refSpec += start + "l=Trust"
 		start = ","
 	}
 	if *trybot {

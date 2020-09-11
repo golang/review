@@ -99,7 +99,7 @@ func submit(b *Branch, c *Commit) *GerritChange {
 	if c.Hash != g.CurrentRevision {
 		run("git", "push", "-q", "origin", b.PushSpec(c))
 
-		// Refetch change information, especially mergeable.
+		// Refetch change information.
 		g, err = b.GerritChange(c, "LABELS", "CURRENT_REVISION")
 		if err != nil {
 			dief("%v", err)
