@@ -12,13 +12,12 @@ import (
 	"time"
 )
 
-// TODO(rsc): Add -tbr, along with standard exceptions (doc/go1.5.txt)
-
 func cmdSubmit(args []string) {
+	// NOTE: New flags should be added to the usage message below as well as doc.go.
 	var interactive bool
 	flags.BoolVar(&interactive, "i", false, "interactively select commits to submit")
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s submit %s [-i | commit...]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s submit %s [-i | commit...]\n", progName, globalFlags)
 	}
 	flags.Parse(args)
 	if interactive && flags.NArg() > 0 {

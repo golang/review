@@ -6,15 +6,28 @@
 Git-codereview manages the code review process for Git changes using a Gerrit
 server.
 
-The git-codereview tool manages ``change branches'' in the local git repository.
-Each such branch tracks a single commit, or ``pending change'',
+The git-codereview tool manages “change branches” in the local git repository.
+Each such branch tracks a single commit, or “pending change”,
 that is reviewed using a Gerrit server; the Gerrit remote must be
-named ``origin'' in the local git repo.
+named “origin” in the local git repo.
 
 Modifications to the pending change are applied by amending the commit.
-This process implements the ``single-commit feature branch'' model.
+This process implements the “single-commit feature branch” model.
 Creating multiple-commit feature branches, for example to break a large
 change into a reviewable sequence, is also supported; see the discussion below.
+
+Each local git branch is expected to have a configured upstream branch on the server.
+For example, for a local “work” branch, .git/config might contain:
+
+	[branch "work"]
+		remote = origin
+		merge = refs/heads/main
+
+to instruct git itself that the local “work” branch tracks the upstream “main” branch.
+Git-codereview inspects this setting, which is referred to as “upstream” below.
+If upstream is not configured, which can happen when using checkouts managed by
+very old versions of git-codereview or other tools, git-codereview initializes upstream
+to “main” if that branch exists, or else “master”.
 
 Once installed as git-codereview, the tool's commands are available through git
 either by running
@@ -26,7 +39,7 @@ or, if aliases are installed, as
 	git <command>
 
 The review tool's command names do not conflict with any extant git commands.
-This document uses the first form for clarity but most users install these
+This document uses the first form for clarity, but most users install these
 aliases in their .gitconfig file:
 
 	[alias]
@@ -43,15 +56,15 @@ Single-Commit Work Branches
 For simple, unrelated changes, the typical usage of the git-codereview tool
 is to place each pending change in its own Git branch.
 In this workflow, the work branch contains
-either no pending change beyond origin/master (when there's no local work)
-or exactly one pending change beyond origin/master (the change being developed).
+either no pending change beyond upstream (when there's no local work)
+or exactly one pending change beyond upstream (the change being developed).
 
 When there is no pending change on the work branch,
-``git codereview change'' creates one by running ``git commit''.
+“git codereview change” creates one by running “git commit”.
 Otherwise, when there is already a pending change,
-``git codereview change'' revises it by running ``git commit --amend''.
+“git codereview change” revises it by running “git commit --amend”.
 
-The ``git codereview mail'' and ``git codereview submit'' commands
+The “git codereview mail” and “git codereview submit” commands
 implicitly operate on the lone pending change.
 
 Multiple-Commit Work Branches
@@ -60,48 +73,48 @@ Of course, it is not always feasible to put each pending change in a separate br
 A sequence of changes that build on one another is more easily
 managed as multiple commits on a single branch, and the git-codereview tool
 supports this workflow as well.
-To add a new pending change, invoke ``git commit'' directly,
-instead of ``git codereview change''.
+To add a new pending change, invoke “git commit” directly,
+instead of “git codereview change”.
 The git-codereview tool adjusts its behavior when there are
 multiple pending changes.
 
-The ``git codereview change'' command amends the top commit in the stack (HEAD).
+The “git codereview change” command amends the top commit in the stack (HEAD).
 To amend a commit further down the stack, use Git's rebase support,
-for example by using ``git commit --fixup'' followed by ``git codereview rebase-work''.
+for example by using “git commit --fixup” followed by “git codereview rebase-work”.
 
-The ``git codereview mail'' command requires an explicit revision argument,
-but note that since ``git codereview mail'' is implemented as a ``git push'',
+The “git codereview mail” command requires an explicit revision argument,
+but note that since “git codereview mail” is implemented as a “git push”,
 any commits earlier in the stack are necessarily also mailed.
 
-The ``git codereview submit'' command also requires an explicit revision argument,
+The “git codereview submit” command also requires an explicit revision argument,
 and while earlier commits are necessarily still uploaded and mailed,
-only the named revision or revisions are submitted (merged into origin/master).
-In a single-commit work branch, a successful ``git codereview submit''
-effectively runs ``git codereview sync'' automatically.
+only the named revision or revisions are submitted (merged into upstream).
+In a single-commit work branch, a successful “git codereview submit”
+effectively runs “git codereview sync” automatically.
 In a multiple-commit work branch, it does not, because
-the implied ``git rebase'' may conflict with the remaining pending commits.
-Instead it is necessary to run ``git codereview sync'' explicitly
-(when ready) after ``git codereview submit''.
+the implied “git rebase” may conflict with the remaining pending commits.
+Instead it is necessary to run “git codereview sync” explicitly
+(when ready) after “git codereview submit”.
 
 Reusing Work Branches
 
 Although one common practice is to create a new branch for each pending change,
-running ``git codereview submit'' (and possibly ``git codereview sync'')
+running “git codereview submit” (and possibly “git codereview sync”)
 leaves the current branch ready for reuse with a future change.
 Some developers find it helpful to create a single work branch
-(``git change work'') and then do all work in that branch,
+(“git change work”) and then do all work in that branch,
 possibly in the multiple-commit mode, never changing between branches.
 
-Command Details
+Commands
 
 All commands accept these global flags:
+
+The -n flag prints all commands that would be run, but does not run them.
 
 The -v flag prints all commands that make changes. Multiple occurrences
 trigger more verbosity in some commands, including sync.
 
-The -n flag prints all commands that would be run, but does not run them.
-
-Descriptions of each command follow.
+These are omitted from the per-command descriptions below.
 
 Branchpoint
 
@@ -112,8 +125,8 @@ on the current branch that is shared with the Gerrit server.
 
 This commit is the point where local work branched from the published tree.
 The command is intended mainly for use in scripts. For example,
-``git diff $(git codereview branchpoint)'' or
-``git log $(git codereview branchpoint)..HEAD''.
+“git diff $(git codereview branchpoint)” or
+“git log $(git codereview branchpoint)..HEAD”.
 
 Change
 
@@ -141,6 +154,10 @@ The -m option specifies a commit message and skips the editor prompt. This
 option is only useful when creating commits (e.g. if there are unstaged
 changes). If a commit already exists, it is overwritten. If -q is also
 present, -q will be ignored.
+997As a special case, if branchname is a decimal CL number, such as 987, the change
+command downloads the latest patch set of that CL from the server and switches to it.
+A specific patch set can be requested by adding a decimal point: 987.2 for patch set 2
+of CL 987.
 
 Gofmt
 
@@ -168,16 +185,17 @@ The hooks command installs the Git hooks to enforce code review conventions.
 	git codereview hooks
 
 The pre-commit hook checks that all Go code is formatted with gofmt and that
-the commit is not being made directly to the master branch.
+the commit is not being made directly to a branch with the same name as the
+upstream branch.
 
-The commit-msg hook adds the Gerrit ``Change-Id'' line to the commit message if
+The commit-msg hook adds the Gerrit “Change-Id” line to the commit message if
 not present. It also checks that the message uses the convention established by
 the Go project that the first line has the form, pkg/path: summary.
 
 The hooks command will not overwrite an existing hook.
-If it is not installing hooks, use ``git codereview hooks -v'' for details.
+If it is not installing hooks, use “git codereview hooks -v” for details.
 This hook installation is also done at startup by all other git codereview
-commands, except ``git codereview help''.
+commands, except “git codereview help”.
 
 Hook-Invoke
 
@@ -185,18 +203,29 @@ The hook-invoke command is an internal command that invokes the named Git hook.
 
 	git codereview hook-invoke <hook> [args]
 
-It is run by the shell scripts installed by the ``git codereview hooks'' command.
+It is run by the shell scripts installed by the “git codereview hooks” command.
 
 Mail
 
 The mail command starts the code review process for the pending change.
 
-	git codereview mail [-f] [-r email] [-cc email] [-trybot] [-wip] [revision]
+	git codereview mail [-r email,...] [-cc email,...]
+		[-diff] [-f] [-nokeycheck] [-hashtag tag,...] [-nokeycheck]
+		[-topic topic] [-trust] [-trybot] [-wip]
+		[revision]
 
 It pushes the pending change commit in the current branch to the Gerrit code
 review server and prints the URL for the change on the server.
 If the change already exists on the server, the mail command updates that
 change with a new changeset.
+
+If there are multiple pending commits, the revision argument is mandatory.
+If no revision is specified, the mail command prints a short summary of
+the pending commits for use in deciding which to mail.
+
+If any commit that would be pushed to the server contains the text
+“DO NOT MAIL” (case insensitive) in its commit message, the mail command
+will refuse to send the commit to the server.
 
 The -r and -cc flags identify the email addresses of people to do the code
 review and to be CC'ed about the code review.
@@ -207,25 +236,27 @@ The mail command resolves such shortenings by reading the list of past reviewers
 from the git repository log to find email addresses of the form name@somedomain
 and then, in case of ambiguity, using the reviewer who appears most often.
 
-The -trybot flag runs the trybots on all new or updated changes. It is
-equivalent to setting the Run-Trybot+1 label from Gerrit.
+The -diff flag shows a diff of the named revision compared against the latest
+upstream commit incorporated into the local branch.
 
-The -wip flag sets the status of the change to work-in-progress.
+The -f flag forces mail to proceed even if there are staged changes that have
+not been committed. By default, mail fails in that case.
 
-The mail command fails if there are staged edits that are not committed.
-The -f flag overrides this behavior.
+The -nokeycheck flag disables the Gerrit server check for committed files
+containing data that looks like public keys. (The most common time -nokeycheck
+is needed is when checking in test cases for cryptography libraries.)
+
+The -trust flag sets a Trust+1 vote on any uploaded changes.
+The Go project uses this vote to identify trusted commit authors.
+
+The -trybot flag sets a Run-TryBot+1 vote on any uploaded changes.
+The Go project uses this vote to start running integration tests on the CL.
+
+The -wip flag marks any uploaded changes as work-in-progress.
 
 The mail command updates the tag <branchname>.mailed to refer to the
-commit that was most recently mailed, so running ``git diff <branchname>.mailed''
+commit that was most recently mailed, so running “git diff <branchname>.mailed”
 shows diffs between what is on the Gerrit server and the current directory.
-
-If there are multiple pending commits, the revision argument is mandatory.
-If no revision is specified, the mail command prints a short summary of
-the pending commits for use in deciding which to mail.
-
-If any commit that would be pushed to the server contains the text
-"DO NOT MAIL" (case insensitive) in its commit message, the mail command
-will refuse to send the commit to the server.
 
 Pending
 
@@ -242,24 +273,24 @@ Gerrit server.
 
 The -s flag causes the command to print abbreviated (short) output.
 
-Common shorter aliases include ``git p'' for ``git pending''
-and ``git pl'' for ``git pending -l'' (notably faster but without Gerrit information).
+Useful aliases include “git p” for “git pending” and “git pl” for “git pending -l”
+(notably faster but without Gerrit information).
 
 Rebase-work
 
 The rebase-work command runs git rebase in interactive mode over pending changes.
-It is shorthand for ``git rebase -i $(git codereview branchpoint)''.
-It differs from plain ``git rebase -i'' in that the latter will try to incorporate
+It is shorthand for “git rebase -i $(git codereview branchpoint)”.
+It differs from plain “git rebase -i” in that the latter will try to incorporate
 new commits from the origin branch during the rebase;
-``git codereview rebase-work'' does not.
+“git codereview rebase-work” does not.
 
-In multiple-commit workflows, rebase-work is used so often
-that it can be helpful to alias it to ``git rw''.
+In multiple-commit workflows, rebase-work is used so often that it can be helpful
+to alias it to “git rw”.
 
 Submit
 
 The submit command pushes the pending change to the Gerrit server and tells
-Gerrit to submit it to the master branch.
+Gerrit to submit it to the upstream branch.
 
 	git codereview submit [-i | revision...]
 
@@ -267,7 +298,7 @@ The command fails if there are modified files (staged or unstaged) that are not
 part of the pending change.
 
 The -i option causes the submit command to open a list of commits to submit
-in the configured text editor, similar to ``git rebase -i''.
+in the configured text editor, similar to “git rebase -i”.
 
 If multiple revisions are specified, the submit command submits each one in turn,
 stopping at the first failure.
@@ -279,7 +310,7 @@ the pending commits for use in deciding which to submit.
 
 After submitting the pending changes, the submit command tries to synchronize the
 current branch to the submitted commit, if it can do so cleanly.
-If not, it will prompt the user to run ``git codereview sync'' manually.
+If not, it will prompt the user to run “git codereview sync” manually.
 
 After a successful sync, the branch can be used to prepare a new change.
 
@@ -300,15 +331,15 @@ of this format:
 
 	key: value
 
-The ``gerrit'' key sets the Gerrit URL for this project. Git-codereview
+The “gerrit” key sets the Gerrit URL for this project. Git-codereview
 automatically derives the Gerrit URL from repositories hosted in
 *.googlesource.com. If not set or derived, the repository is assumed to
 not have Gerrit, and certain features won't work.
 
-The ``issuerepo'' key specifies the GitHub repository to use for issues, if
-different from the source repository. If set to ``golang/go'', for example,
-lines such as ``Fixes #123'' in a commit message will be rewritten to ``Fixes
-golang/go#123''.
+The “issuerepo” key specifies the GitHub repository to use for issues,
+if different from the source repository. If set to “golang/go”, for example,
+lines such as “Fixes #123” in a commit message will be rewritten to
+“Fixes golang/go#123”.
 
 */
 package main

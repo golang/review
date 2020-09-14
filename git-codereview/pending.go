@@ -80,12 +80,13 @@ func (b *pendingBranch) load() {
 }
 
 func cmdPending(args []string) {
+	// NOTE: New flags should be added to the usage message below as well as doc.go.
 	flags.BoolVar(&pendingCurrentOnly, "c", false, "show only current branch")
 	flags.BoolVar(&pendingLocal, "l", false, "use only local information - no network operations")
 	flags.BoolVar(&pendingShort, "s", false, "show short listing")
 	flags.Parse(args)
 	if len(flags.Args()) > 0 {
-		fmt.Fprintf(stderr(), "Usage: %s pending %s [-c] [-l] [-s]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s pending %s [-c] [-l] [-s]\n", progName, globalFlags)
 		os.Exit(2)
 	}
 

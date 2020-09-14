@@ -17,12 +17,13 @@ var changeAuto bool
 var changeQuick bool
 
 func cmdChange(args []string) {
+	// NOTE: New flags should be added to the usage message below as well as doc.go.
 	flags.StringVar(&commitMsg, "m", "", "specify a commit message")
 	flags.BoolVar(&changeAuto, "a", false, "add changes to any tracked files")
 	flags.BoolVar(&changeQuick, "q", false, "do not edit pending commit msg")
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
-		fmt.Fprintf(stderr(), "Usage: %s change %s [branch]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s change %s [-a] [-m msg] [-q] [branch]\n", progName, globalFlags)
 		os.Exit(2)
 	}
 
@@ -41,7 +42,7 @@ func cmdChange(args []string) {
 	// Create or amend change commit.
 	b := CurrentBranch()
 	if !b.IsLocalOnly() {
-		dief("can't commit to %s branch (use '%s change branchname').", b.Name, os.Args[0])
+		dief("can't commit to %s branch (use '%s change branchname').", b.Name, progName)
 	}
 
 	amend := b.HasPendingCommit()

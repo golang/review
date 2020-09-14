@@ -27,102 +27,48 @@ var (
 	noRun   = new(bool)
 )
 
+const progName = "git-codereview"
+
 func initFlags() {
 	flags = flag.NewFlagSet("", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), usage, os.Args[0], os.Args[0])
+		fmt.Fprintf(stderr(), usage, progName, progName)
 	}
-	flags.Var(verbose, "v", "report commands")
 	flags.BoolVar(noRun, "n", false, "print but do not run commands")
+	flags.Var(verbose, "v", "report commands")
 }
 
 const globalFlags = "[-n] [-v]"
 
 const usage = `Usage: %s <command> ` + globalFlags + `
-Type "%s help" for more information.
+
+Use "%s help" for a list of commands.
 `
 
 const help = `Usage: %s <command> ` + globalFlags + `
 
-The git-codereview command is a wrapper for the git command that provides a
-simple interface to the "single-commit feature branch" development model.
+Git-codereview is a git helper command for managing pending commits
+against an upstream server, typically a Gerrit server.
 
-See the docs for details: https://godoc.org/golang.org/x/review/git-codereview
-
-The -v flag prints all commands that make changes.
-The -n flag prints all commands that would be run, but does not run them.
+The -n flag prints commands that would make changes but does not run them.
+The -v flag prints those commands as they run.
 
 Available commands:
 
+	branchpoint
 	change [name]
-		Create a change commit, or amend an existing change commit,
-		with the staged changes. If a branch name is provided, check
-		out that branch (creating it if it does not exist).
-		Does not amend the existing commit when switching branches.
-		If -q is specified, skip the editing of an extant pending
-		change's commit message.
-		If -a is specified, automatically add any unstaged changes in
-		tracked files during commit.
-		If -m is specified and a message given, a commit is created
-		and the editor prompt is skipped.
-
 	change NNNN[/PP]
-		Checkout the commit corresponding to CL number NNNN and
-		patch set PP from Gerrit.
-		If the patch set is omitted, use the current patch set.
-
 	gofmt [-l]
-		Run gofmt on all tracked files in the staging area and the
-		working tree.
-		If -l is specified, list files that need formatting.
-		Otherwise, reformat files in place.
-
 	help
-		Show this help text.
-
 	hooks
-		Install Git commit hooks for Gerrit and gofmt.
-		Every other operation except help also does this,
-		if they are not already installed.
-
-	mail [-f] [-r reviewer,...] [-cc mail,...] [-trybot] [-hashtag tag,...] [commit]
-		Upload change commit to the code review server and send mail
-		requesting a code review.
-		If there are multiple commits on this branch, upload commits
-		up to and including the named commit.
-		If -f is specified, upload even if there are staged changes.
-		The -r and -cc flags identify the email addresses of people to
-		do the code review and to be CC'ed about the code review.
-		Multiple addresses are given as a comma-separated list.
-		If -trybot is specified, the trybots are run on the changes,
-		if permitted.
-		The -hashtag flag applies hashtags to the code review.
-
-	mail -diff
-		Show the changes but do not send mail or upload.
-
+	mail [-r reviewer,...] [-cc mail,...] [options] [commit]
 	pending [-c] [-l] [-s]
-		Show the status of all pending changes and staged, unstaged,
-		and untracked files in the local repository.
-		If -c is specified, show only changes on the current branch.
-		If -l is specified, only use locally available information.
-		If -s is specified, show short output.
-
 	rebase-work
-		Run git rebase in interactive mode over pending changes
-		(shorthand for "git rebase -i $(git codereview branchpoint)").
-		This rebase does not incorporate any new changes from the origin
-		branch, in contrast with a normal "git rebase -i".
-
 	submit [-i | commit...]
-		Push the pending change to the Gerrit server and tell Gerrit to
-		submit it to the master branch.
-
 	sync
-		Fetch changes from the remote repository and merge them into
-		the current branch, rebasing the change commit on top of them.
 
-
+See https://pkg.go.dev/golang.org/x/review/git-codereview
+for the full details of each command.
 `
 
 func main() {
@@ -137,14 +83,19 @@ func main() {
 	}
 	command, args := os.Args[1], os.Args[2:]
 
+	// NOTE: Keep this switch in sync with the list of commands above.
 	var cmd func([]string)
 	switch command {
+	default:
+		flags.Usage()
+		return // avoid installing hooks.
 	case "help":
-		fmt.Fprintf(stdout(), help, os.Args[0])
+		fmt.Fprintf(stdout(), help, progName)
 		return // avoid installing hooks.
 	case "hooks": // in case hooks weren't installed.
 		installHook(args)
 		return // avoid invoking installHook twice.
+
 	case "branchpoint":
 		cmd = cmdBranchpoint
 	case "change":
@@ -165,9 +116,6 @@ func main() {
 		cmd = cmdSync
 	case "test-loadAuth": // for testing only.
 		cmd = func([]string) { loadAuth() }
-	default:
-		flags.Usage()
-		return // avoid installing hooks.
 	}
 
 	// Install hooks automatically, but only if this is a Gerrit repo.
@@ -191,7 +139,7 @@ func main() {
 func expectZeroArgs(args []string, command string) {
 	flags.Parse(args)
 	if len(flags.Args()) > 0 {
-		fmt.Fprintf(stderr(), "Usage: %s %s %s\n", os.Args[0], command, globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s %s %s\n", progName, command, globalFlags)
 		os.Exit(2)
 	}
 }
@@ -381,7 +329,7 @@ func stderr() io.Writer {
 }
 
 func printf(format string, args ...interface{}) {
-	fmt.Fprintf(stderr(), "%s: %s\n", os.Args[0], fmt.Sprintf(format, args...))
+	fmt.Fprintf(stderr(), "%s: %s\n", progName, fmt.Sprintf(format, args...))
 }
 
 // count is a flag.Value that is like a flag.Bool and a flag.Int.

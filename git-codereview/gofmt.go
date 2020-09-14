@@ -18,10 +18,11 @@ import (
 var gofmtList bool
 
 func cmdGofmt(args []string) {
+	// NOTE: New flags should be added to the usage message below as well as doc.go.
 	flags.BoolVar(&gofmtList, "l", false, "list files that need to be formatted")
 	flags.Parse(args)
 	if len(flag.Args()) > 0 {
-		fmt.Fprintf(stderr(), "Usage: %s gofmt %s [-l]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s gofmt %s [-l]\n", progName, globalFlags)
 		os.Exit(2)
 	}
 

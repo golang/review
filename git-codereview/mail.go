@@ -15,24 +15,29 @@ import (
 )
 
 func cmdMail(args []string) {
+	// NOTE: New flags should be added to the usage message below as well as doc.go.
 	var (
-		diff       = flags.Bool("diff", false, "show change commit diff and don't upload or mail")
-		force      = flags.Bool("f", false, "mail even if there are staged changes")
-		wip        = flags.Bool("wip", false, "set the status of a change to Work-in-Progress")
-		topic      = flags.String("topic", "", "set Gerrit topic")
-		trybot     = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
-		trust      = flags.Bool("trust", false, "add a Trust+1 vote to the CL")
-		rList      = new(stringList) // installed below
-		ccList     = new(stringList) // installed below
-		tagList    = new(stringList) // installed below
-		noKeyCheck = flags.Bool("nokeycheck", false, "set 'git push -o nokeycheck', to prevent Gerrit from checking for private keys")
+		rList  = new(stringList) // installed below
+		ccList = new(stringList) // installed below
+
+		diff        = flags.Bool("diff", false, "show change commit diff and don't upload or mail")
+		force       = flags.Bool("f", false, "mail even if there are staged changes")
+		hashtagList = new(stringList) // installed below
+		noKeyCheck  = flags.Bool("nokeycheck", false, "set 'git push -o nokeycheck', to prevent Gerrit from checking for private keys")
+		topic       = flags.String("topic", "", "set Gerrit topic")
+		trust       = flags.Bool("trust", false, "add a Trust+1 vote to the CL")
+		trybot      = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
+		wip         = flags.Bool("wip", false, "set the status of a change to Work-in-Progress")
 	)
 	flags.Var(rList, "r", "comma-separated list of reviewers")
 	flags.Var(ccList, "cc", "comma-separated list of people to CC:")
-	flags.Var(tagList, "hashtag", "comma-separated list of tags to set")
+	flags.Var(hashtagList, "hashtag", "comma-separated list of tags to set")
 
 	flags.Usage = func() {
-		fmt.Fprintf(stderr(), "Usage: %s mail %s [-r reviewer,...] [-cc mail,...] [-f] [-diff] [-hashtag tag,...] [-nokeycheck] [-topic topic] [-trust] [-trybot] [-wip] [commit]\n", os.Args[0], globalFlags)
+		fmt.Fprintf(stderr(),
+			"Usage: %s mail %s [-r reviewer,...] [-cc mail,...]\n"+
+				"\t[-f] [-diff] [-hashtag tag,...] [-nokeycheck] [-topic topic]\n"+
+				"\t[-trust] [-trybot] [-wip] [commit]\n", progName, globalFlags)
 	}
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
@@ -90,7 +95,7 @@ func cmdMail(args []string) {
 
 	if !*force && HasStagedChanges() {
 		dief("there are staged changes; aborting.\n"+
-			"Use '%s change' to include them or '%s mail -f' to force it.", os.Args[0], os.Args[0])
+			"Use '%s change' to include them or '%s mail -f' to force it.", progName, progName)
 	}
 
 	if !utf8.ValidString(c.Message) {
@@ -115,8 +120,8 @@ func cmdMail(args []string) {
 		refSpec += mailList(start, "cc", string(*ccList))
 		start = ","
 	}
-	if *tagList != "" {
-		for _, tag := range strings.Split(string(*tagList), ",") {
+	if *hashtagList != "" {
+		for _, tag := range strings.Split(string(*hashtagList), ",") {
 			if tag == "" {
 				dief("hashtag may not contain empty tags")
 			}
