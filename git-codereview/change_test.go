@@ -160,6 +160,21 @@ func TestChangeCL(t *testing.T) {
 	checkChangeCL("100/1", "refs/changes/00/100/1", hash1)
 	checkChangeCL("100/2", "refs/changes/00/100/2", hash2)
 	checkChangeCL("100", "refs/changes/00/100/3", hash1)
+
+	// turn off gerrit, make it look like we are on GitHub
+	write(t, gt.server+"/codereview.cfg", "nothing: here", 0644)
+	trun(t, gt.server, "git", "add", "codereview.cfg")
+	trun(t, gt.server, "git", "commit", "-m", "new codereview.cfg on main")
+	testMain(t, "change", "main")
+	trun(t, gt.client, "git", "pull", "-r")
+	trun(t, gt.client, "git", "remote", "set-url", "origin", "https://github.com/google/not-a-project")
+
+	testMain(t, "change", "-n", "123")
+	testNoStdout(t)
+	testPrintedStderr(t,
+		"git fetch -q origin pull/123/head",
+		"git checkout -q FETCH_HEAD",
+	)
 }
 
 func TestChangeWithMessage(t *testing.T) {

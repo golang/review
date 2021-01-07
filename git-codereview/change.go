@@ -103,16 +103,24 @@ func commitChanges(amend bool) {
 }
 
 func checkoutOrCreate(target string) {
-	// If it's a valid Gerrit number, checkout the CL.
+	// If it's a valid Gerrit number CL or CL/PS or GitHub pull request number PR,
+	// checkout the CL or PR.
 	cl, ps, isCL := parseCL(target)
 	if isCL {
-		if !haveGerrit() {
+		what := "CL"
+		if !haveGerrit() && haveGitHub() {
+			what = "PR"
+			if ps != "" {
+				dief("change PR syntax is NNN not NNN.PP")
+			}
+		}
+		if what == "CL" && !haveGerrit() {
 			dief("cannot change to a CL without gerrit")
 		}
 		if HasStagedChanges() || HasUnstagedChanges() {
-			dief("cannot change to a CL with uncommitted work")
+			dief("cannot change to a %s with uncommitted work", what)
 		}
-		checkoutCL(cl, ps)
+		checkoutCL(what, cl, ps)
 		return
 	}
 
@@ -176,8 +184,8 @@ func checkoutOrCreate(target string) {
 }
 
 // Checkout the patch set of the given CL. When patch set is empty, use the latest.
-func checkoutCL(cl, ps string) {
-	if ps == "" {
+func checkoutCL(what, cl, ps string) {
+	if what == "CL" && ps == "" {
 		change, err := readGerritChange(cl + "?o=CURRENT_REVISION")
 		if err != nil {
 			dief("cannot change to CL %s: %v", cl, err)
@@ -189,28 +197,36 @@ func checkoutCL(cl, ps string) {
 		ps = strconv.Itoa(rev.Number)
 	}
 
-	var group string
-	if len(cl) > 1 {
-		group = cl[len(cl)-2:]
+	var ref string
+	if what == "CL" {
+		var group string
+		if len(cl) > 1 {
+			group = cl[len(cl)-2:]
+		} else {
+			group = "0" + cl
+		}
+		cl = fmt.Sprintf("%s/%s", cl, ps)
+		ref = fmt.Sprintf("refs/changes/%s/%s", group, cl)
 	} else {
-		group = "0" + cl
+		ref = fmt.Sprintf("pull/%s/head", cl)
 	}
-	ref := fmt.Sprintf("refs/changes/%s/%s/%s", group, cl, ps)
-
 	err := runErr("git", "fetch", "-q", "origin", ref)
 	if err != nil {
-		dief("cannot change to CL %s/%s: %v", cl, ps, err)
+		dief("cannot change to %v %s: %v", what, cl, err)
 	}
 	err = runErr("git", "checkout", "-q", "FETCH_HEAD")
 	if err != nil {
-		dief("cannot change to CL %s/%s: %v", cl, ps, err)
+		dief("cannot change to %s %s: %v", what, cl, err)
+	}
+	if *noRun {
+		return
 	}
 	subject, err := trimErr(cmdOutputErr("git", "log", "--format=%s", "-1"))
 	if err != nil {
-		printf("changed to CL %s/%s.", cl, ps)
+		printf("changed to %s %s.", what, cl)
 		dief("cannot read change subject from git: %v", err)
 	}
-	printf("changed to CL %s/%s.\n\t%s", cl, ps, subject)
+	printf("changed to %s %s.\n\t%s", what, cl, subject)
 }
 
 var parseCLRE = regexp.MustCompile(`^([0-9]+)(?:/([0-9]+))?$`)

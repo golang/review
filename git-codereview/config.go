@@ -75,6 +75,11 @@ func haveGerritInternal(gerrit, origin string) bool {
 	return strings.HasSuffix(host, ".googlesource.com")
 }
 
+func haveGitHub() bool {
+	origin := trim(cmdOutput("git", "config", "remote.origin.url"))
+	return strings.Contains(origin, "github.com")
+}
+
 func parseConfig(raw string) (map[string]string, error) {
 	cfg := make(map[string]string)
 	for _, line := range nonBlankLines(raw) {
