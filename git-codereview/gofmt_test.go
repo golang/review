@@ -255,33 +255,33 @@ func TestGofmtFastForwardMerge(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
-	// merge dev.branch into master
+	// merge dev.branch into main
 	write(t, gt.server+"/file", "more work", 0644)
 	trun(t, gt.server, "git", "commit", "-m", "work", "file")
 	trun(t, gt.server, "git", "merge", "-m", "merge", "dev.branch")
 
-	// add bad go file on master
+	// add bad go file on main
 	write(t, gt.server+"/bad.go", "package {\n", 0644)
 	trun(t, gt.server, "git", "add", "bad.go")
 	trun(t, gt.server, "git", "commit", "-m", "bad go")
 
 	// update client
-	trun(t, gt.client, "git", "checkout", "master")
+	trun(t, gt.client, "git", "checkout", "main")
 	trun(t, gt.client, "git", "pull")
 	testMain(t, "change", "dev.branch")
 	trun(t, gt.client, "git", "pull")
 
-	// merge master into dev.branch, fast forward merge
-	trun(t, gt.client, "git", "merge", "--ff-only", "master")
+	// merge main into dev.branch, fast forward merge
+	trun(t, gt.client, "git", "merge", "--ff-only", "main")
 
 	// verify that now client is in a state where just the tag is changing; there's no new commit.
-	masterHash := strings.TrimSpace(trun(t, gt.server, "git", "rev-parse", "master"))
+	mainHash := strings.TrimSpace(trun(t, gt.server, "git", "rev-parse", "main"))
 	devHash := strings.TrimSpace(trun(t, gt.client, "git", "rev-parse", "HEAD"))
 
-	if masterHash != devHash {
+	if mainHash != devHash {
 		t.Logf("branches:\n%s", trun(t, gt.client, "git", "branch", "-a", "-v"))
 		t.Logf("log:\n%s", trun(t, gt.client, "git", "log", "--graph", "--decorate"))
-		t.Fatalf("setup wrong - got different commit hashes on master and dev branch")
+		t.Fatalf("setup wrong - got different commit hashes on main and dev branch")
 	}
 
 	// check that gofmt finds nothing to do, ignoring the bad (but committed) file1.go.

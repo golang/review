@@ -14,28 +14,28 @@ func TestChange(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
-	t.Logf("master -> master")
-	testMain(t, "change", "master")
-	testRan(t, "git checkout -q master")
+	t.Logf("main -> main")
+	testMain(t, "change", "main")
+	testRan(t, "git checkout -q main")
 
 	testCommitMsg = "foo: my commit msg"
-	t.Logf("master -> work")
+	t.Logf("main -> work")
 	testMain(t, "change", "work")
 	testRan(t, "git checkout -q -b work",
-		"git branch -q --set-upstream-to origin/master")
+		"git branch -q --set-upstream-to origin/main")
 
-	t.Logf("work -> master")
-	testMain(t, "change", "master")
-	testRan(t, "git checkout -q master")
+	t.Logf("work -> main")
+	testMain(t, "change", "main")
+	testRan(t, "git checkout -q main")
 
-	t.Logf("master -> work with staged changes")
+	t.Logf("main -> work with staged changes")
 	write(t, gt.client+"/file", "new content", 0644)
 	trun(t, gt.client, "git", "add", "file")
 	testMain(t, "change", "work")
 	testRan(t, "git checkout -q work",
 		"git commit -q --allow-empty -m foo: my commit msg")
 
-	t.Logf("master -> dev.branch")
+	t.Logf("main -> dev.branch")
 	testMain(t, "change", "dev.branch")
 	testRan(t, "git checkout -q -t -b dev.branch origin/dev.branch")
 }
@@ -52,13 +52,13 @@ func TestChangeAhead(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
-	// commit to master (mistake)
+	// commit to main (mistake)
 	write(t, gt.client+"/file", "new content", 0644)
 	trun(t, gt.client, "git", "add", "file")
 	trun(t, gt.client, "git", "commit", "-m", "msg")
 
 	testMainDied(t, "change", "work")
-	testPrintedStderr(t, "bad repo state: branch master is ahead of origin/master")
+	testPrintedStderr(t, "bad repo state: branch main is ahead of origin/main")
 }
 
 func TestMessageRE(t *testing.T) {
@@ -117,7 +117,7 @@ func TestChangeCL(t *testing.T) {
 	// Ensure that 'change' with a CL accepts we have gerrit. Test address is injected by newGerritServer.
 	write(t, gt.server+"/codereview.cfg", "gerrit: on", 0644)
 	trun(t, gt.server, "git", "add", "codereview.cfg")
-	trun(t, gt.server, "git", "commit", "-m", "codereview.cfg on master")
+	trun(t, gt.server, "git", "commit", "-m", "codereview.cfg on main")
 	trun(t, gt.client, "git", "pull")
 	defer srv.done()
 
@@ -140,7 +140,7 @@ func TestChangeCL(t *testing.T) {
 	}})
 
 	checkChangeCL := func(arg, ref, hash string) {
-		testMain(t, "change", "master")
+		testMain(t, "change", "main")
 		testMain(t, "change", arg)
 		testRan(t,
 			fmt.Sprintf("git fetch -q origin %s", ref),

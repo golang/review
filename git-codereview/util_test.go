@@ -83,7 +83,7 @@ func (gt *gitTest) work(t *testing.T) {
 	t.Helper()
 	if gt.nwork == 0 {
 		trun(t, gt.client, "git", "checkout", "-b", "work")
-		trun(t, gt.client, "git", "branch", "--set-upstream-to", "origin/master")
+		trun(t, gt.client, "git", "branch", "--set-upstream-to", "origin/main")
 		trun(t, gt.client, "git", "tag", "work") // make sure commands do the right thing when there is a tag of the same name
 	}
 
@@ -142,22 +142,35 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 	server := tmpdir + "/git-origin"
 
 	mkdir(t, server)
-	write(t, server+"/file", "this is master", 0644)
+	write(t, server+"/file", "this is main", 0644)
 	write(t, server+"/.gitattributes", "* -text\n", 0644)
 	trun(t, server, "git", "init", ".")
 	trun(t, server, "git", "config", "user.name", "gopher")
 	trun(t, server, "git", "config", "user.email", "gopher@example.com")
 	trun(t, server, "git", "add", "file", ".gitattributes")
-	trun(t, server, "git", "commit", "-m", "on master")
+	trun(t, server, "git", "commit", "-m", "initial commit")
+
+	// Newer gits use a default branch name of main.
+	// Older ones used master.
+	// So the branch name now may be main or master.
+	// We would like to assume main for the tests.
+	// Newer gits would let us do
+	//	git init --initial-branch=main .
+	// above, but older gits don't have initial-branch.
+	// And we don't trust older gits to handle a no-op branch rename.
+	// So rename it to something different, and then to main.
+	// Then we'll be in a known state.
+	trun(t, server, "git", "branch", "-M", "certainly-not-main")
+	trun(t, server, "git", "branch", "-M", "main")
 
 	for _, name := range []string{"dev.branch", "release.branch"} {
-		trun(t, server, "git", "checkout", "master")
+		trun(t, server, "git", "checkout", "main")
 		trun(t, server, "git", "checkout", "-b", name)
 		write(t, server+"/file."+name, "this is "+name, 0644)
 		trun(t, server, "git", "add", "file."+name)
 		trun(t, server, "git", "commit", "-m", "on "+name)
 	}
-	trun(t, server, "git", "checkout", "master")
+	trun(t, server, "git", "checkout", "main")
 
 	client := tmpdir + "/git-client"
 	mkdir(t, client)
@@ -439,7 +452,7 @@ func (s *gerritServer) setReply(path string, reply gerritReply) {
 }
 
 func (s *gerritServer) setJSON(id, json string) {
-	s.setReply("/a/changes/proj~master~"+id, gerritReply{body: ")]}'\n" + json})
+	s.setReply("/a/changes/proj~main~"+id, gerritReply{body: ")]}'\n" + json})
 }
 
 func (s *gerritServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {

@@ -94,9 +94,9 @@ func TestSubmitErrors(t *testing.T) {
 	t.Logf("> submit with unexpected status")
 	const newJSON = `{"status": "NEW", "labels": {"Code-Review": {"approved": {}}}}`
 	srv.setJSON(id, newJSON)
-	srv.setReply("/a/changes/proj~master~I123456789/submit", gerritReply{body: ")]}'\n" + newJSON})
+	srv.setReply("/a/changes/proj~main~I123456789/submit", gerritReply{body: ")]}'\n" + newJSON})
 	testMainDied(t, "submit")
-	testRan(t, "git push -q origin HEAD:refs/for/master")
+	testRan(t, "git push -q origin HEAD:refs/for/main")
 	testPrintedStderr(t, "submit error: unexpected post-submit Gerrit change status \"NEW\"")
 }
 
@@ -109,15 +109,15 @@ func TestSubmitTimeout(t *testing.T) {
 	gt.work(t)
 
 	setJSON := func(json string) {
-		srv.setReply("/a/changes/proj~master~I123456789", gerritReply{body: ")]}'\n" + json})
+		srv.setReply("/a/changes/proj~main~I123456789", gerritReply{body: ")]}'\n" + json})
 	}
 
 	t.Log("> submit with timeout")
 	const submittedJSON = `{"status": "SUBMITTED", "mergeable": true, "labels": {"Code-Review": {"approved": {}}}}`
 	setJSON(submittedJSON)
-	srv.setReply("/a/changes/proj~master~I123456789/submit", gerritReply{body: ")]}'\n" + submittedJSON})
+	srv.setReply("/a/changes/proj~main~I123456789/submit", gerritReply{body: ")]}'\n" + submittedJSON})
 	testMainDied(t, "submit")
-	testRan(t, "git push -q origin HEAD:refs/for/master")
+	testRan(t, "git push -q origin HEAD:refs/for/main")
 	testPrintedStderr(t, "cannot submit: timed out waiting for change to be submitted by Gerrit")
 }
 
@@ -144,7 +144,7 @@ func TestSubmit(t *testing.T) {
 	)
 	submitted := false
 	npoll := 0
-	srv.setReply("/a/changes/proj~master~I123456789", gerritReply{f: func() gerritReply {
+	srv.setReply("/a/changes/proj~main~I123456789", gerritReply{f: func() gerritReply {
 		if !submitted {
 			return gerritReply{body: ")]}'\n" + newJSON}
 		}
@@ -153,7 +153,7 @@ func TestSubmit(t *testing.T) {
 		}
 		return gerritReply{body: ")]}'\n" + mergedJSON}
 	}})
-	srv.setReply("/a/changes/proj~master~I123456789/submit", gerritReply{f: func() gerritReply {
+	srv.setReply("/a/changes/proj~main~I123456789/submit", gerritReply{f: func() gerritReply {
 		if submitted {
 			return gerritReply{status: 409}
 		}
@@ -235,20 +235,20 @@ func testSubmitMultiple(t *testing.T, gt *gitTest, srv *gerritServer) (*GerritCh
 		Labels:          map[string]*GerritLabel{"Code-Review": &GerritLabel{Approved: new(GerritAccount)}},
 	}
 
-	srv.setReply("/a/changes/proj~master~I0000001", gerritReply{f: func() gerritReply {
+	srv.setReply("/a/changes/proj~main~I0000001", gerritReply{f: func() gerritReply {
 		return gerritReply{json: cl1}
 	}})
-	srv.setReply("/a/changes/proj~master~I0000001/submit", gerritReply{f: func() gerritReply {
+	srv.setReply("/a/changes/proj~main~I0000001/submit", gerritReply{f: func() gerritReply {
 		if cl1.Status != "NEW" {
 			return gerritReply{status: 409}
 		}
 		cl1.Status = "MERGED"
 		return gerritReply{json: cl1}
 	}})
-	srv.setReply("/a/changes/proj~master~I0000002", gerritReply{f: func() gerritReply {
+	srv.setReply("/a/changes/proj~main~I0000002", gerritReply{f: func() gerritReply {
 		return gerritReply{json: cl2}
 	}})
-	srv.setReply("/a/changes/proj~master~I0000002/submit", gerritReply{f: func() gerritReply {
+	srv.setReply("/a/changes/proj~main~I0000002/submit", gerritReply{f: func() gerritReply {
 		if cl2.Status != "NEW" {
 			return gerritReply{status: 409}
 		}

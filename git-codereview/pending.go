@@ -247,7 +247,7 @@ func cmdPending(args []string) {
 		if n := b.CommitsBehind(); n > 0 {
 			tags = append(tags, fmt.Sprintf("%d behind", n))
 		}
-		if b.OriginBranch() != "origin/master" {
+		if br := b.OriginBranch(); br != "origin/master" && br != "origin/main" {
 			tags = append(tags, "tracking "+strings.TrimPrefix(b.OriginBranch(), "origin/"))
 		}
 		if len(tags) > 0 {

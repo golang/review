@@ -210,10 +210,10 @@ func testHookCommitMsgBranchPrefix(t *testing.T, gerrit bool) {
 	}
 
 	// Master has no prefix.
-	testMain(t, "change", "master")
+	testMain(t, "change", "main")
 	checkPrefix("Test message.\n")
 
-	// Work branch from master has no prefix.
+	// Work branch from main has no prefix.
 	testMain(t, "change", "work")
 	checkPrefix("Test message.\n")
 }

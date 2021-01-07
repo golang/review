@@ -22,7 +22,7 @@ func TestPendingNone(t *testing.T) {
 	defer gt.done()
 
 	testPending(t, `
-		master (current branch)
+		main (current branch)
 
 	`)
 }
@@ -69,13 +69,13 @@ func TestPendingComplex(t *testing.T) {
 	trun(t, gt.server, "git", "commit", "-a", "-m", "v3")
 
 	trun(t, gt.client, "git", "fetch")
-	trun(t, gt.client, "git", "checkout", "-b", "work3ignored", "-t", "origin/master")
+	trun(t, gt.client, "git", "checkout", "-b", "work3ignored", "-t", "origin/main")
 
 	write(t, gt.server+"/file", "v4", 0644)
 	trun(t, gt.server, "git", "commit", "-a", "-m", "v4")
 
 	trun(t, gt.client, "git", "fetch")
-	trun(t, gt.client, "git", "checkout", "-b", "work2", "-t", "origin/master")
+	trun(t, gt.client, "git", "checkout", "-b", "work2", "-t", "origin/main")
 	write(t, gt.client+"/file", "modify", 0644)
 	write(t, gt.client+"/file1", "new", 0644)
 	trun(t, gt.client, "git", "add", "file", "file1")
@@ -159,14 +159,14 @@ func TestPendingErrors(t *testing.T) {
 	gt.enableGerrit(t)
 	defer gt.done()
 
-	trun(t, gt.client, "git", "checkout", "master")
+	trun(t, gt.client, "git", "checkout", "main")
 	write(t, gt.client+"/file", "v3", 0644)
 	trun(t, gt.client, "git", "commit", "-a", "-m", "v3")
 
 	testPending(t, `
-		master REVHASH..REVHASH (current branch)
-			ERROR: Branch contains 1 commit not on origin/master.
-				Do not commit directly to master branch.
+		main REVHASH..REVHASH (current branch)
+			ERROR: Branch contains 1 commit not on origin/main.
+				Do not commit directly to main branch.
 		
 		+ REVHASH
 			v3
@@ -177,9 +177,9 @@ func TestPendingErrors(t *testing.T) {
 	`)
 
 	testPendingArgs(t, []string{"-s"}, `
-		master REVHASH..REVHASH (current branch)
-			ERROR: Branch contains 1 commit not on origin/master.
-				Do not commit directly to master branch.
+		main REVHASH..REVHASH (current branch)
+			ERROR: Branch contains 1 commit not on origin/main.
+				Do not commit directly to main branch.
 		+ REVHASH v3
 
 	`)
@@ -446,7 +446,7 @@ func TestPendingGerritMultiChange15(t *testing.T) {
 
 func testPendingReply(srv *gerritServer, id, rev, status string) {
 	srv.setJSON(id, `{
-		"id": "proj~master~`+id+`",
+		"id": "proj~main~`+id+`",
 		"project": "proj",
 		"current_revision": "`+rev+`",
 		"status": "`+status+`",
