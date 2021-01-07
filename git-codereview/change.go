@@ -26,6 +26,13 @@ func cmdChange(args []string) {
 		exit(2)
 	}
 
+	if _, err := cmdOutputErr("git", "rev-parse", "--abbrev-ref", "MERGE_HEAD"); err == nil {
+		diePendingMerge("change")
+	}
+	if _, err := cmdOutputErr("git", "rev-parse", "--abbrev-ref", "REBASE_HEAD"); err == nil {
+		dief("cannot change: found pending rebase or sync")
+	}
+
 	// Checkout or create branch, if specified.
 	target := flags.Arg(0)
 	if target != "" {

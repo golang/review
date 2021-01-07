@@ -166,9 +166,11 @@ func TestBranchpointMerge(t *testing.T) {
 
 	hash := strings.TrimSpace(trun(t, gt.client, "git", "rev-parse", "HEAD"))
 
-	// merge dev.branch
-	testMain(t, "change", "work")
+	// Merge dev.branch but delete the codereview.cfg that comes in,
+	// or else we'll think we are on the wrong branch.
 	trun(t, gt.client, "git", "merge", "-m", "merge", "origin/dev.branch")
+	trun(t, gt.client, "git", "rm", "codereview.cfg")
+	trun(t, gt.client, "git", "commit", "-m", "rm codereview.cfg")
 
 	// check branchpoint is old head (despite this commit having two parents)
 	bp := CurrentBranch().Branchpoint()

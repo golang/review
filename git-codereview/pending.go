@@ -293,6 +293,9 @@ func cmdPending(args []string) {
 // commit and its Gerrit state.
 func formatCommit(w io.Writer, c *Commit, short bool) {
 	g := c.g
+	if g == nil {
+		g = new(GerritChange)
+	}
 	msg := strings.TrimRight(c.Message, "\r\n")
 	fmt.Fprintf(w, "%s", c.ShortHash)
 	var tags []string
@@ -317,6 +320,9 @@ func formatCommit(w io.Writer, c *Commit, short bool) {
 		tags = append(tags, "submitted")
 	case "ABANDONED":
 		tags = append(tags, "abandoned")
+	}
+	if c.Merge != "" {
+		tags = append(tags, "merge="+c.Merge[:7])
 	}
 	if len(tags) > 0 {
 		fmt.Fprintf(w, " (%s)", strings.Join(tags, ", "))

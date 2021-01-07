@@ -15,6 +15,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"testing"
@@ -167,7 +169,12 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 		trun(t, server, "git", "checkout", "main")
 		trun(t, server, "git", "checkout", "-b", name)
 		write(t, server+"/file."+name, "this is "+name, 0644)
-		trun(t, server, "git", "add", "file."+name)
+		cfg := "branch: " + name + "\n"
+		if name == "dev.branch" {
+			cfg += "parent-branch: main\n"
+		}
+		write(t, server+"/codereview.cfg", cfg, 0644)
+		trun(t, server, "git", "add", "file."+name, "codereview.cfg")
 		trun(t, server, "git", "commit", "-m", "on "+name)
 	}
 	trun(t, server, "git", "checkout", "main")
@@ -330,7 +337,7 @@ func testMain(t *testing.T, args ...string) {
 			if died {
 				msg = "died"
 			} else {
-				msg = fmt.Sprintf("panic: %v", err)
+				msg = fmt.Sprintf("panic: %v\n%s", err, debug.Stack())
 			}
 			t.Fatalf("%s\nstdout:\n%sstderr:\n%s", msg, testStdout, testStderr)
 		}
@@ -377,6 +384,16 @@ func testPrinted(t *testing.T, buf *bytes.Buffer, name string, messages ...strin
 	if errors.Len() > 0 {
 		t.Helper()
 		t.Fatalf("wrong output\n%s%s:\n%s", &errors, name, all)
+	}
+}
+
+func testHideRevHashes(t *testing.T) {
+	for _, b := range []*bytes.Buffer{testStdout, testStderr} {
+		out := b.Bytes()
+		out = regexp.MustCompile(`\b[0-9a-f]{7}\b`).ReplaceAllLiteral(out, []byte("REVHASH"))
+		out = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b`).ReplaceAllLiteral(out, []byte("DATE"))
+		b.Reset()
+		b.Write(out)
 	}
 }
 
