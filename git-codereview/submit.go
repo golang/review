@@ -17,6 +17,7 @@ func cmdSubmit(args []string) {
 	flags.BoolVar(&interactive, "i", false, "interactively select commits to submit")
 	flags.Usage = func() {
 		fmt.Fprintf(stderr(), "Usage: %s submit %s [-i | commit...]\n", progName, globalFlags)
+		exit(2)
 	}
 	flags.Parse(args)
 	if interactive && flags.NArg() > 0 {

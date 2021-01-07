@@ -321,8 +321,12 @@ func formatCommit(w io.Writer, c *Commit, short bool) {
 	case "ABANDONED":
 		tags = append(tags, "abandoned")
 	}
-	if c.Merge != "" {
-		tags = append(tags, "merge="+c.Merge[:7])
+	if len(c.Parents) > 1 {
+		var h []string
+		for _, p := range c.Parents[1:] {
+			h = append(h, p[:7])
+		}
+		tags = append(tags, "merge="+strings.Join(h, ","))
 	}
 	if len(tags) > 0 {
 		fmt.Fprintf(w, " (%s)", strings.Join(tags, ", "))

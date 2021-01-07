@@ -59,7 +59,7 @@ func cmdMail(args []string) {
 		return
 	}
 
-	if len(ListFiles(c)) == 0 && c.Merge == "" {
+	if len(ListFiles(c)) == 0 && len(c.Parents) == 1 {
 		dief("cannot mail: commit %s is empty", c.ShortHash)
 	}
 
