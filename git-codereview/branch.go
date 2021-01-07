@@ -116,11 +116,6 @@ func (b *Branch) FullName() string {
 	return b.Name
 }
 
-// IsLocalOnly reports whether b is a local work branch (only local, not known to remote server).
-func (b *Branch) IsLocalOnly() bool {
-	return "origin/"+b.Name != b.OriginBranch()
-}
-
 // HasPendingCommit reports whether b has any pending commits.
 func (b *Branch) HasPendingCommit() bool {
 	b.loadPending()

@@ -17,11 +17,12 @@ func TestChange(t *testing.T) {
 	t.Logf("main -> main")
 	testMain(t, "change", "main")
 	testRan(t, "git checkout -q main")
+	branchpoint := strings.TrimSpace(trun(t, gt.client, "git", "rev-parse", "HEAD"))
 
 	testCommitMsg = "foo: my commit msg"
 	t.Logf("main -> work")
 	testMain(t, "change", "work")
-	testRan(t, "git checkout -q -b work",
+	testRan(t, "git checkout -q -b work HEAD",
 		"git branch -q --set-upstream-to origin/main")
 
 	t.Logf("work -> main")
@@ -35,7 +36,12 @@ func TestChange(t *testing.T) {
 	testRan(t, "git checkout -q work",
 		"git commit -q --allow-empty -m foo: my commit msg")
 
-	t.Logf("main -> dev.branch")
+	t.Logf("work -> work2")
+	testMain(t, "change", "work2")
+	testRan(t, "git checkout -q -b work2 "+branchpoint,
+		"git branch -q --set-upstream-to origin/main")
+
+	t.Logf("work2 -> dev.branch")
 	testMain(t, "change", "dev.branch")
 	testRan(t, "git checkout -q -t -b dev.branch origin/dev.branch")
 
@@ -60,19 +66,6 @@ func TestChangeHEAD(t *testing.T) {
 
 	testMainDied(t, "change", "HeAd")
 	testPrintedStderr(t, "invalid branch name \"HeAd\": ref name HEAD is reserved for git")
-}
-
-func TestChangeAhead(t *testing.T) {
-	gt := newGitTest(t)
-	defer gt.done()
-
-	// commit to main (mistake)
-	write(t, gt.client+"/file", "new content", 0644)
-	trun(t, gt.client, "git", "add", "file")
-	trun(t, gt.client, "git", "commit", "-m", "msg")
-
-	testMainDied(t, "change", "work")
-	testPrintedStderr(t, "bad repo state: branch main is ahead of origin/main")
 }
 
 func TestMessageRE(t *testing.T) {

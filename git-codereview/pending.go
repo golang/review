@@ -254,13 +254,6 @@ func cmdPending(args []string) {
 		}
 		fmt.Fprintf(&buf, "\n")
 		printed := false
-		if text := b.errors(); text != "" {
-			fmt.Fprintf(&buf, "\tERROR: %s\n", strings.Replace(strings.TrimSpace(text), "\n", "\n\t", -1))
-			if !pendingShort {
-				printed = true
-				fmt.Fprintf(&buf, "\n")
-			}
-		}
 
 		if b.current && len(b.staged)+len(b.unstaged)+len(b.untracked) > 0 {
 			printed = true
@@ -417,18 +410,6 @@ func allSubmitted(work []*Commit) bool {
 		}
 	}
 	return true
-}
-
-// errors returns any errors that should be displayed
-// about the state of the current branch, diagnosing common mistakes.
-func (b *Branch) errors() string {
-	b.loadPending()
-	var buf bytes.Buffer
-	if haveGerrit() && !b.IsLocalOnly() && b.commitsAhead > 0 {
-		fmt.Fprintf(&buf, "Branch contains %d commit%s not on origin/%s.\n", b.commitsAhead, suffix(b.commitsAhead, "s"), b.Name)
-		fmt.Fprintf(&buf, "\tDo not commit directly to %s branch.\n", b.Name)
-	}
-	return buf.String()
 }
 
 // suffix returns an empty string if n == 1, s otherwise.

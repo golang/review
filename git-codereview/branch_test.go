@@ -15,36 +15,36 @@ func TestCurrentBranch(t *testing.T) {
 	defer gt.done()
 
 	t.Logf("on main")
-	checkCurrentBranch(t, "main", "origin/main", false, false, "", "")
+	checkCurrentBranch(t, "main", "origin/main", false, "", "")
 
 	t.Logf("on newbranch")
 	trun(t, gt.client, "git", "checkout", "--no-track", "-b", "newbranch")
-	checkCurrentBranch(t, "newbranch", "origin/main", true, false, "", "")
+	checkCurrentBranch(t, "newbranch", "origin/main", false, "", "")
 
 	t.Logf("making change")
 	write(t, gt.client+"/file", "i made a change", 0644)
 	trun(t, gt.client, "git", "commit", "-a", "-m", "My change line.\n\nChange-Id: I0123456789abcdef0123456789abcdef\n")
-	checkCurrentBranch(t, "newbranch", "origin/main", true, true, "I0123456789abcdef0123456789abcdef", "My change line.")
+	checkCurrentBranch(t, "newbranch", "origin/main", true, "I0123456789abcdef0123456789abcdef", "My change line.")
 
 	t.Logf("on dev.branch")
 	trun(t, gt.client, "git", "checkout", "-t", "-b", "dev.branch", "origin/dev.branch")
-	checkCurrentBranch(t, "dev.branch", "origin/dev.branch", false, false, "", "")
+	checkCurrentBranch(t, "dev.branch", "origin/dev.branch", false, "", "")
 
 	t.Logf("on newdev")
 	trun(t, gt.client, "git", "checkout", "-t", "-b", "newdev", "origin/dev.branch")
-	checkCurrentBranch(t, "newdev", "origin/dev.branch", true, false, "", "")
+	checkCurrentBranch(t, "newdev", "origin/dev.branch", false, "", "")
 
 	t.Logf("making change")
 	write(t, gt.client+"/file", "i made another change", 0644)
 	trun(t, gt.client, "git", "commit", "-a", "-m", "My other change line.\n\nChange-Id: I1123456789abcdef0123456789abcdef\n")
-	checkCurrentBranch(t, "newdev", "origin/dev.branch", true, true, "I1123456789abcdef0123456789abcdef", "My other change line.")
+	checkCurrentBranch(t, "newdev", "origin/dev.branch", true, "I1123456789abcdef0123456789abcdef", "My other change line.")
 
 	t.Logf("detached head mode")
 	trun(t, gt.client, "git", "checkout", "HEAD^0")
-	checkCurrentBranch(t, "HEAD", "origin/HEAD", false, false, "", "")
+	checkCurrentBranch(t, "HEAD", "origin/HEAD", false, "", "")
 }
 
-func checkCurrentBranch(t *testing.T, name, origin string, isLocal, hasPending bool, changeID, subject string) {
+func checkCurrentBranch(t *testing.T, name, origin string, hasPending bool, changeID, subject string) {
 	b := CurrentBranch()
 	if b.Name != name {
 		t.Errorf("b.Name = %q, want %q", b.Name, name)
@@ -52,11 +52,8 @@ func checkCurrentBranch(t *testing.T, name, origin string, isLocal, hasPending b
 	if x := b.OriginBranch(); x != origin {
 		t.Errorf("b.OriginBranch() = %q, want %q", x, origin)
 	}
-	if x := b.IsLocalOnly(); x != isLocal {
-		t.Errorf("b.IsLocalOnly() = %v, want %v", x, isLocal)
-	}
 	if x := b.HasPendingCommit(); x != hasPending {
-		t.Errorf("b.HasPendingCommit() = %v, want %v", x, isLocal)
+		t.Errorf("b.HasPendingCommit() = %v, want %v", x, hasPending)
 	}
 	if work := b.Pending(); len(work) > 0 {
 		c := work[0]

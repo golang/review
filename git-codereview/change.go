@@ -31,7 +31,7 @@ func cmdChange(args []string) {
 	if target != "" {
 		checkoutOrCreate(target)
 		b := CurrentBranch()
-		if HasStagedChanges() && b.IsLocalOnly() && !b.HasPendingCommit() {
+		if HasStagedChanges() && !b.HasPendingCommit() {
 			commitChanges(false)
 		}
 		b.check()
@@ -40,10 +40,6 @@ func cmdChange(args []string) {
 
 	// Create or amend change commit.
 	b := CurrentBranch()
-	if !b.IsLocalOnly() {
-		dief("can't commit to %s branch (use '%s change branchname').", b.Name, progName)
-	}
-
 	amend := b.HasPendingCommit()
 	if amend {
 		// Dies if there is not exactly one commit.
@@ -64,11 +60,6 @@ func (b *Branch) check() {
 		if n := b.CommitsBehind(); n > 0 {
 			printf("warning: %d commit%s behind %s; run 'git codereview sync' to update.", n, suffix(n, "s"), b.OriginBranch())
 		}
-	}
-
-	// TODO(rsc): Test
-	if text := b.errors(); text != "" {
-		printf("error: %s\n", text)
 	}
 }
 
@@ -158,19 +149,28 @@ func checkoutOrCreate(target string) {
 
 	// If the current branch has a pending commit, building
 	// on top of it will not help. Don't allow that.
-	// Otherwise, inherit HEAD and upstream from the current branch.
+	// Otherwise, inherit branchpoint and upstream from the current branch.
 	b := CurrentBranch()
+	branchpoint := "HEAD"
 	if b.HasPendingCommit() {
-		if !b.IsLocalOnly() {
-			dief("bad repo state: branch %s is ahead of origin/%s", b.Name, b.Name)
-		}
-		dief("cannot branch from work branch; change back to %v first.", strings.TrimPrefix(b.OriginBranch(), "origin/"))
+		fmt.Fprintf(stderr(), "warning: pending changes on %s are not copied to new branch %s\n", b.Name, target)
+		branchpoint = b.Branchpoint()
 	}
 
 	origin := b.OriginBranch()
 
-	// NOTE: This is different from git checkout -q -t -b branch. It does not move HEAD.
-	run("git", "checkout", "-q", "-b", target)
+	// NOTE: This is different from git checkout -q -t -b origin,
+	// because the -t wold use the origin directly, and that may be
+	// ahead of the current directory. The goal of this command is
+	// to create a new branch for work on the current directory,
+	// not to incorporate new commits at the same time (use 'git sync' for that).
+	// The ideal is that HEAD doesn't change at all.
+	// In the absence of pending commits, that ideal is achieved.
+	// But if there are pending commits, it'd be too confusing to have them
+	// on two different work branches, so we drop them and use the
+	// branchpoint they started from (after warning above), moving HEAD
+	// as little as possible.
+	run("git", "checkout", "-q", "-b", target, branchpoint)
 	run("git", "branch", "-q", "--set-upstream-to", origin)
 	printf("created branch %v tracking %s.", target, origin)
 }

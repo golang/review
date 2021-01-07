@@ -298,7 +298,7 @@ func TestMailEmpty(t *testing.T) {
 	}()
 
 	testMain(t, "change", "work")
-	testRan(t, "git checkout -q -b work",
+	testRan(t, "git checkout -q -b work HEAD",
 		"git branch -q --set-upstream-to origin/main")
 
 	t.Logf("creating empty change")

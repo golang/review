@@ -48,9 +48,9 @@ func TestPendingBasic(t *testing.T) {
 		work REVHASH..REVHASH (current branch)
 		+ REVHASH
 			msg
-			
+
 			Change-Id: I123456789
-		
+
 			Files in this change:
 				file
 
@@ -109,9 +109,9 @@ func TestPendingComplex(t *testing.T) {
 		work REVHASH..REVHASH (3 behind)
 		+ REVHASH
 			msg
-			
+
 			Change-Id: I123456789
-		
+
 			Files in this change:
 				file
 
@@ -131,11 +131,11 @@ func TestPendingComplex(t *testing.T) {
 
 		+ REVHASH
 			some changes
-		
+
 			Files in this change:
 				file
 				file1
-		
+
 	`)
 
 	testPendingArgs(t, []string{"-c", "-s"}, `
@@ -150,37 +150,6 @@ func TestPendingComplex(t *testing.T) {
 				afile1
 				file1
 		+ REVHASH some changes
-		
-	`)
-}
-
-func TestPendingErrors(t *testing.T) {
-	gt := newGitTest(t)
-	gt.enableGerrit(t)
-	defer gt.done()
-
-	trun(t, gt.client, "git", "checkout", "main")
-	write(t, gt.client+"/file", "v3", 0644)
-	trun(t, gt.client, "git", "commit", "-a", "-m", "v3")
-
-	testPending(t, `
-		main REVHASH..REVHASH (current branch)
-			ERROR: Branch contains 1 commit not on origin/main.
-				Do not commit directly to main branch.
-		
-		+ REVHASH
-			v3
-		
-			Files in this change:
-				file
-
-	`)
-
-	testPendingArgs(t, []string{"-s"}, `
-		main REVHASH..REVHASH (current branch)
-			ERROR: Branch contains 1 commit not on origin/main.
-				Do not commit directly to main branch.
-		+ REVHASH v3
 
 	`)
 }
@@ -208,18 +177,18 @@ func TestPendingMultiChange(t *testing.T) {
 				file
 			Files staged:
 				file
-		
+
 		+ REVHASH
 			v2
-		
+
 			Files in this change:
 				file
 
 		+ REVHASH
 			msg
-			
+
 			Change-Id: I123456789
-		
+
 			Files in this change:
 				file
 
@@ -253,9 +222,9 @@ func TestPendingGerrit(t *testing.T) {
 		work REVHASH..REVHASH (current branch)
 		+ REVHASH
 			msg
-			
+
 			Change-Id: I123456789
-		
+
 			Files in this change:
 				file
 
@@ -273,7 +242,7 @@ func TestPendingGerrit(t *testing.T) {
 		work REVHASH..REVHASH (current branch)
 		+ REVHASH
 			msg
-			
+
 			Change-Id: I123456789
 
 			Files in this change:
@@ -292,9 +261,9 @@ func TestPendingGerrit(t *testing.T) {
 		work REVHASH..REVHASH (current branch, all mailed, all submitted, 1 behind)
 		+ REVHASH http://127.0.0.1:PORT/1234 (mailed, submitted)
 			msg
-			
+
 			Change-Id: I123456789
-		
+
 			Code-Review:
 				+1 Grace Emlin
 				-2 George Opher
@@ -316,7 +285,7 @@ func TestPendingGerrit(t *testing.T) {
 		work REVHASH..REVHASH (current branch, 1 behind)
 		+ REVHASH
 			msg
-			
+
 			Change-Id: I123456789
 
 			Files in this change:
@@ -363,10 +332,10 @@ func TestPendingGerritMultiChange(t *testing.T) {
 				file
 			Files staged:
 				file
-		
+
 		+ REVHASH http://127.0.0.1:PORT/1234 (mailed)
 			v2
-			
+
 			Change-Id: I2345
 
 			Code-Review:
@@ -379,9 +348,9 @@ func TestPendingGerritMultiChange(t *testing.T) {
 
 		+ REVHASH http://127.0.0.1:PORT/1234 (mailed, submitted)
 			msg
-			
+
 			Change-Id: I123456789
-		
+
 			Code-Review:
 				+1 Grace Emlin
 				-2 George Opher
@@ -525,6 +494,7 @@ func testPendingArgs(t *testing.T, args []string, want string) {
 
 	out = regexp.MustCompile(`\b[0-9a-f]{7}\b`).ReplaceAllLiteral(out, []byte("REVHASH"))
 	out = regexp.MustCompile(`\b127\.0\.0\.1:\d+\b`).ReplaceAllLiteral(out, []byte("127.0.0.1:PORT"))
+	out = regexp.MustCompile(`(?m)[ \t]+$`).ReplaceAllLiteral(out, nil) // ignore trailing space differences
 
 	if string(out) != want {
 		t.Errorf("invalid pending output:\n%s\nwant:\n%s", out, want)

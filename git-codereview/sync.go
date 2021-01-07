@@ -16,6 +16,26 @@ func cmdSync(args []string) {
 		id = work[0].ChangeID
 	}
 
+	// If this is a Gerrit repo, disable the status advice that
+	// tells users to run 'git push' and so on, like the marked (<<<) lines:
+	//
+	//	% git status
+	//	On branch master
+	//	Your branch is ahead of 'origin/master' by 3 commits. <<<
+	//	  (use "git push" to publish your local commits)      <<<
+	//	...
+	//
+	// (This advice is inappropriate when using Gerrit.)
+	if len(b.Pending()) > 0 && haveGerrit() {
+		// Only disable if statusHints is unset in the local config.
+		// This allows users who really want them to put them back
+		// in the .git/config for the Gerrit-cloned repo.
+		_, err := cmdOutputErr("git", "config", "--local", "advice.statusHints")
+		if err != nil {
+			run("git", "config", "--local", "advice.statusHints", "false")
+		}
+	}
+
 	// Don't sync with staged or unstaged changes.
 	// rebase is going to complain if we don't, and we can give a nicer error.
 	checkStaged("sync")

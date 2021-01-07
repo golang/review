@@ -279,14 +279,6 @@ func hookPreCommit(args []string) {
 		}
 	*/
 
-	// Prevent commits to master branches, but only if we're here for code review.
-	if haveGerrit() {
-		b := CurrentBranch()
-		if !b.IsLocalOnly() && b.Name != "HEAD" {
-			dief("cannot commit on %s branch", b.Name)
-		}
-	}
-
 	hookGofmt()
 }
 
