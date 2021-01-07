@@ -7,9 +7,11 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -17,12 +19,16 @@ import (
 
 // Branch describes a Git branch.
 type Branch struct {
-	Name          string    // branch name
+	Name    string // branch name
+	Current bool   // branch is currently checked out
+
 	loadedPending bool      // following fields are valid
 	originBranch  string    // upstream origin branch
 	commitsAhead  int       // number of commits ahead of origin branch
 	branchpoint   string    // latest commit hash shared with origin branch
 	pending       []*Commit // pending commits, newest first (children before parents)
+
+	config map[string]string // cached config; use Config instead
 }
 
 // A Commit describes a single pending commit on a Git branch.
@@ -41,10 +47,34 @@ type Commit struct {
 	committed []string      // list of files in this commit
 }
 
+// Config returns the configuration for the branch.
+func (b *Branch) Config() map[string]string {
+	if b.config != nil {
+		return b.config
+	}
+	var cfgText string
+	if b.Current {
+		data, _ := ioutil.ReadFile(filepath.Join(repoRoot(), "codereview.cfg"))
+		cfgText = string(data)
+	} else {
+		out, err := cmdOutputDirErr(repoRoot(), "git", "show", b.Name+":codereview.cfg")
+		if err == nil {
+			cfgText = out
+		}
+	}
+	cfg, err := parseConfig(cfgText)
+	if err != nil {
+		verbosef("failed to load config for branch %v: %v", b.Name, err)
+		cfg = make(map[string]string)
+	}
+	b.config = cfg
+	return b.config
+}
+
 // CurrentBranch returns the current branch.
 func CurrentBranch() *Branch {
 	name := strings.TrimPrefix(trim(cmdOutput("git", "rev-parse", "--abbrev-ref", "HEAD")), "heads/")
-	return &Branch{Name: name}
+	return &Branch{Name: name, Current: true}
 }
 
 // DetachedHead reports whether branch b corresponds to a detached HEAD
@@ -68,6 +98,41 @@ func (b *Branch) OriginBranch() string {
 	if b.originBranch != "" {
 		return b.originBranch
 	}
+
+	cfg := b.Config()["branch"]
+	upstream := ""
+	if cfg != "" {
+		upstream = "origin/" + cfg
+	}
+	gitUpstream := b.gitOriginBranch()
+	if upstream == "" {
+		upstream = gitUpstream
+	}
+	if upstream == "" {
+		// Assume branch was created before we set upstream correctly.
+		// See if origin/main exists; if so, use it.
+		// Otherwise, fall back to origin/master.
+		argv := []string{"git", "rev-parse", "--abbrev-ref", "origin/main"}
+		cmd := exec.Command(argv[0], argv[1:]...)
+		setEnglishLocale(cmd)
+		if err := cmd.Run(); err == nil {
+			upstream = "origin/main"
+		} else {
+			upstream = "origin/master"
+		}
+	}
+
+	if gitUpstream != upstream && b.Current {
+		// Best effort attempt to correct setting for next time,
+		// and for "git status".
+		exec.Command("git", "branch", "-u", upstream).Run()
+	}
+
+	b.originBranch = upstream
+	return b.originBranch
+}
+
+func (b *Branch) gitOriginBranch() string {
 	argv := []string{"git", "rev-parse", "--abbrev-ref", b.Name + "@{u}"}
 	cmd := exec.Command(argv[0], argv[1:]...)
 	if runtime.GOOS == "windows" {
@@ -82,28 +147,14 @@ func (b *Branch) OriginBranch() string {
 
 	out, err := cmd.CombinedOutput()
 	if err == nil && len(out) > 0 {
-		b.originBranch = string(bytes.TrimSpace(out))
-		return b.originBranch
+		return string(bytes.TrimSpace(out))
 	}
 
 	// Have seen both "No upstream configured" and "no upstream configured".
 	if strings.Contains(string(out), "upstream configured") {
-		// Assume branch was created before we set upstream correctly.
-		// See if origin/main exists; if so, use it.
-		// Otherwise, fall back to origin/master.
-		argv := []string{"git", "rev-parse", "--abbrev-ref", "origin/main"}
-		cmd := exec.Command(argv[0], argv[1:]...)
-		setEnglishLocale(cmd)
-		if out, err := cmd.CombinedOutput(); err == nil {
-			b.originBranch = string(bytes.TrimSpace(out))
-			// Best effort attempt to correct setting for next time,
-			// and for "git status".
-			exec.Command("git", "branch", "-u", "origin/main").Run()
-			return b.originBranch
-		}
-		b.originBranch = "origin/master"
-		return b.originBranch
+		return ""
 	}
+
 	fmt.Fprintf(stderr(), "%v\n%s\n", commandString(argv[0], argv[1:]), out)
 	dief("%v", err)
 	panic("not reached")
@@ -135,6 +186,20 @@ func (b *Branch) Branchpoint() string {
 	return b.branchpoint
 }
 
+func gitHash(expr string) string {
+	out, err := cmdOutputErr("git", "rev-parse", expr)
+	if err != nil {
+		dief("cannot resolve %s: %v\n%s", expr, err, out)
+	}
+	if strings.HasPrefix(expr, "-") {
+		// Git has a bug where it will just echo these back with no error.
+		// (Try "git rev-parse -qwerty".)
+		// Reject them ourselves instead.
+		dief("cannot resolve %s: invalid reference", expr)
+	}
+	return trim(out)
+}
+
 func (b *Branch) loadPending() {
 	if b.loadedPending {
 		return
@@ -142,7 +207,13 @@ func (b *Branch) loadPending() {
 	b.loadedPending = true
 
 	// In case of early return.
-	b.branchpoint = trim(cmdOutput("git", "rev-parse", "HEAD"))
+	// But avoid the git exec unless really needed.
+	b.branchpoint = ""
+	defer func() {
+		if b.branchpoint == "" {
+			b.branchpoint = gitHash("HEAD")
+		}
+	}()
 
 	if b.DetachedHead() {
 		return
@@ -165,7 +236,6 @@ func (b *Branch) loadPending() {
 	for i, field := range fields {
 		fields[i] = strings.TrimLeft(field, "\r\n")
 	}
-	foundMergeBranchpoint := false
 	for i := 0; i+numField <= len(fields); i += numField {
 		c := &Commit{
 			Hash:      fields[i],
@@ -184,13 +254,15 @@ func (b *Branch) loadPending() {
 			// even if we later see additional commits on a different branch leading down to
 			// a lower location on the same origin branch.
 			// Check c.Merge (the second parent) too, so we don't depend on the parent order.
-			if strings.Contains(cmdOutput("git", "branch", "-a", "--contains", c.Parent), " "+origin+"\n") {
-				foundMergeBranchpoint = true
+			if strings.Contains(cmdOutput("git", "branch", "-a", "--contains", c.Parent), " remotes/"+origin+"\n") {
+				b.pending = append(b.pending, c)
 				b.branchpoint = c.Parent
+				break
 			}
-			if strings.Contains(cmdOutput("git", "branch", "-a", "--contains", c.Merge), " "+origin+"\n") {
-				foundMergeBranchpoint = true
+			if strings.Contains(cmdOutput("git", "branch", "-a", "--contains", c.Merge), " remotes/"+origin+"\n") {
+				b.pending = append(b.pending, c)
 				b.branchpoint = c.Merge
+				break
 			}
 		}
 		for _, line := range lines(c.Message) {
@@ -203,11 +275,8 @@ func (b *Branch) loadPending() {
 				c.ChangeID = line[len("Change-Id: "):]
 			}
 		}
-
 		b.pending = append(b.pending, c)
-		if !foundMergeBranchpoint {
-			b.branchpoint = c.Parent
-		}
+		b.branchpoint = c.Parent
 	}
 	b.commitsAhead = len(b.pending)
 }
@@ -418,6 +487,9 @@ func (b *Branch) DefaultCommit(action, extra string) *Commit {
 
 // ListFiles returns the list of files in a given commit.
 func ListFiles(c *Commit) []string {
+	if c.Parent == "" {
+		return nil
+	}
 	return nonBlankLines(cmdOutput("git", "diff", "--name-only", c.Parent, c.Hash, "--"))
 }
 

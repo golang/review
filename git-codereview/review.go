@@ -67,6 +67,7 @@ Available commands:
 	rebase-work
 	submit [-i | commit...]
 	sync
+	sync-branch [-continue]
 
 See https://pkg.go.dev/golang.org/x/review/git-codereview
 for the full details of each command.
@@ -112,6 +113,8 @@ func main() {
 		cmd = cmdSubmit
 	case "sync":
 		cmd = cmdSync
+	case "sync-branch":
+		cmd = cmdSyncBranch
 	case "test-loadAuth": // for testing only.
 		cmd = func([]string) { loadAuth() }
 	}

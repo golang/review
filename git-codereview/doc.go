@@ -344,5 +344,27 @@ if different from the source repository. If set to “golang/go”, for example,
 lines such as “Fixes #123” in a commit message will be rewritten to
 “Fixes golang/go#123”.
 
+The “branch” key specifies the name of the branch on the origin server
+corresponding to the current checkout. If this setting is missing, git-codereview
+uses the name of the remote branch that the current checkout is tracking.
+If that setting is missing, git-codereview uses “main”.
+
+The “parent-branch” key specifies the name of the parent branch on
+the origin server. The parent branch is the branch from which the current
+pulls regular updates. For example the parent branch of “dev.feature”
+would typically be “main”, in which case it would have this codereview.cfg:
+
+	branch: dev.feature
+	parent-branch: main
+
+In a more complex configuration, one feature branch might depend upon
+another, like “dev.feature2” containing follow-on work for “dev.feature”,
+neither of which has merged yet. In this case, the dev.feature2 branch
+would have this codereview.cfg:
+
+	branch: dev.feature2
+	parent-branch: dev.feature
+
+The parent branch setting is used by the sync-branch command.
 */
 package main

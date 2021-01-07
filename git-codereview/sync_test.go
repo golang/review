@@ -4,7 +4,10 @@
 
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestSync(t *testing.T) {
 	gt := newGitTest(t)
@@ -122,4 +125,159 @@ func TestSyncRebase(t *testing.T) {
 	testMain(t, "sync", "-v=false")
 	testNoStdout(t)
 	testNoStderr(t)
+}
+
+func TestBranchConfig(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t) // do the main-branch work setup now to avoid unwanted change below
+
+	trun(t, gt.client, "git", "checkout", "dev.branch")
+	testMain(t, "pending", "-c", "-l")
+	// The !+ means reject any output with a +, which introduces a pending commit.
+	// There should be no pending commits.
+	testPrintedStdout(t, "dev.branch (current branch, tracking dev.branch)", "!+")
+
+	// If we make a branch with raw git,
+	// the codereview.cfg should help us see the tracking info
+	// even though git doesn't know the right upstream.
+	trun(t, gt.client, "git", "checkout", "-b", "mywork", "HEAD^0")
+	if out, err := cmdOutputDirErr(gt.client, "git", "rev-parse", "--abbrev-ref", "@{u}"); err == nil {
+		t.Fatalf("git knows @{u} but should not:\n%s", out)
+	}
+	testMain(t, "pending", "-c", "-l")
+	testPrintedStdout(t, "mywork (current branch, tracking dev.branch)", "!+")
+	// Pending should have set @{u} correctly for us.
+	if out, err := cmdOutputDirErr(gt.client, "git", "rev-parse", "--abbrev-ref", "@{u}"); err != nil {
+		t.Fatalf("git does not know @{u} but should: %v\n%s", err, out)
+	} else if out = strings.TrimSpace(out); out != "origin/dev.branch" {
+		t.Fatalf("git @{u} = %q, want %q", out, "origin/dev.branch")
+	}
+
+	// Even if we add a pending commit, we should see the right tracking info.
+	// The !codereview.cfg makes sure we do not see the codereview.cfg-changing
+	// commit from the server in the output. (That would happen if we were printing
+	// new commits relative to main instead of relative to dev.branch.)
+	gt.work(t)
+	testMain(t, "pending", "-c", "-l")
+	testHideRevHashes(t)
+	testPrintedStdout(t, "mywork REVHASH..REVHASH (current branch, tracking dev.branch)", "!codereview.cfg")
+
+	// If we make a new branch using the old work HEAD
+	// then we should be back to something tracking main.
+	trun(t, gt.client, "git", "checkout", "-b", "mywork2", "work^0")
+	gt.work(t)
+	testMain(t, "pending", "-c", "-l")
+	testHideRevHashes(t)
+	testPrintedStdout(t, "mywork2 REVHASH..REVHASH (current branch)", "!codereview.cfg")
+
+	// Now look at all branches, which should use the appropriate configs
+	// from the commits on each branch.
+	testMain(t, "pending", "-l")
+	testHideRevHashes(t)
+	testPrintedStdout(t, "mywork2 REVHASH..REVHASH (current branch)",
+		"mywork REVHASH..REVHASH (tracking dev.branch)",
+		"work REVHASH..REVHASH\n") // the \n checks for not having a (tracking main)
+}
+
+func TestSyncBranch(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	gt.serverWork(t)
+	gt.serverWork(t)
+	trun(t, gt.server, "git", "checkout", "dev.branch")
+	gt.serverWorkUnrelated(t)
+	gt.serverWorkUnrelated(t)
+	gt.serverWorkUnrelated(t)
+	trun(t, gt.server, "git", "checkout", "main")
+
+	testMain(t, "change", "dev.branch")
+	testMain(t, "sync-branch")
+	testHideRevHashes(t)
+	testPrintedStdout(t, "[dev.branch] all: merge main (REVHASH) into dev.branch",
+		"Merge List:",
+		"+ DATE REVHASH msg #2",
+		"+ DATE REVHASH",
+	)
+	testPrintedStderr(t, "* Merge commit created.",
+		"Run 'git codereview mail' to send for review.")
+}
+
+func TestSyncBranchConflict(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	gt.serverWork(t)
+	gt.serverWork(t)
+	trun(t, gt.server, "git", "checkout", "dev.branch")
+	gt.serverWork(t)
+	trun(t, gt.server, "git", "checkout", "main")
+
+	testMain(t, "change", "dev.branch")
+
+	testMainDied(t, "sync-branch")
+	testNoStdout(t)
+	testPrintedStderr(t,
+		"git-codereview: sync-branch: merge conflicts in:",
+		"	- file",
+		"Please fix them (use 'git status' to see the list again),",
+		"then 'git add' or 'git rm' to resolve them,",
+		"and then 'git sync-branch -continue' to continue.",
+		"Or run 'git merge --abort' to give up on this sync-branch.",
+	)
+
+	// Other client-changing commands should fail now.
+	testDisallowed := func(cmd ...string) {
+		t.Helper()
+		testMainDied(t, cmd...)
+		testNoStdout(t)
+		testPrintedStderr(t,
+			"git-codereview: cannot "+cmd[0]+": found pending merge",
+			"Run 'git codereview sync-branch -continue' if you fixed",
+			"merge conflicts after a previous sync-branch operation.",
+			"Or run 'git merge --abort' to give up on the sync-branch.",
+		)
+	}
+	testDisallowed("change", "main")
+	testDisallowed("sync-branch")
+
+	// throw away server changes to resolve merge
+	trun(t, gt.client, "git", "checkout", "HEAD", "file")
+
+	// Still cannot change branches even with conflicts resolved.
+	testDisallowed("change", "main")
+	testDisallowed("sync-branch")
+
+	testMain(t, "sync-branch", "-continue")
+	testHideRevHashes(t)
+	testPrintedStdout(t,
+		"[dev.branch] all: merge main (REVHASH) into dev.branch",
+		"+ REVHASH (merge=REVHASH)",
+		"Conflicts:",
+		"- file",
+		"Merge List:",
+		"+ DATE REVHASH msg #2",
+		"+ DATE REVHASH",
+	)
+	testPrintedStderr(t,
+		"* Merge commit created.",
+		"Run 'git codereview mail' to send for review.",
+	)
+
+	// Check that pending only shows the merge, not more commits.
+	testMain(t, "pending", "-c", "-l", "-s")
+	n := strings.Count(testStdout.String(), "+")
+	if n != 1 {
+		t.Fatalf("git pending shows %d commits, want 1:\n%s", n, testStdout.String())
+	}
+	testNoStderr(t)
+
+	// Check that mail sends the merge to the right place!
+	testMain(t, "mail", "-n")
+	testNoStdout(t)
+	testPrintedStderr(t,
+		"git push -q origin HEAD:refs/for/dev.branch",
+		"git tag -f dev.branch.mailed",
+	)
 }
