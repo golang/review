@@ -23,7 +23,7 @@ func cmdGofmt(args []string) {
 	flags.Parse(args)
 	if len(flag.Args()) > 0 {
 		fmt.Fprintf(stderr(), "Usage: %s gofmt %s [-l]\n", progName, globalFlags)
-		os.Exit(2)
+		exit(2)
 	}
 
 	f := gofmtCommand

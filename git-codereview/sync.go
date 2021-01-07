@@ -33,11 +33,11 @@ func cmdSync(args []string) {
 		run("git", "pull", "-q", "-r", "origin", strings.TrimPrefix(b.OriginBranch(), "origin/"))
 	}
 
-	// If the change commit has been submitted,
-	// roll back change leaving any changes unstaged.
-	// Pull should have done this for us, but check just in case.
 	b = CurrentBranch() // discard any cached information
 	if len(b.Pending()) == 1 && b.Submitted(id) {
+		// If the change commit has been submitted,
+		// roll back change leaving any changes unstaged.
+		// Pull should have done this for us, but check just in case.
 		run("git", "reset", b.Branchpoint())
 	}
 }

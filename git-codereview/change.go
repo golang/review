@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,7 +23,7 @@ func cmdChange(args []string) {
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
 		fmt.Fprintf(stderr(), "Usage: %s change %s [-a] [-m msg] [-q] [branch]\n", progName, globalFlags)
-		os.Exit(2)
+		exit(2)
 	}
 
 	// Checkout or create branch, if specified.
@@ -56,13 +55,11 @@ func cmdChange(args []string) {
 }
 
 func (b *Branch) check() {
-	// TODO(rsc): Test
 	staged, unstaged, _ := LocalChanges()
 	if len(staged) == 0 && len(unstaged) == 0 {
 		// No staged changes, no unstaged changes.
 		// If the branch is behind upstream, now is a good time to point that out.
 		// This applies to both local work branches and tracking branches.
-		// TODO(rsc): Test.
 		b.loadPending()
 		if n := b.CommitsBehind(); n > 0 {
 			printf("warning: %d commit%s behind %s; run 'git codereview sync' to update.", n, suffix(n, "s"), b.OriginBranch())

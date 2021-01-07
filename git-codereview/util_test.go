@@ -290,9 +290,8 @@ var (
 	testStderr *bytes.Buffer
 	testStdout *bytes.Buffer
 	died       bool
+	mainCanDie bool
 )
-
-var mainCanDie bool
 
 func testMainDied(t *testing.T, args ...string) {
 	t.Helper()
@@ -319,7 +318,7 @@ func testMain(t *testing.T, args ...string) {
 		testStdout = stdoutTrap
 		testStderr = stderrTrap
 
-		dieTrap = nil
+		exitTrap = nil
 		runLogTrap = nil
 		stdoutTrap = nil
 		stderrTrap = nil
@@ -337,7 +336,7 @@ func testMain(t *testing.T, args ...string) {
 		}
 	}()
 
-	dieTrap = func() {
+	exitTrap = func() {
 		died = true
 		panic("died")
 	}
@@ -525,4 +524,20 @@ func (s *gerritServer) serveChangesQuery(w http.ResponseWriter, req *http.Reques
 	}
 	fmt.Fprintf(&buf, "%s", end)
 	w.Write(buf.Bytes())
+}
+
+func TestUsage(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	testMainDied(t)
+	testPrintedStderr(t, "Usage: git-codereview <command>")
+
+	testMainDied(t, "not-a-command")
+	testPrintedStderr(t, "Usage: git-codereview <command>")
+
+	// During tests we configure the flag package to panic on error
+	// instead of
+	testMainDied(t, "mail", "-not-a-flag")
+	testPrintedStderr(t, "flag provided but not defined")
 }

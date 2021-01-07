@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 )
@@ -22,7 +21,7 @@ func cmdSubmit(args []string) {
 	flags.Parse(args)
 	if interactive && flags.NArg() > 0 {
 		flags.Usage()
-		os.Exit(2)
+		exit(2)
 	}
 
 	b := CurrentBranch()

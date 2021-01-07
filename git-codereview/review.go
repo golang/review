@@ -34,6 +34,7 @@ func initFlags() {
 	flags.Usage = func() {
 		fmt.Fprintf(stderr(), usage, progName, progName)
 	}
+	flags.SetOutput(stderr())
 	flags.BoolVar(noRun, "n", false, "print but do not run commands")
 	flags.Var(verbose, "v", "report commands")
 }
@@ -76,10 +77,7 @@ func main() {
 
 	if len(os.Args) < 2 {
 		flags.Usage()
-		if dieTrap != nil {
-			dieTrap()
-		}
-		os.Exit(2)
+		exit(2)
 	}
 	command, args := os.Args[1], os.Args[2:]
 
@@ -88,7 +86,7 @@ func main() {
 	switch command {
 	default:
 		flags.Usage()
-		return // avoid installing hooks.
+		exit(2) // avoid installing hooks.
 	case "help":
 		fmt.Fprintf(stdout(), help, progName)
 		return // avoid installing hooks.
@@ -140,7 +138,7 @@ func expectZeroArgs(args []string, command string) {
 	flags.Parse(args)
 	if len(flags.Args()) > 0 {
 		fmt.Fprintf(stderr(), "Usage: %s %s %s\n", progName, command, globalFlags)
-		os.Exit(2)
+		exit(2)
 	}
 }
 
@@ -292,18 +290,18 @@ func commandString(command string, args []string) string {
 	return strings.Join(append([]string{command}, args...), " ")
 }
 
-var dieTrap func()
-
 func dief(format string, args ...interface{}) {
 	printf(format, args...)
-	die()
+	exit(1)
 }
 
-func die() {
-	if dieTrap != nil {
-		dieTrap()
+var exitTrap func()
+
+func exit(code int) {
+	if exitTrap != nil {
+		exitTrap()
 	}
-	os.Exit(1)
+	os.Exit(code)
 }
 
 func verbosef(format string, args ...interface{}) {

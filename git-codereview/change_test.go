@@ -38,6 +38,20 @@ func TestChange(t *testing.T) {
 	t.Logf("main -> dev.branch")
 	testMain(t, "change", "dev.branch")
 	testRan(t, "git checkout -q -t -b dev.branch origin/dev.branch")
+
+	testMain(t, "pending", "-c")
+	testPrintedStdout(t, "tracking dev.branch")
+	testMain(t, "change", "main")
+	testMain(t, "change", "work2")
+
+	t.Logf("server work × 2")
+	gt.serverWork(t)
+	gt.serverWork(t)
+	testMain(t, "sync")
+
+	t.Logf("-> work with server ahead")
+	testMain(t, "change", "work")
+	testPrintedStderr(t, "warning: 2 commits behind origin/main; run 'git codereview sync' to update")
 }
 
 func TestChangeHEAD(t *testing.T) {

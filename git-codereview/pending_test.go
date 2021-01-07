@@ -323,6 +323,7 @@ func TestPendingGerrit(t *testing.T) {
 				file
 
 	`)
+
 	testPendingArgs(t, []string{"-l", "-s"}, `
 		work REVHASH..REVHASH (current branch, 1 behind)
 		+ REVHASH msg

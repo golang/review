@@ -80,7 +80,7 @@ func TestSubmitErrors(t *testing.T) {
 	testPrintedStderr(t, "cannot submit: change abandoned")
 
 	t.Logf("> missing approval")
-	srv.setJSON(id, `{"status": "NEW", "labels": {"Code-Review": {}}}`)
+	srv.setJSON(id, `{"status": "NEW", "labels": {"Code-Review": {}, "Color": {"Optional": true}}}`)
 	testMainDied(t, "submit")
 	testRan(t) // nothing
 	testPrintedStderr(t, "cannot submit: change missing Code-Review approval")
@@ -160,6 +160,15 @@ func TestSubmit(t *testing.T) {
 		submitted = true
 		return gerritReply{body: ")]}'\n" + submittedJSON}
 	}})
+
+	testMain(t, "submit", "-n")
+	testPrintedStderr(t, "submitting")
+	testPrintedStderr(t, "stopped before submit")
+
+	testMain(t, "pending", "-c", "-l")
+	testPrintedStdout(t, "(current branch)")
+	testPrintedStdout(t, "Files in this change:")
+
 	testMain(t, "submit")
 	testRan(t,
 		"git fetch -q",
@@ -196,17 +205,31 @@ func TestSubmitInteractive(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
+	os.Setenv("GIT_EDITOR", ":")
+	testMain(t, "submit", "-i")
+	testPrintedStderr(t, "nothing to submit")
+
 	srv := newGerritServer(t)
 	defer srv.done()
 
 	cl1, cl2 := testSubmitMultiple(t, gt, srv)
-	os.Setenv("GIT_EDITOR", "echo "+cl1.CurrentRevision+" > ")
+
+	os.Setenv("GIT_EDITOR", "echo > ")
+	testMain(t, "submit", "-i")
+	if cl1.Status != "NEW" {
+		t.Fatalf("want cl1.Status == NEW; got %v", cl1.Status)
+	}
+	if cl2.Status != "NEW" {
+		t.Fatalf("want cl2.Status == NEW; got %v", cl2.Status)
+	}
+
+	os.Setenv("GIT_EDITOR", "( echo "+cl1.CurrentRevision+"; echo; echo '# comment' ) > ")
 	testMain(t, "submit", "-i")
 	if cl1.Status != "MERGED" {
 		t.Fatalf("want cl1.Status == MERGED; got %v", cl1.Status)
 	}
 	if cl2.Status != "NEW" {
-		t.Fatalf("want cl2.Status == NEW; got %v", cl1.Status)
+		t.Fatalf("want cl2.Status == NEW; got %v", cl2.Status)
 	}
 }
 

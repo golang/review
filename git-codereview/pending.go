@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -87,7 +86,7 @@ func cmdPending(args []string) {
 	flags.Parse(args)
 	if len(flags.Args()) > 0 {
 		fmt.Fprintf(stderr(), "Usage: %s pending %s [-c] [-l] [-s]\n", progName, globalFlags)
-		os.Exit(2)
+		exit(2)
 	}
 
 	// Fetch info about remote changes, so that we can say which branches need sync.

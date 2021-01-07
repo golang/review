@@ -104,4 +104,22 @@ func TestSyncRebase(t *testing.T) {
 	if len(b.Pending()) != 0 {
 		t.Fatalf("have %d pending CLs after final sync, want 0", len(b.Pending()))
 	}
+
+	// sync -v prints git output.
+	// also exercising -v parsing.
+	testMain(t, "sync", "-v=true")
+	testNoStdout(t)
+	testPrintedStderr(t, "git pull -q -r origin main")
+
+	testMain(t, "sync", "-v=1")
+	testNoStdout(t)
+	testPrintedStderr(t, "git pull -q -r origin main")
+
+	testMain(t, "sync", "-v")
+	testNoStdout(t)
+	testPrintedStderr(t, "git pull -q -r origin main")
+
+	testMain(t, "sync", "-v=false")
+	testNoStdout(t)
+	testNoStderr(t)
 }

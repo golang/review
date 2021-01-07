@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -38,11 +37,12 @@ func cmdMail(args []string) {
 			"Usage: %s mail %s [-r reviewer,...] [-cc mail,...]\n"+
 				"\t[-f] [-diff] [-hashtag tag,...] [-nokeycheck] [-topic topic]\n"+
 				"\t[-trust] [-trybot] [-wip] [commit]\n", progName, globalFlags)
+		exit(2)
 	}
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
 		flags.Usage()
-		os.Exit(2)
+		exit(2)
 	}
 
 	b := CurrentBranch()
@@ -221,7 +221,7 @@ func mailList(start, tag string, flagList string) string {
 		verbosef("expanded %s to %s", short[1:], long[1:])
 	}
 	if errors {
-		die()
+		exit(1)
 	}
 	return spec
 }
