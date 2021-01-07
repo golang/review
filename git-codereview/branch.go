@@ -33,18 +33,33 @@ type Branch struct {
 
 // A Commit describes a single pending commit on a Git branch.
 type Commit struct {
-	Hash      string // commit hash
-	ShortHash string // abbreviated commit hash
-	Parent    string // parent hash
-	Merge     string // for merges, hash of commit being merged into Parent
-	Message   string // commit message
-	Subject   string // first line of commit message
-	ChangeID  string // Change-Id in commit message ("" if missing)
+	Hash      string   // commit hash
+	ShortHash string   // abbreviated commit hash
+	Parent    string   // parent hash (== Parents[0])
+	Parents   []string // all parent hashes (merges have > 1)
+	Tree      string   // tree hash
+	Message   string   // commit message
+	Subject   string   // first line of commit message
+	ChangeID  string   // Change-Id in commit message ("" if missing)
+
+	AuthorName  string // author name (from %an)
+	AuthorEmail string // author email (from %ae)
+	AuthorDate  string // author date as Unix timestamp string (from %at)
 
 	// For use by pending command.
 	g         *GerritChange // associated Gerrit change data
 	gerr      error         // error loading Gerrit data
 	committed []string      // list of files in this commit
+}
+
+// HasParent reports whether hash appears in c.Parents.
+func (c *Commit) HasParent(hash string) bool {
+	for _, p := range c.Parents {
+		if p == hash {
+			return true
+		}
+	}
+	return false
 }
 
 // Config returns the configuration for the branch.
@@ -227,8 +242,10 @@ func (b *Branch) loadPending() {
 
 	// Note: --topo-order means child first, then parent.
 	origin := b.OriginBranch()
-	const numField = 5
-	all := trim(cmdOutput("git", "log", "--topo-order", "--format=format:%H%x00%h%x00%P%x00%B%x00%s%x00", origin+".."+b.FullName(), "--"))
+	const numField = 9
+	all := trim(cmdOutput("git", "log", "--topo-order",
+		"--format=format:%H%x00%h%x00%P%x00%T%x00%B%x00%s%x00%an%x00%ae%x00%at%x00",
+		origin+".."+b.FullName(), "--"))
 	fields := strings.Split(all, "\x00")
 	if len(fields) < numField {
 		return // nothing pending
@@ -236,16 +253,23 @@ func (b *Branch) loadPending() {
 	for i, field := range fields {
 		fields[i] = strings.TrimLeft(field, "\r\n")
 	}
+Log:
 	for i := 0; i+numField <= len(fields); i += numField {
+		parents := strings.Fields(fields[i+2])
 		c := &Commit{
-			Hash:      fields[i],
-			ShortHash: fields[i+1],
-			Parent:    strings.TrimSpace(fields[i+2]), // %P starts with \n for some reason
-			Message:   fields[i+3],
-			Subject:   fields[i+4],
+			Hash:        fields[i],
+			ShortHash:   fields[i+1],
+			Parent:      parents[0],
+			Parents:     parents,
+			Tree:        fields[i+3],
+			Message:     fields[i+4],
+			Subject:     fields[i+5],
+			AuthorName:  fields[i+6],
+			AuthorEmail: fields[i+7],
+			AuthorDate:  fields[i+8],
 		}
-		if j := strings.Index(c.Parent, " "); j >= 0 {
-			c.Parent, c.Merge = c.Parent[:j], c.Parent[j+1:]
+
+		if len(c.Parents) > 1 {
 			// Found merge point.
 			// Merges break the invariant that the last shared commit (the branchpoint)
 			// is the parent of the final commit in the log output.
@@ -254,15 +278,12 @@ func (b *Branch) loadPending() {
 			// even if we later see additional commits on a different branch leading down to
 			// a lower location on the same origin branch.
 			// Check c.Merge (the second parent) too, so we don't depend on the parent order.
-			if strings.Contains(cmdOutput("git", "branch", "-a", "--contains", c.Parent), " remotes/"+origin+"\n") {
-				b.pending = append(b.pending, c)
-				b.branchpoint = c.Parent
-				break
-			}
-			if strings.Contains(cmdOutput("git", "branch", "-a", "--contains", c.Merge), " remotes/"+origin+"\n") {
-				b.pending = append(b.pending, c)
-				b.branchpoint = c.Merge
-				break
+			for _, parent := range c.Parents {
+				if strings.Contains(cmdOutput("git", "branch", "-a", "--contains", parent), " remotes/"+origin+"\n") {
+					b.pending = append(b.pending, c)
+					b.branchpoint = parent
+					break Log
+				}
 			}
 		}
 		for _, line := range lines(c.Message) {

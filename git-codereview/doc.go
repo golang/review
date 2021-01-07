@@ -48,8 +48,10 @@ aliases in their .gitconfig file:
 		mail = codereview mail
 		pending = codereview pending
 		rebase-work = codereview rebase-work
+		reword = codereview reword
 		submit = codereview submit
 		sync = codereview sync
+		sync-branch = codereview sync-branch
 
 Single-Commit Work Branches
 
@@ -282,13 +284,38 @@ Useful aliases include “git p” for “git pending” and “git pl” for �
 Rebase-work
 
 The rebase-work command runs git rebase in interactive mode over pending changes.
-It is shorthand for “git rebase -i $(git codereview branchpoint)”.
+
+	git codereview rebase-work
+
+The command is shorthand for “git rebase -i $(git codereview branchpoint)”.
 It differs from plain “git rebase -i” in that the latter will try to incorporate
 new commits from the origin branch during the rebase;
 “git codereview rebase-work” does not.
 
 In multiple-commit workflows, rebase-work is used so often that it can be helpful
 to alias it to “git rw”.
+
+Reword
+
+The reword command edits pending commit messages.
+
+	git codereview reword [commit...]
+
+Reword opens the editor on the commit messages for the named comments.
+When the editing is finished, it applies the changes to the pending commits.
+If no commit is listed, reword applies to all pending commits.
+
+Reword is similar in effect to running “git codereview rebase-work” and changing
+the script action for the named commits to “reword”, or (with no arguments)
+to “git commit --amend”, but it only affects the commit messages, not the state
+of the git staged index, nor any checked-out files. This more careful implementation
+makes it safe to use when there are local changes or, for example, when tests are
+running that would be broken by temporary changes to the checked-out tree,
+as would happen during “git codereview rebase-work”.
+
+Reword is most useful for editing commit messages on a multiple-commit work
+branch, but it can also be useful in single-commit work branches to allow
+editing a commit message without committing staged changes at the same time.
 
 Submit
 

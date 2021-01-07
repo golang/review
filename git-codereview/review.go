@@ -33,6 +33,7 @@ func initFlags() {
 	flags = flag.NewFlagSet("", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(stderr(), usage, progName, progName)
+		exit(2)
 	}
 	flags.SetOutput(stderr())
 	flags.BoolVar(noRun, "n", false, "print but do not run commands")
@@ -65,6 +66,7 @@ Available commands:
 	mail [-r reviewer,...] [-cc mail,...] [options] [commit]
 	pending [-c] [-l] [-s]
 	rebase-work
+	reword [commit...]
 	submit [-i | commit...]
 	sync
 	sync-branch [-continue]
@@ -109,6 +111,8 @@ func main() {
 		cmd = cmdPending
 	case "rebase-work":
 		cmd = cmdRebaseWork
+	case "reword":
+		cmd = cmdReword
 	case "submit":
 		cmd = cmdSubmit
 	case "sync":
