@@ -5,6 +5,9 @@
 package main
 
 import (
+	"bytes"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -79,7 +82,7 @@ func TestSyncRebase(t *testing.T) {
 	// submit first two CLs - gt.serverWork does same thing gt.work does, but on server
 
 	gt.serverWork(t)
-	gt.serverWorkUnrelated(t) // wedge in unrelated work to get different hashes
+	gt.serverWorkUnrelated(t, "") // wedge in unrelated work to get different hashes
 	gt.serverWork(t)
 
 	testMain(t, "sync")
@@ -215,9 +218,9 @@ func TestSyncBranch(t *testing.T) {
 	gt.serverWork(t)
 	gt.serverWork(t)
 	trun(t, gt.server, "git", "checkout", "dev.branch")
-	gt.serverWorkUnrelated(t)
-	gt.serverWorkUnrelated(t)
-	gt.serverWorkUnrelated(t)
+	gt.serverWorkUnrelated(t, "")
+	gt.serverWorkUnrelated(t, "")
+	gt.serverWorkUnrelated(t, "")
 	trun(t, gt.server, "git", "checkout", "main")
 
 	testMain(t, "change", "dev.branch")
@@ -230,6 +233,90 @@ func TestSyncBranch(t *testing.T) {
 	)
 	testPrintedStderr(t, "* Merge commit created.",
 		"Run 'git codereview mail' to send for review.")
+}
+
+func TestSyncBranchMergeBack(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	// server does not default to having a codereview.cfg on main,
+	// but sync-branch requires one.
+	var mainCfg = []byte("branch: main\n")
+	ioutil.WriteFile(filepath.Join(gt.server, "codereview.cfg"), mainCfg, 0666)
+	trun(t, gt.server, "git", "add", "codereview.cfg")
+	trun(t, gt.server, "git", "commit", "-m", "config for main", "codereview.cfg")
+
+	gt.serverWork(t)
+	gt.serverWork(t)
+	trun(t, gt.server, "git", "checkout", "dev.branch")
+	gt.serverWorkUnrelated(t, "work on dev.branch#1")
+	gt.serverWorkUnrelated(t, "work on dev.branch#2")
+	gt.serverWorkUnrelated(t, "work on dev.branch#3")
+	trun(t, gt.server, "git", "checkout", "main")
+	testMain(t, "change", "dev.branch")
+
+	// Merge back should fail because there are
+	// commits in the parent that have not been merged here yet.
+	testMainDied(t, "sync-branch", "--merge-back-to-parent")
+	testNoStdout(t)
+	testPrintedStderr(t, "parent has new commits")
+
+	// Bring them in, creating a merge commit.
+	testMain(t, "sync-branch")
+
+	// Merge back should still fail - merge commit not submitted yet.
+	testMainDied(t, "sync-branch", "--merge-back-to-parent")
+	testNoStdout(t)
+	testPrintedStderr(t, "pending changes exist")
+
+	// Push the changes back to the server.
+	// (In a real system this would happen through Gerrit.)
+	trun(t, gt.client, "git", "push", "origin")
+
+	devHash := trim(trun(t, gt.client, "git", "rev-parse", "HEAD"))
+
+	// Nothing should be pending.
+	testMain(t, "pending", "-c")
+	testPrintedStdout(t, "!+")
+
+	// This time should work.
+	testMain(t, "sync-branch", "--merge-back-to-parent")
+	testPrintedStdout(t,
+		"\n\tall: REVERSE MERGE dev.branch ("+devHash[:7]+") into main",
+		"This commit is a REVERSE MERGE.",
+		"It merges dev.branch back into its parent branch, main.",
+		"This marks the end of development on dev.branch.",
+		"Merge List:",
+		"msg #2",
+		"!config for main",
+	)
+	testPrintedStderr(t, "Merge commit created.")
+
+	data, err := ioutil.ReadFile(filepath.Join(gt.client, "codereview.cfg"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, mainCfg) {
+		t.Fatalf("codereview.cfg not restored:\n%s", data)
+	}
+
+	// Check pending knows what branch it is on.
+	testMain(t, "pending", "-c")
+	testHideRevHashes(t)
+	testPrintedStdout(t,
+		"dev.branch REVHASH..REVHASH (current branch)", // no "tracking dev.branch" anymore
+		"REVHASH (merge=REVHASH)",
+		"Merge List:",
+		"!config for main",
+	)
+
+	// Check that mail sends the merge to the right place!
+	testMain(t, "mail", "-n")
+	testNoStdout(t)
+	testPrintedStderr(t,
+		"git push -q origin HEAD:refs/for/main",
+		"git tag -f dev.branch.mailed",
+	)
 }
 
 func TestSyncBranchConflict(t *testing.T) {
