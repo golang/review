@@ -40,11 +40,14 @@ func TestCurrentBranch(t *testing.T) {
 	checkCurrentBranch(t, "newdev", "origin/dev.branch", true, "I1123456789abcdef0123456789abcdef", "My other change line.")
 
 	t.Logf("detached head mode")
-	trun(t, gt.client, "git", "checkout", "HEAD^0")
-	checkCurrentBranch(t, "HEAD", "origin/HEAD", false, "", "")
+	trun(t, gt.client, "git", "checkout", "main^0")
+	checkCurrentBranch(t, "HEAD", "", false, "", "")
+	trun(t, gt.client, "git", "checkout", "dev.branch^0")
+	checkCurrentBranch(t, "HEAD", "origin/dev.branch", false, "", "")
 }
 
 func checkCurrentBranch(t *testing.T, name, origin string, hasPending bool, changeID, subject string) {
+	t.Helper()
 	b := CurrentBranch()
 	if b.Name != name {
 		t.Errorf("b.Name = %q, want %q", b.Name, name)

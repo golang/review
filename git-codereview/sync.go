@@ -19,6 +19,7 @@ func cmdSync(args []string) {
 
 	// Get current branch and commit ID for fixup after pull.
 	b := CurrentBranch()
+	b.NeedOriginBranch("sync")
 	var id string
 	if work := b.Pending(); len(work) > 0 {
 		id = work[0].ChangeID
