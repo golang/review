@@ -69,7 +69,7 @@ func (gt *gitTest) done() {
 }
 
 // doWork simulates commit 'n' touching 'file' in 'dir'
-func doWork(t *testing.T, n int, dir, file, changeid string) {
+func doWork(t *testing.T, n int, dir, file, changeid string, msg string) {
 	t.Helper()
 	write(t, dir+"/"+file, fmt.Sprintf("new content %d", n), 0644)
 	trun(t, dir, "git", "add", file)
@@ -77,8 +77,11 @@ func doWork(t *testing.T, n int, dir, file, changeid string) {
 	if n > 1 {
 		suffix = fmt.Sprintf(" #%d", n)
 	}
-	msg := fmt.Sprintf("msg%s\n\nChange-Id: I%d%s\n", suffix, n, changeid)
-	trun(t, dir, "git", "commit", "-m", msg)
+	if msg != "" {
+		msg += "\n\n"
+	}
+	cmsg := fmt.Sprintf("%smsg%s\n\nChange-Id: I%d%s\n", msg, suffix, n, changeid)
+	trun(t, dir, "git", "commit", "-m", cmsg)
 }
 
 func (gt *gitTest) work(t *testing.T) {
@@ -91,14 +94,14 @@ func (gt *gitTest) work(t *testing.T) {
 
 	// make local change on client
 	gt.nwork++
-	doWork(t, gt.nwork, gt.client, "file", "23456789")
+	doWork(t, gt.nwork, gt.client, "file", "23456789", "")
 }
 
 func (gt *gitTest) workFile(t *testing.T, file string) {
 	t.Helper()
 	// make local change on client in the specific file
 	gt.nwork++
-	doWork(t, gt.nwork, gt.client, file, "23456789")
+	doWork(t, gt.nwork, gt.client, file, "23456789", "")
 }
 
 func (gt *gitTest) serverWork(t *testing.T) {
@@ -108,15 +111,15 @@ func (gt *gitTest) serverWork(t *testing.T) {
 	// having gone through Gerrit and submitted with possibly
 	// different commit hashes but the same content.
 	gt.nworkServer++
-	doWork(t, gt.nworkServer, gt.server, "file", "23456789")
+	doWork(t, gt.nworkServer, gt.server, "file", "23456789", "")
 }
 
-func (gt *gitTest) serverWorkUnrelated(t *testing.T) {
+func (gt *gitTest) serverWorkUnrelated(t *testing.T, msg string) {
 	t.Helper()
 	// make unrelated change on server
 	// this makes history different on client and server
 	gt.nworkOther++
-	doWork(t, gt.nworkOther, gt.server, "otherfile", "9999")
+	doWork(t, gt.nworkOther, gt.server, "otherfile", "9999", msg)
 }
 
 func newGitTest(t *testing.T) (gt *gitTest) {
