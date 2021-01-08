@@ -234,7 +234,9 @@ func cmdPending(args []string) {
 			fmt.Fprintf(&buf, " %.7s..%s", b.branchpoint, work[0].ShortHash)
 		}
 		var tags []string
-		if b.current {
+		if b.DetachedHead() {
+			tags = append(tags, "detached")
+		} else if b.current {
 			tags = append(tags, "current branch")
 		}
 		if allMailed(work) && len(work) > 0 {
@@ -246,7 +248,9 @@ func cmdPending(args []string) {
 		if n := b.CommitsBehind(); n > 0 {
 			tags = append(tags, fmt.Sprintf("%d behind", n))
 		}
-		if br := b.OriginBranch(); br != "origin/master" && br != "origin/main" {
+		if br := b.OriginBranch(); br == "" {
+			tags = append(tags, "remote branch unknown")
+		} else if br != "origin/master" && br != "origin/main" {
 			tags = append(tags, "tracking "+strings.TrimPrefix(b.OriginBranch(), "origin/"))
 		}
 		if len(tags) > 0 {

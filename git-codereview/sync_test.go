@@ -180,6 +180,34 @@ func TestBranchConfig(t *testing.T) {
 		"work REVHASH..REVHASH\n") // the \n checks for not having a (tracking main)
 }
 
+func TestDetachedHead(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+	gt.work(t) // do the main-branch work setup now to avoid unwanted change below
+
+	trun(t, gt.client, "git", "checkout", "HEAD^0") // enter detached HEAD mode with one pending commit
+
+	// Pending should succeed and just print very little.
+	testMain(t, "pending", "-c", "-l")
+	testPrintedStdout(t, "HEAD (detached, remote branch unknown)", "!+")
+	testNoStderr(t)
+
+	// Sync, branchpoint should fail - branch unknown
+	// (there is no "upstream" coming from git, and there's no branch line
+	// in codereview.cfg on main in the test setup).
+	for _, cmd := range []string{"sync", "branchpoint"} {
+		testMainDied(t, cmd)
+		testNoStdout(t)
+		testPrintedStderr(t, "cannot "+cmd+": no origin branch (in detached HEAD mode)")
+	}
+
+	// If we switch to dev.branch, which does have a branch line,
+	// detached HEAD mode should be able to find the branchpoint.
+	trun(t, gt.client, "git", "checkout", "dev.branch")
+	gt.work(t)
+	trun(t, gt.client, "git", "checkout", "HEAD^0")
+}
+
 func TestSyncBranch(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()

@@ -120,13 +120,15 @@ func runGofmt(flags int) (files []string, stderrText string) {
 	}
 
 	// Find files modified in the index compared to the branchpoint.
-	branchpt := b.Branchpoint()
-	if strings.Contains(cmdOutput("git", "branch", "-r", "--contains", b.FullName()), "origin/") {
-		// This is a branch tag move, not an actual change.
-		// Use HEAD as branch point, so nothing will appear changed.
-		// We don't want to think about gofmt on already published
-		// commits.
-		branchpt = "HEAD"
+	// The default of HEAD will only compare against the most recent commit.
+	// But if we know the origin branch, and this isn't a branch tag move,
+	// then check all the pending commits.
+	branchpt := "HEAD"
+	if b.OriginBranch() != "" {
+		isBranchTagMove := strings.Contains(cmdOutput("git", "branch", "-r", "--contains", b.FullName()), "origin/")
+		if !isBranchTagMove {
+			branchpt = b.Branchpoint()
+		}
 	}
 	indexFiles := addRoot(repo, filter(gofmtRequired, nonBlankLines(cmdOutput("git", "diff", "--name-only", "--diff-filter=ACM", "--cached", branchpt, "--"))))
 	localFiles := addRoot(repo, filter(gofmtRequired, nonBlankLines(cmdOutput("git", "diff", "--name-only", "--diff-filter=ACM"))))

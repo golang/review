@@ -98,18 +98,26 @@ func (b *Branch) DetachedHead() bool {
 	return b.Name == "HEAD"
 }
 
+// NeedOriginBranch exits with an error message
+// if the origin branch is unknown.
+// The cmd is the user command reported in the failure message.
+func (b *Branch) NeedOriginBranch(cmd string) {
+	if b.OriginBranch() == "" {
+		why := ""
+		if b.DetachedHead() {
+			why = " (in detached HEAD mode)"
+		}
+		if cmd == "<internal branchpoint>" && exitTrap != nil {
+			panic("NeedOriginBranch")
+		}
+		dief("cannot %s: no origin branch%s", cmd, why)
+	}
+}
+
 // OriginBranch returns the name of the origin branch that branch b tracks.
 // The returned name is like "origin/master" or "origin/dev.garbage" or
 // "origin/release-branch.go1.4".
 func (b *Branch) OriginBranch() string {
-	if b.DetachedHead() {
-		// Detached head mode.
-		// "origin/HEAD" is clearly false, but it should be easy to find when it
-		// appears in other commands. Really any caller of OriginBranch
-		// should check for detached head mode.
-		return "origin/HEAD"
-	}
-
 	if b.originBranch != "" {
 		return b.originBranch
 	}
@@ -119,28 +127,33 @@ func (b *Branch) OriginBranch() string {
 	if cfg != "" {
 		upstream = "origin/" + cfg
 	}
-	gitUpstream := b.gitOriginBranch()
-	if upstream == "" {
-		upstream = gitUpstream
-	}
-	if upstream == "" {
-		// Assume branch was created before we set upstream correctly.
-		// See if origin/main exists; if so, use it.
-		// Otherwise, fall back to origin/master.
-		argv := []string{"git", "rev-parse", "--abbrev-ref", "origin/main"}
-		cmd := exec.Command(argv[0], argv[1:]...)
-		setEnglishLocale(cmd)
-		if err := cmd.Run(); err == nil {
-			upstream = "origin/main"
-		} else {
-			upstream = "origin/master"
-		}
-	}
 
-	if gitUpstream != upstream && b.Current {
-		// Best effort attempt to correct setting for next time,
-		// and for "git status".
-		exec.Command("git", "branch", "-u", upstream).Run()
+	// Consult and possibly update git,
+	// but only if we are actually on a real branch,
+	// not in detached HEAD mode.
+	if !b.DetachedHead() {
+		gitUpstream := b.gitOriginBranch()
+		if upstream == "" {
+			upstream = gitUpstream
+		}
+		if upstream == "" {
+			// Assume branch was created before we set upstream correctly.
+			// See if origin/main exists; if so, use it.
+			// Otherwise, fall back to origin/master.
+			argv := []string{"git", "rev-parse", "--abbrev-ref", "origin/main"}
+			cmd := exec.Command(argv[0], argv[1:]...)
+			setEnglishLocale(cmd)
+			if err := cmd.Run(); err == nil {
+				upstream = "origin/main"
+			} else {
+				upstream = "origin/master"
+			}
+		}
+		if gitUpstream != upstream && b.Current {
+			// Best effort attempt to correct setting for next time,
+			// and for "git status".
+			exec.Command("git", "branch", "-u", upstream).Run()
+		}
 	}
 
 	b.originBranch = upstream
@@ -197,6 +210,7 @@ func (b *Branch) Pending() []*Commit {
 // Branchpoint returns an identifier for the latest revision
 // common to both this branch and its upstream branch.
 func (b *Branch) Branchpoint() string {
+	b.NeedOriginBranch("<internal branchpoint>")
 	b.loadPending()
 	return b.branchpoint
 }
@@ -515,8 +529,10 @@ func ListFiles(c *Commit) []string {
 }
 
 func cmdBranchpoint(args []string) {
-	expectZeroArgs(args, "sync")
-	fmt.Fprintf(stdout(), "%s\n", CurrentBranch().Branchpoint())
+	expectZeroArgs(args, "branchpoint")
+	b := CurrentBranch()
+	b.NeedOriginBranch("branchpoint")
+	fmt.Fprintf(stdout(), "%s\n", b.Branchpoint())
 }
 
 func cmdRebaseWork(args []string) {
