@@ -353,6 +353,38 @@ The sync command updates the local repository.
 It fetches commits from the remote repository and merges them from the
 upstream branch to the current branch, rebasing any pending changes.
 
+Sync-branch
+
+The sync-branch command merges changes from the parent branch into
+the current branch.
+
+	git codereview sync-branch
+
+There must be no pending work in the current checkout. Sync-branch pulls
+all commits from the parent branch to the current branch and creates a
+merge commit. If there are merge conflicts, sync-branch reports those
+conflicts and exits. After fixing the conflicts, running
+
+	git codereview sync-branch -continue
+
+will continue the process. (If the merge should be abandoned, use
+the standard “git merge -abort” command instead.)
+
+The sync-branch command depends on the codereview.cfg having
+branch and parent-branch keys. See the Configuration section below.
+
+When a server-side development branch is being shut down and
+the changes should be merged back into the parent branch, the command
+
+	git codereview sync-branch -merge-back-to-parent
+
+runs the merge in reverse. This is a very rare operation and should not
+be used unless you are certain that you want changes to flow in the
+reverse direction, because work on the dev branch has been ended.
+After running this command, the local checkout of the dev branch will
+be configured to mail changes to the parent branch instead of the
+dev branch.
+
 Configuration
 
 If a file named codereview.cfg is present in the repository root,
