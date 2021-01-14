@@ -88,7 +88,7 @@ func cmdReword(args []string) {
 	// (perhaps the user has forgotten about one in another window),
 	// we don't want them to step on each other during editing.
 	var buf bytes.Buffer
-	saveFile := filepath.Join(repoRoot(), ".git/REWORD_MSGS")
+	saveFile := filepath.Join(gitPathDir(), "REWORD_MSGS")
 	saveBuf := func() {
 		if err := ioutil.WriteFile(saveFile, buf.Bytes(), 0666); err != nil {
 			dief("cannot save messages: %v", err)

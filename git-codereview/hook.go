@@ -76,8 +76,24 @@ func installHook(args []string) {
 	}
 }
 
+// repoRoot returns the root of the currently selected git repo, or
+// worktree root if this is an alternate worktree of a repo.
 func repoRoot() string {
 	return filepath.Clean(trim(cmdOutput("git", "rev-parse", "--show-toplevel")))
+}
+
+// gitPathDir returns the directory used by git to store temporary
+// files such as COMMIT_EDITMSG, FETCH_HEAD, and such for the repo.
+// For a simple git repo, this will be <root>/.git, and for an
+// alternate worktree of a repo it will be in
+// <root>/.git/worktrees/<worktreename>.
+func gitPathDir() string {
+	gcd := trim(cmdOutput("git", "rev-parse", "--git-path", "."))
+	result, err := filepath.Abs(gcd)
+	if err != nil {
+		dief("%v", err)
+	}
+	return result
 }
 
 // gitPath resolve the $GIT_DIR/path, taking in consideration
