@@ -17,9 +17,11 @@ func TestMail(t *testing.T) {
 	h := CurrentBranch().Pending()[0].ShortHash
 
 	// fake auth information to avoid Gerrit error
+	auth.initialized = true
 	auth.host = "gerrit.fake"
 	auth.user = "not-a-user"
 	defer func() {
+		auth.initialized = false
 		auth.host = ""
 		auth.user = ""
 	}()
@@ -59,9 +61,11 @@ func TestDoNotMail(t *testing.T) {
 
 func TestDoNotMailTempFiles(t *testing.T) {
 	// fake auth information to avoid Gerrit error
+	auth.initialized = true
 	auth.host = "gerrit.fake"
 	auth.user = "not-a-user"
 	defer func() {
+		auth.initialized = false
 		auth.host = ""
 		auth.user = ""
 	}()
@@ -95,9 +99,11 @@ func TestMailNonPrintables(t *testing.T) {
 	gt.work(t)
 
 	// fake auth information to avoid Gerrit error
+	auth.initialized = true
 	auth.host = "gerrit.fake"
 	auth.user = "not-a-user"
 	defer func() {
+		auth.initialized = false
 		auth.host = ""
 		auth.user = ""
 	}()
@@ -182,9 +188,11 @@ func TestMailShort(t *testing.T) {
 	defer gt.done()
 
 	// fake auth information to avoid Gerrit error
+	auth.initialized = true
 	auth.host = "gerrit.fake"
 	auth.user = "not-a-user"
 	defer func() {
+		auth.initialized = false
 		auth.host = ""
 		auth.user = ""
 	}()
@@ -241,9 +249,11 @@ func TestMailTopic(t *testing.T) {
 	h := CurrentBranch().Pending()[0].ShortHash
 
 	// fake auth information to avoid Gerrit error
+	auth.initialized = true
 	auth.host = "gerrit.fake"
 	auth.user = "not-a-user"
 	defer func() {
+		auth.initialized = false
 		auth.host = ""
 		auth.user = ""
 	}()
@@ -265,9 +275,11 @@ func TestMailHashtag(t *testing.T) {
 	h := CurrentBranch().Pending()[0].ShortHash
 
 	// fake auth information to avoid Gerrit error
+	auth.initialized = true
 	auth.host = "gerrit.fake"
 	auth.user = "not-a-user"
 	defer func() {
+		auth.initialized = false
 		auth.host = ""
 		auth.user = ""
 	}()
@@ -290,9 +302,11 @@ func TestMailEmpty(t *testing.T) {
 	defer gt.done()
 
 	// fake auth information to avoid Gerrit error
+	auth.initialized = true
 	auth.host = "gerrit.fake"
 	auth.user = "not-a-user"
 	defer func() {
+		auth.initialized = false
 		auth.host = ""
 		auth.user = ""
 	}()

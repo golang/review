@@ -94,6 +94,7 @@ func TestLoadAuth(t *testing.T) {
 
 	for i, tt := range authTests {
 		t.Logf("#%d", i)
+		auth.initialized = false
 		auth.user = ""
 		auth.password = ""
 		auth.cookieName = ""
@@ -175,6 +176,7 @@ func TestLoadGerritOrigin(t *testing.T) {
 	}
 
 	for _, item := range list {
+		auth.initialized = false
 		auth.host = ""
 		auth.url = ""
 		auth.project = ""

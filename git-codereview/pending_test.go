@@ -476,10 +476,12 @@ func testPending(t *testing.T, want string) {
 func testPendingArgs(t *testing.T, args []string, want string) {
 	setHelper(t)
 	// fake auth information to avoid Gerrit error
-	if auth.host == "" {
+	if !auth.initialized {
+		auth.initialized = true
 		auth.host = "gerrit.fake"
 		auth.user = "not-a-user"
 		defer func() {
+			auth.initialized = false
 			auth.host = ""
 			auth.user = ""
 		}()

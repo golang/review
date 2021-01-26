@@ -17,10 +17,13 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // auth holds cached data about authentication to Gerrit.
 var auth struct {
+	initialized bool
+
 	host    string // "go.googlesource.com"
 	url     string // "https://go-review.googlesource.com"
 	project string // "go", "tools", "crypto", etc
@@ -34,12 +37,21 @@ var auth struct {
 	password    string
 }
 
+// loadGerritOriginMutex is used to control access when initializing auth
+// in loadGerritOrigin, which can be called in parallel by "pending".
+// We use a mutex rather than a sync.Once because the tests clear auth.
+var loadGerritOriginMutex sync.Mutex
+
 // loadGerritOrigin loads the Gerrit host name from the origin remote.
+// This sets auth.{initialized,host,url,project}.
 // If the origin remote does not appear to be a Gerrit server
 // (is missing, is GitHub, is not https, has too many path elements),
 // loadGerritOrigin dies.
 func loadGerritOrigin() {
-	if auth.host != "" {
+	loadGerritOriginMutex.Lock()
+	defer loadGerritOriginMutex.Unlock()
+
+	if auth.initialized {
 		return
 	}
 
@@ -52,6 +64,8 @@ func loadGerritOrigin() {
 	if err != nil {
 		dief("failed to load Gerrit origin: %v", err)
 	}
+
+	auth.initialized = true
 }
 
 // loadGerritOriginInternal does the work of loadGerritOrigin, just extracted out
@@ -279,7 +293,7 @@ func gerritAPI(path string, requestBody []byte, target interface{}) error {
 }
 
 // fullChangeID returns the unambigous Gerrit change ID for the commit c on branch b.
-// The retruned ID has the form project~originbranch~Ihexhexhexhexhex.
+// The returned ID has the form project~originbranch~Ihexhexhexhexhex.
 // See https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#change-id for details.
 func fullChangeID(b *Branch, c *Commit) string {
 	loadGerritOrigin()

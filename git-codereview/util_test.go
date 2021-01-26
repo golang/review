@@ -437,6 +437,7 @@ func newGerritServer(t *testing.T) *gerritServer {
 		t.Fatalf("starting fake gerrit: %v", err)
 	}
 
+	auth.initialized = true
 	auth.host = l.Addr().String()
 	auth.url = "http://" + auth.host
 	auth.project = "proj"
@@ -450,6 +451,7 @@ func newGerritServer(t *testing.T) *gerritServer {
 
 func (s *gerritServer) done() {
 	s.l.Close()
+	auth.initialized = false
 	auth.host = ""
 	auth.url = ""
 	auth.project = ""
