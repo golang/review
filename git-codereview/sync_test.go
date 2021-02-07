@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -236,6 +237,29 @@ func TestSyncBranch(t *testing.T) {
 	)
 	testPrintedStderr(t, "* Merge commit created.",
 		"Run 'git codereview mail' to send for review.")
+}
+
+func TestSyncBranchWorktree(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	gt.serverWork(t)
+	gt.serverWork(t)
+	trun(t, gt.server, "git", "checkout", "dev.branch")
+	gt.serverWorkUnrelated(t, "")
+	gt.serverWorkUnrelated(t, "")
+	gt.serverWorkUnrelated(t, "")
+	trun(t, gt.server, "git", "checkout", "main")
+
+	wt := filepath.Join(gt.tmpdir, "git-worktree")
+	trun(t, gt.client, "git", "worktree", "add", "-b", "dev.branch", wt, "origin/dev.branch")
+	if err := os.Chdir(wt); err != nil {
+		t.Fatal(err)
+	}
+
+	testMain(t, "sync-branch")
+	testHideRevHashes(t)
+	testPrintedStdout(t, "[dev.branch] all: merge main (REVHASH) into dev.branch")
 }
 
 func TestSyncBranchMergeBack(t *testing.T) {

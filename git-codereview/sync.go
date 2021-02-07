@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -104,7 +103,7 @@ type syncBranchStatus struct {
 }
 
 func syncBranchStatusFile() string {
-	return filepath.Join(repoRoot(), ".git/codereview-sync-branch-status")
+	return gitPath("codereview-sync-branch-status")
 }
 
 func readSyncBranchStatus() *syncBranchStatus {
