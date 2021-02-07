@@ -170,7 +170,7 @@ func run(command string, args ...string) {
 }
 
 func runErr(command string, args ...string) error {
-	return runDirErr("", command, args...)
+	return runDirErr(".", command, args...)
 }
 
 var runLogTrap []string
@@ -194,6 +194,9 @@ func runDirErr(dir, command string, args ...string) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = stdout()
 	cmd.Stderr = stderr()
+	if dir != "." {
+		cmd.Dir = dir
+	}
 	setEnglishLocale(cmd)
 	return cmd.Run()
 }
