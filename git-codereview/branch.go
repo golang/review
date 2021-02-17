@@ -273,7 +273,6 @@ Log:
 		c := &Commit{
 			Hash:        fields[i],
 			ShortHash:   fields[i+1],
-			Parent:      parents[0],
 			Parents:     parents,
 			Tree:        fields[i+3],
 			Message:     fields[i+4],
@@ -282,7 +281,9 @@ Log:
 			AuthorEmail: fields[i+7],
 			AuthorDate:  fields[i+8],
 		}
-
+		if len(c.Parents) > 0 {
+			c.Parent = c.Parents[0]
+		}
 		if len(c.Parents) > 1 {
 			// Found merge point.
 			// Merges break the invariant that the last shared commit (the branchpoint)
