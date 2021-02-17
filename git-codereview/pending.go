@@ -332,6 +332,9 @@ func formatCommit(w io.Writer, c *Commit, short bool) {
 		}
 		tags = append(tags, "merge="+strings.Join(h, ","))
 	}
+	if g.UnresolvedCommentCount > 0 {
+		tags = append(tags, fmt.Sprintf("%d unresolved comments", g.UnresolvedCommentCount))
+	}
 	if len(tags) > 0 {
 		fmt.Fprintf(w, " (%s)", strings.Join(tags, ", "))
 	}

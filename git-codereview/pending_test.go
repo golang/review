@@ -230,7 +230,7 @@ func TestPendingGerrit(t *testing.T) {
 
 	`)
 
-	testPendingReply(srv, "I123456789", CurrentBranch().Pending()[0].Hash, "MERGED")
+	testPendingReply(srv, "I123456789", CurrentBranch().Pending()[0].Hash, "MERGED", 0)
 
 	// Test local mode does not talk to any server.
 	// Make client 1 behind server.
@@ -320,8 +320,8 @@ func TestPendingGerritMultiChange(t *testing.T) {
 	srv := newGerritServer(t)
 	defer srv.done()
 
-	testPendingReply(srv, "I123456789", hash1, "MERGED")
-	testPendingReply(srv, "I2345", hash2, "NEW")
+	testPendingReply(srv, "I123456789", hash1, "MERGED", 0)
+	testPendingReply(srv, "I2345", hash2, "NEW", 99)
 
 	testPending(t, `
 		work REVHASH..REVHASH (current branch, all mailed)
@@ -333,7 +333,7 @@ func TestPendingGerritMultiChange(t *testing.T) {
 			Files staged:
 				file
 
-		+ REVHASH http://127.0.0.1:PORT/1234 (mailed)
+		+ REVHASH http://127.0.0.1:PORT/1234 (mailed, 99 unresolved comments)
 			v2
 
 			Change-Id: I2345
@@ -370,7 +370,7 @@ func TestPendingGerritMultiChange(t *testing.T) {
 				file
 			Files staged:
 				file
-		+ REVHASH v2 (CL 1234 -2 +1, mailed)
+		+ REVHASH v2 (CL 1234 -2 +1, mailed, 99 unresolved comments)
 		+ REVHASH msg (CL 1234 -2 +1, mailed, submitted)
 
 	`)
@@ -384,13 +384,13 @@ func TestPendingGerritMultiChange15(t *testing.T) {
 
 	gt.work(t)
 	hash1 := CurrentBranch().Pending()[0].Hash
-	testPendingReply(srv, "I123456789", hash1, "MERGED")
+	testPendingReply(srv, "I123456789", hash1, "MERGED", 0)
 
 	for i := 1; i < 15; i++ {
 		write(t, gt.client+"/file", fmt.Sprintf("v%d", i), 0644)
 		trun(t, gt.client, "git", "commit", "-a", "-m", fmt.Sprintf("v%d\n\nChange-Id: I%010d", i, i))
 		hash2 := CurrentBranch().Pending()[0].Hash
-		testPendingReply(srv, fmt.Sprintf("I%010d", i), hash2, "NEW")
+		testPendingReply(srv, fmt.Sprintf("I%010d", i), hash2, "NEW", 0)
 	}
 
 	testPendingArgs(t, []string{"-s"}, `
@@ -414,12 +414,13 @@ func TestPendingGerritMultiChange15(t *testing.T) {
 	`)
 }
 
-func testPendingReply(srv *gerritServer, id, rev, status string) {
+func testPendingReply(srv *gerritServer, id, rev, status string, unresolved int) {
 	srv.setJSON(id, `{
 		"id": "proj~main~`+id+`",
 		"project": "proj",
 		"current_revision": "`+rev+`",
 		"status": "`+status+`",
+		"unresolved_comment_count":`+fmt.Sprint(unresolved)+`,
 		"_number": 1234,
 		"owner": {"_id": 42},
 		"labels": {

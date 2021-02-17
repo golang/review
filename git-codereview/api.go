@@ -372,24 +372,26 @@ func readGerritChangesBatch(query string, n int, ch chan gerritChangeResult) {
 	ch <- gerritChangeResult{c, err}
 }
 
-// GerritChange is the JSON struct returned by a Gerrit CL query.
+// GerritChange is the JSON struct for a Gerrit ChangeInfo, returned by a Gerrit CL query.
 type GerritChange struct {
-	ID              string
-	Project         string
-	Branch          string
-	ChangeId        string `json:"change_id"`
-	Subject         string
-	Status          string
-	Created         string
-	Updated         string
-	Insertions      int
-	Deletions       int
-	Number          int `json:"_number"`
-	Owner           *GerritAccount
-	Labels          map[string]*GerritLabel
-	CurrentRevision string `json:"current_revision"`
-	Revisions       map[string]*GerritRevision
-	Messages        []*GerritMessage
+	ID                     string
+	Project                string
+	Branch                 string
+	ChangeId               string `json:"change_id"`
+	Subject                string
+	Status                 string
+	Created                string
+	Updated                string
+	Insertions             int
+	Deletions              int
+	Number                 int `json:"_number"`
+	Owner                  *GerritAccount
+	Labels                 map[string]*GerritLabel
+	CurrentRevision        string `json:"current_revision"`
+	Revisions              map[string]*GerritRevision
+	Messages               []*GerritMessage
+	TotalCommentCount      int `json:"total_comment_count"`
+	UnresolvedCommentCount int `json:"unresolved_comment_count"`
 }
 
 // LabelNames returns the label names for the change, in lexicographic order.
@@ -441,8 +443,53 @@ type GerritRevision struct {
 	Fetch  map[string]*GerritFetch
 }
 
-// GerritFetch is the JSON struct for a Gerrit FetchInfo
+// GerritFetch is the JSON struct for a Gerrit FetchInfo.
 type GerritFetch struct {
 	URL string
 	Ref string
+}
+
+// GerritComment is the JSON struct for a Gerrit CommentInfo.
+type GerritComment struct {
+	PatchSet        string `json:"patch_set"`
+	ID              string
+	Path            string
+	Side            string
+	Parent          string
+	Line            string
+	Range           *GerritCommentRange
+	InReplyTo       string
+	Message         string
+	Updated         string
+	Author          *GerritAccount
+	Tag             string
+	Unresolved      bool
+	ChangeMessageID string `json:"change_message_id"`
+	CommitID        string `json:"commit_id"` // SHA1 hex
+}
+
+// GerritCommentRange is the JSON struct for a Gerrit CommentRange.
+type GerritCommentRange struct {
+	StartLine      int `json:"start_line"`      // 1-based
+	StartCharacter int `json:"start_character"` // 0-based
+	EndLine        int `json:"end_line"`        // 1-based
+	EndCharacter   int `json:"end_character"`   // 0-based
+}
+
+// GerritContextLine is the JSON struct for a Gerrit ContextLine.
+type GerritContextLine struct {
+	LineNumber  int    `json:"line_number"` // 1-based
+	ContextLine string `json:"context_line"`
+}
+
+// GerritCommentInput is the JSON struct for a Gerrit CommentInput.
+type GerritCommentInput struct {
+	ID         string              `json:"id,omitempty"`   // ID of a draft comment to update
+	Path       string              `json:"path,omitempty"` // file to attach comment to
+	Side       string              `json:"side,omitempty"` // REVISION (default) or PARENT
+	Line       int                 `json:"line,omitempty"` // 0 to use range (or else file comment)
+	Range      *GerritCommentRange `json:"range,omitempty"`
+	InReplyTo  string              `json:"in_reply_to,omitempty"` // ID of comment being replied to
+	Message    string              `json:"message,omitempty"`
+	Unresolved *bool               `json:"unresolved,omitempty"` // defaults to parent setting or else false
 }
