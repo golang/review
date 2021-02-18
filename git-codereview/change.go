@@ -6,6 +6,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -29,7 +31,9 @@ func cmdChange(args []string) {
 	if _, err := cmdOutputErr("git", "rev-parse", "--abbrev-ref", "MERGE_HEAD"); err == nil {
 		diePendingMerge("change")
 	}
-	if _, err := cmdOutputErr("git", "rev-parse", "--abbrev-ref", "REBASE_HEAD"); err == nil {
+	// Note: A rebase with a conflict + rebase --continue sometimes leaves behind REBASE_HEAD.
+	// So check for the rebase-merge directory instead, which it does a better job cleaning up.
+	if _, err := os.Stat(filepath.Join(gitPathDir(), "rebase-merge")); err == nil {
 		dief("cannot change: found pending rebase or sync")
 	}
 
