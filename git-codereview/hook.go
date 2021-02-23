@@ -169,7 +169,22 @@ func hookCommitMsg(args []string) {
 	if err != nil {
 		dief("%v", err)
 	}
-	data := append([]byte{}, oldData...)
+
+	data := fixCommitMessage(oldData)
+
+	// Write back.
+	if !bytes.Equal(data, oldData) {
+		if err := ioutil.WriteFile(file, data, 0666); err != nil {
+			dief("%v", err)
+		}
+	}
+}
+
+// fixCommitMessage fixes various commit message issues,
+// including adding a Change-Id line and rewriting #12345
+// into repo#12345 as directed by codereview.cfg.
+func fixCommitMessage(msg []byte) []byte {
+	data := append([]byte{}, msg...)
 	data = stripComments(data)
 
 	// Empty message not allowed.
@@ -226,12 +241,7 @@ func hookCommitMsg(args []string) {
 		}
 	}
 
-	// Write back.
-	if !bytes.Equal(data, oldData) {
-		if err := ioutil.WriteFile(file, data, 0666); err != nil {
-			dief("%v", err)
-		}
-	}
+	return data
 }
 
 // randomBytes returns 20 random bytes suitable for use in a Change-Id line.

@@ -32,6 +32,7 @@ func TestReword(t *testing.T) {
 	testPrintedStderr(t, "cannot rebase with uncommitted work")
 
 	os.Setenv("GIT_EDITOR", "sed -i.bak -e s/msg/MESSAGE/")
+	defer os.Unsetenv("GIT_EDITOR")
 
 	testMain(t, "reword", "MSG3", "MSG4")
 	testNoStdout(t)
@@ -63,6 +64,22 @@ func TestReword(t *testing.T) {
 
 	out := trun(t, gt.client, "git", "log", "-n1")
 	if !strings.Contains(out, fakeName) {
-		t.Fatalf("reword lost author name (%s): %v\n", fakeName, out)
+		t.Fatalf("reword lost author name (%s):\n%s", fakeName, out)
+	}
+
+	write(t, gt.client+"/codereview.cfg", "issuerepo: my/issues\ngerrit: on\n", 0644)
+
+	os.Setenv("GIT_EDITOR", "sed -i.bak -e 's/Change-Id:.*/Fixes #12345/'")
+	testMain(t, "reword", "HEAD") // editing single commit message
+	out = trun(t, gt.client, "git", "log", "-n1", "HEAD")
+	if !strings.Contains(out, "Fixes my/issues#12345") || !strings.Contains(out, "Change-Id:") {
+		t.Fatalf("reword single commit did not run commit message hook:\n%s", out)
+	}
+
+	trun(t, gt.client, "git", "reset", "--hard", "MSG4")
+	testMain(t, "reword") // editing all commit messages
+	out = trun(t, gt.client, "git", "log", "-n1", "HEAD")
+	if !strings.Contains(out, "Fixes my/issues#12345") || !strings.Contains(out, "Change-Id:") {
+		t.Fatalf("reword multiple commits did not run commit message hook:\n%s", out)
 	}
 }

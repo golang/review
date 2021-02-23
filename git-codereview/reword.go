@@ -104,7 +104,7 @@ func cmdReword(args []string) {
 		if edited == "" {
 			dief("edited message is empty")
 		}
-		newMsg[c] = edited
+		newMsg[c] = string(fixCommitMessage([]byte(edited)))
 		fmt.Fprintf(&buf, "# %s\n\n%s\n\n", c.Subject, edited)
 		saveBuf()
 	} else {
@@ -166,7 +166,7 @@ func cmdReword(args []string) {
 			if c == nil {
 				dief("cannot find commit for header: %s\n%s", strings.TrimSpace(hdr), note)
 			}
-			newMsg[c] = body
+			newMsg[c] = string(fixCommitMessage([]byte(body)))
 		}
 	}
 
