@@ -240,7 +240,7 @@ func cmdSyncBranch(args []string) {
 		run("git", "reset", "--hard", "origin/"+parent)
 		_, err = cmdOutputErr("git", "merge", "--no-ff", "origin/"+branch)
 	} else {
-		_, err = cmdOutputErr("git", "merge", "origin/"+parent)
+		_, err = cmdOutputErr("git", "merge", "--no-ff", "origin/"+parent)
 	}
 
 	// Resolve codereview.cfg the right way - never take it from the merge.
