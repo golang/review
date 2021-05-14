@@ -125,7 +125,8 @@ func writeSyncBranchStatus(status *syncBranchStatus) {
 }
 
 func cmdSyncBranch(args []string) {
-	os.Setenv("GIT_EDITOR", ":") // do not bring up editor during merge, commit
+	os.Setenv("GIT_EDITOR", ":")       // do not bring up editor during merge, commit
+	os.Setenv("GIT_GOFMT_HOOK", "off") // do not require gofmt during merge
 
 	var cont, mergeBackToParent bool
 	flags.BoolVar(&cont, "continue", false, "continue after merge conflicts")
