@@ -16,12 +16,14 @@ import (
 var commitMsg string
 var changeAuto bool
 var changeQuick bool
+var changeSignoff bool
 
 func cmdChange(args []string) {
 	// NOTE: New flags should be added to the usage message below as well as doc.go.
 	flags.StringVar(&commitMsg, "m", "", "specify a commit message")
 	flags.BoolVar(&changeAuto, "a", false, "add changes to any tracked files")
 	flags.BoolVar(&changeQuick, "q", false, "do not edit pending commit msg")
+	flags.BoolVar(&changeSignoff, "s", false, "add a Signed-off-by trailer at the end of the commit message")
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
 		fmt.Fprintf(stderr(), "Usage: %s change %s [-a] [-m msg] [-q] [branch]\n", progName, globalFlags)
@@ -99,6 +101,9 @@ func commitChanges(amend bool) {
 		}
 		if changeAuto {
 			args = append(args, "-a")
+		}
+		if changeSignoff {
+			args = append(args, "-s")
 		}
 		run("git", args...)
 	}

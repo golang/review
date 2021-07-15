@@ -185,3 +185,14 @@ func TestChangeWithMessage(t *testing.T) {
 	testMain(t, "change", "-m", "foo: some commit message")
 	testRan(t, "git commit -q --allow-empty -m foo: some commit message")
 }
+
+func TestChangeWithSignoff(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	testMain(t, "change", "new_branch")
+	// There are no staged changes, hence an empty commit will be created.
+	// Hence we also need a commit message.
+	testMain(t, "change", "-s", "-m", "foo: bar")
+	testRan(t, "git commit -q --allow-empty -m foo: bar -s")
+}

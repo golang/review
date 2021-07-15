@@ -157,6 +157,9 @@ option is only useful when creating commits (e.g. if there are unstaged
 changes). If a commit already exists, it is overwritten. If -q is also
 present, -q will be ignored.
 
+The -s option adds a Signed-off-by trailer at the end of the commit message;
+it is equivalent to the 'git commit' -s option.
+
 As a special case, if branchname is a decimal CL number, such as 987, the change
 command downloads the latest patch set of that CL from the server and switches to it.
 A specific patch set P can be requested by adding /P: 987.2 for patch set 2 of CL 987.
