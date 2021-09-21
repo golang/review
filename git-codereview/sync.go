@@ -56,10 +56,16 @@ func cmdSync(args []string) {
 	// We want to pull in the remote changes from the upstream branch
 	// and rebase the current pending commit (if any) on top of them.
 	// If there is no pending commit, the pull will do a fast-forward merge.
+	//
+	// The -c advice.skippedCherryPicks=false disables this message:
+	//
+	//	hint: use --reapply-cherry-picks to include skipped commits
+	//	hint: Disable this message with "git config advice.skippedCherryPicks false"
+	//
 	if *verbose > 1 {
-		run("git", "pull", "-q", "-r", "-v", "origin", strings.TrimPrefix(b.OriginBranch(), "origin/"))
+		run("git", "-c", "advice.skippedCherryPicks=false", "pull", "-q", "-r", "-v", "origin", strings.TrimPrefix(b.OriginBranch(), "origin/"))
 	} else {
-		run("git", "pull", "-q", "-r", "origin", strings.TrimPrefix(b.OriginBranch(), "origin/"))
+		run("git", "-c", "advice.skippedCherryPicks=false", "pull", "-q", "-r", "origin", strings.TrimPrefix(b.OriginBranch(), "origin/"))
 	}
 
 	b = CurrentBranch() // discard any cached information

@@ -118,15 +118,15 @@ func TestSyncRebase(t *testing.T) {
 	// also exercising -v parsing.
 	testMain(t, "sync", "-v=true")
 	testNoStdout(t)
-	testPrintedStderr(t, "git pull -q -r origin main")
+	testPrintedStderr(t, "git -c advice.skippedCherryPicks=false pull -q -r origin main")
 
 	testMain(t, "sync", "-v=1")
 	testNoStdout(t)
-	testPrintedStderr(t, "git pull -q -r origin main")
+	testPrintedStderr(t, "git -c advice.skippedCherryPicks=false pull -q -r origin main")
 
 	testMain(t, "sync", "-v")
 	testNoStdout(t)
-	testPrintedStderr(t, "git pull -q -r origin main")
+	testPrintedStderr(t, "git -c advice.skippedCherryPicks=false pull -q -r origin main")
 
 	testMain(t, "sync", "-v=false")
 	testNoStdout(t)
