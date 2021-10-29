@@ -402,6 +402,10 @@ func LocalBranches() []*Branch {
 			// (git rev-parse --abbrev-ref HEAD returns 'HEAD').
 			s = current.Name
 		}
+		// + marks a branch checked out in a worktree. Worktrees in detached
+		// HEAD mode don't appear in the "git branch" output, so this is always
+		// a normal name.
+		s = strings.TrimPrefix(s, "+ ")
 		branches = append(branches, &Branch{Name: s})
 	}
 	return branches

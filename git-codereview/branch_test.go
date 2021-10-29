@@ -5,6 +5,7 @@
 package main
 
 import (
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -83,6 +84,11 @@ func TestLocalBranches(t *testing.T) {
 	t.Logf("detached head mode")
 	trun(t, gt.client, "git", "checkout", "HEAD^0")
 	checkLocalBranches(t, "HEAD", "main", "newbranch")
+
+	t.Logf("worktree")
+	wt := filepath.Join(gt.tmpdir, "git-worktree")
+	trun(t, gt.client, "git", "worktree", "add", "-b", "wtbranch", wt)
+	checkLocalBranches(t, "HEAD", "main", "newbranch", "wtbranch")
 }
 
 func checkLocalBranches(t *testing.T, want ...string) {
