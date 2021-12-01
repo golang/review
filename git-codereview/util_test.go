@@ -324,6 +324,8 @@ func testMain(t *testing.T, args ...string) {
 	mainCanDie = false // reset for next invocation
 
 	defer func() {
+		t.Helper()
+
 		runLog = runLogTrap
 		testStdout = stdoutTrap
 		testStderr = stderrTrap
@@ -343,6 +345,13 @@ func testMain(t *testing.T, args ...string) {
 				msg = fmt.Sprintf("panic: %v\n%s", err, debug.Stack())
 			}
 			t.Fatalf("%s\nstdout:\n%sstderr:\n%s", msg, testStdout, testStderr)
+		}
+
+		if testStdout.Len() > 0 {
+			t.Logf("stdout:\n%s", testStdout)
+		}
+		if testStderr.Len() > 0 {
+			t.Logf("stderr:\n%s", testStderr)
 		}
 	}()
 
