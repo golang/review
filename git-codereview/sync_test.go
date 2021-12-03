@@ -315,7 +315,7 @@ func TestSyncBranchMergeBack(t *testing.T) {
 	testNoStdout(t)
 	testPrintedStderr(t,
 		"git push -q origin HEAD:refs/for/main",
-		"git tag -f dev.branch.mailed",
+		"git tag --no-sign -f dev.branch.mailed",
 	)
 }
 
@@ -393,6 +393,6 @@ func TestSyncBranchConflict(t *testing.T) {
 	testNoStdout(t)
 	testPrintedStderr(t,
 		"git push -q origin HEAD:refs/for/dev.branch",
-		"git tag -f dev.branch.mailed",
+		"git tag --no-sign -f dev.branch.mailed",
 	)
 }

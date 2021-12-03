@@ -29,7 +29,7 @@ func TestMail(t *testing.T) {
 	testMain(t, "mail")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/main",
-		"git tag -f work.mailed "+h)
+		"git tag --no-sign -f work.mailed "+h)
 }
 
 func TestDoNotMail(t *testing.T) {
@@ -160,14 +160,14 @@ func TestMailMultiple(t *testing.T) {
 	testMain(t, "mail", "HEAD^")
 	testRan(t,
 		"git push -q origin "+h+":refs/for/main",
-		"git tag -f work.mailed "+h)
+		"git tag --no-sign -f work.mailed "+h)
 
 	// Mail HEAD.
 	h = CurrentBranch().Pending()[0].ShortHash
 	testMain(t, "mail", "HEAD")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/main",
-		"git tag -f work.mailed "+h)
+		"git tag --no-sign -f work.mailed "+h)
 }
 
 var reviewerLog = []string{
@@ -212,17 +212,17 @@ func TestMailShort(t *testing.T) {
 	testMain(t, "mail")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/main",
-		"git tag -f work.mailed "+h)
+		"git tag --no-sign -f work.mailed "+h)
 
 	testMain(t, "mail", "-r", "r1")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/main%r=r1@golang.org",
-		"git tag -f work.mailed "+h)
+		"git tag --no-sign -f work.mailed "+h)
 
 	testMain(t, "mail", "-r", "other,anon", "-cc", "r1,full@email.com")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/main%r=other@golang.org,r=anon@golang.org,cc=r1@golang.org,cc=full@email.com",
-		"git tag -f work.mailed "+h)
+		"git tag --no-sign -f work.mailed "+h)
 
 	testMainDied(t, "mail", "-r", "other", "-r", "anon,r1,missing")
 	testPrintedStderr(t, "unknown reviewer: missing")
@@ -238,7 +238,7 @@ func TestWIP(t *testing.T) {
 	testMain(t, "mail", "-wip")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/main%wip",
-		"git tag -f work.mailed "+h)
+		"git tag --no-sign -f work.mailed "+h)
 }
 
 func TestMailTopic(t *testing.T) {
@@ -264,7 +264,7 @@ func TestMailTopic(t *testing.T) {
 	testMain(t, "mail", "-topic", "test-topic")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/main%topic=test-topic",
-		"git tag -f work.mailed "+h)
+		"git tag --no-sign -f work.mailed "+h)
 }
 
 func TestMailHashtag(t *testing.T) {
@@ -287,11 +287,11 @@ func TestMailHashtag(t *testing.T) {
 	testMain(t, "mail", "-hashtag", "test1,test2")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/main%hashtag=test1,hashtag=test2",
-		"git tag -f work.mailed "+h)
+		"git tag --no-sign -f work.mailed "+h)
 	testMain(t, "mail", "-hashtag", "")
 	testRan(t,
 		"git push -q origin HEAD:refs/for/main",
-		"git tag -f work.mailed "+h)
+		"git tag --no-sign -f work.mailed "+h)
 
 	testMainDied(t, "mail", "-hashtag", "test1,,test3")
 	testPrintedStderr(t, "hashtag may not contain empty tags")
