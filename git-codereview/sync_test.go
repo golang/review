@@ -55,6 +55,9 @@ func TestSyncRebase(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
+	// Suppress --reapply-cherry-picks hint.
+	trun(t, gt.client, "git", "config", "advice.skippedCherryPicks", "false")
+
 	// client 3 ahead
 	gt.work(t)
 	gt.work(t)
