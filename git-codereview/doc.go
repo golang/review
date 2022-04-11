@@ -53,7 +53,7 @@ aliases in their .gitconfig file:
 		sync = codereview sync
 		sync-branch = codereview sync-branch
 
-Single-Commit Work Branches
+# Single-Commit Work Branches
 
 For simple, unrelated changes, the typical usage of the git-codereview tool
 is to place each pending change in its own Git branch.
@@ -69,7 +69,7 @@ Otherwise, when there is already a pending change,
 The “git codereview mail” and “git codereview submit” commands
 implicitly operate on the lone pending change.
 
-Multiple-Commit Work Branches
+# Multiple-Commit Work Branches
 
 Of course, it is not always feasible to put each pending change in a separate branch.
 A sequence of changes that build on one another is more easily
@@ -98,7 +98,7 @@ the implied “git rebase” may conflict with the remaining pending commits.
 Instead it is necessary to run “git codereview sync” explicitly
 (when ready) after “git codereview submit”.
 
-Reusing Work Branches
+# Reusing Work Branches
 
 Although one common practice is to create a new branch for each pending change,
 running “git codereview submit” (and possibly “git codereview sync”)
@@ -107,7 +107,7 @@ Some developers find it helpful to create a single work branch
 (“git change work”) and then do all work in that branch,
 possibly in the multiple-commit mode, never changing between branches.
 
-Commands
+# Commands
 
 All commands accept these global flags:
 
@@ -118,7 +118,7 @@ trigger more verbosity in some commands, including sync.
 
 These are omitted from the per-command descriptions below.
 
-Branchpoint
+# Branchpoint
 
 The branchpoint command prints the commit hash of the most recent commit
 on the current branch that is shared with the Gerrit server.
@@ -130,7 +130,7 @@ The command is intended mainly for use in scripts. For example,
 “git diff $(git codereview branchpoint)” or
 “git log $(git codereview branchpoint)..HEAD”.
 
-Change
+# Change
 
 The change command creates and moves between Git branches and maintains the
 pending changes on work branches.
@@ -167,7 +167,7 @@ If the origin server is GitHub instead of Gerrit, then the number is
 treated a GitHub pull request number, and the change command downloads the latest
 version of that pull request. In this case, the /P suffix is disallowed.
 
-Gofmt
+# Gofmt
 
 The gofmt command applies the gofmt program to all files modified in the
 current work branch, both in the staging area (index) and the working tree
@@ -180,13 +180,13 @@ not reformat them. Otherwise, the gofmt command reformats modified files in
 place. That is, files in the staging area are reformatted in the staging area,
 and files in the working tree are reformatted in the working tree.
 
-Help
+# Help
 
 The help command displays basic usage instructions.
 
 	git codereview help
 
-Hooks
+# Hooks
 
 The hooks command installs the Git hooks to enforce code review conventions.
 
@@ -205,7 +205,7 @@ If it is not installing hooks, use “git codereview hooks -v” for details.
 This hook installation is also done at startup by all other git codereview
 commands, except “git codereview help”.
 
-Hook-Invoke
+# Hook-Invoke
 
 The hook-invoke command is an internal command that invokes the named Git hook.
 
@@ -213,7 +213,7 @@ The hook-invoke command is an internal command that invokes the named Git hook.
 
 It is run by the shell scripts installed by the “git codereview hooks” command.
 
-Mail
+# Mail
 
 The mail command starts the code review process for the pending change.
 
@@ -266,7 +266,7 @@ The mail command updates the tag <branchname>.mailed to refer to the
 commit that was most recently mailed, so running “git diff <branchname>.mailed”
 shows diffs between what is on the Gerrit server and the current directory.
 
-Pending
+# Pending
 
 The pending command prints to standard output the status of all pending changes
 and staged, unstaged, and untracked files in the local repository.
@@ -284,7 +284,7 @@ The -s flag causes the command to print abbreviated (short) output.
 Useful aliases include “git p” for “git pending” and “git pl” for “git pending -l”
 (notably faster but without Gerrit information).
 
-Rebase-work
+# Rebase-work
 
 The rebase-work command runs git rebase in interactive mode over pending changes.
 
@@ -298,7 +298,7 @@ new commits from the origin branch during the rebase;
 In multiple-commit workflows, rebase-work is used so often that it can be helpful
 to alias it to “git rw”.
 
-Reword
+# Reword
 
 The reword command edits pending commit messages.
 
@@ -320,7 +320,7 @@ Reword is most useful for editing commit messages on a multiple-commit work
 branch, but it can also be useful in single-commit work branches to allow
 editing a commit message without committing staged changes at the same time.
 
-Submit
+# Submit
 
 The submit command pushes the pending change to the Gerrit server and tells
 Gerrit to submit it to the upstream branch.
@@ -347,7 +347,7 @@ If not, it will prompt the user to run “git codereview sync” manually.
 
 After a successful sync, the branch can be used to prepare a new change.
 
-Sync
+# Sync
 
 The sync command updates the local repository.
 
@@ -356,7 +356,7 @@ The sync command updates the local repository.
 It fetches commits from the remote repository and merges them from the
 upstream branch to the current branch, rebasing any pending changes.
 
-Sync-branch
+# Sync-branch
 
 The sync-branch command merges changes from the parent branch into
 the current branch.
@@ -388,7 +388,7 @@ After running this command, the local checkout of the dev branch will
 be configured to mail changes to the parent branch instead of the
 dev branch.
 
-Configuration
+# Configuration
 
 If a file named codereview.cfg is present in the repository root,
 git-codereview will use it for configuration. It should contain lines
