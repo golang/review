@@ -218,8 +218,8 @@ It is run by the shell scripts installed by the “git codereview hooks” comma
 The mail command starts the code review process for the pending change.
 
 	git codereview mail [-r email,...] [-cc email,...]
-		[-diff] [-f] [-nokeycheck] [-hashtag tag,...] [-nokeycheck]
-		[-topic topic] [-trust] [-trybot] [-wip]
+		[-diff] [-f] [-hashtag tag,...] [-nokeycheck]
+		[-topic topic] [-trybot] [-wip]
 		[revision]
 
 It pushes the pending change commit in the current branch to the Gerrit code
@@ -253,9 +253,6 @@ not been committed. By default, mail fails in that case.
 The -nokeycheck flag disables the Gerrit server check for committed files
 containing data that looks like public keys. (The most common time -nokeycheck
 is needed is when checking in test cases for cryptography libraries.)
-
-The -trust flag sets a Trust+1 vote on any uploaded changes.
-The Go project uses this vote to identify trusted commit authors.
 
 The -trybot flag sets a Run-TryBot+1 vote on any uploaded changes.
 The Go project uses this vote to start running integration tests on the CL.

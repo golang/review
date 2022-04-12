@@ -24,7 +24,6 @@ func cmdMail(args []string) {
 		hashtagList = new(stringList) // installed below
 		noKeyCheck  = flags.Bool("nokeycheck", false, "set 'git push -o nokeycheck', to prevent Gerrit from checking for private keys")
 		topic       = flags.String("topic", "", "set Gerrit topic")
-		trust       = flags.Bool("trust", false, "add a Trust+1 vote to the CL")
 		trybot      = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
 		wip         = flags.Bool("wip", false, "set the status of a change to Work-in-Progress")
 		noverify    = flags.Bool("no-verify", false, "disable presubmits")
@@ -37,7 +36,7 @@ func cmdMail(args []string) {
 		fmt.Fprintf(stderr(),
 			"Usage: %s mail %s [-r reviewer,...] [-cc mail,...]\n"+
 				"\t[-f] [-diff] [-hashtag tag,...] [-nokeycheck] [-topic topic]\n"+
-				"\t[-trust] [-trybot] [-wip] [commit]\n", progName, globalFlags)
+				"\t[-trybot] [-wip] [commit]\n", progName, globalFlags)
 		exit(2)
 	}
 	flags.Parse(args)
@@ -138,10 +137,6 @@ func cmdMail(args []string) {
 			dief("topic may not contain a comma")
 		}
 		refSpec += start + "topic=" + *topic
-		start = ","
-	}
-	if *trust {
-		refSpec += start + "l=Trust"
 		start = ","
 	}
 	if *trybot {
