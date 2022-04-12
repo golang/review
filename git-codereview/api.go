@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
@@ -230,7 +231,15 @@ func (e *gerritError) Error() string {
 // gerritAPI expects to get a 200 response with a body consisting of an
 // anti-xss line (]})' or some such) followed by JSON.
 // If requestBody != nil, gerritAPI sets the Content-Type to application/json.
-func gerritAPI(path string, requestBody []byte, target interface{}) error {
+func gerritAPI(path string, requestBody []byte, target interface{}) (err error) {
+	defer func() {
+		if err != nil {
+			// os.Stderr, not stderr(), because the latter is not safe for
+			// use from multiple goroutines.
+			fmt.Fprintf(os.Stderr, "git-codereview: fetch %s: %v\n", path, err)
+		}
+	}()
+
 	// Strictly speaking, we might be able to use unauthenticated
 	// access, by removing the /a/ from the URL, but that assumes
 	// that all the information we care about is publicly visible.
