@@ -232,11 +232,15 @@ func (e *gerritError) Error() string {
 // anti-xss line (]})' or some such) followed by JSON.
 // If requestBody != nil, gerritAPI sets the Content-Type to application/json.
 func gerritAPI(path string, requestBody []byte, target interface{}) (err error) {
+	var respBodyBytes []byte
 	defer func() {
 		if err != nil {
 			// os.Stderr, not stderr(), because the latter is not safe for
 			// use from multiple goroutines.
 			fmt.Fprintf(os.Stderr, "git-codereview: fetch %s: %v\n", path, err)
+			if len(respBodyBytes) > 0 {
+				fmt.Fprintf(os.Stderr, "Gerrit response:\n%s\n", respBodyBytes)
+			}
 		}
 	}()
 
@@ -280,6 +284,8 @@ func gerritAPI(path string, requestBody []byte, target interface{}) (err error) 
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
+
+	respBodyBytes = body
 
 	if err != nil {
 		return fmt.Errorf("reading response body: %v", err)
