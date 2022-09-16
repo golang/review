@@ -27,6 +27,7 @@ func cmdMail(args []string) {
 		trybot      = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
 		wip         = flags.Bool("wip", false, "set the status of a change to Work-in-Progress")
 		noverify    = flags.Bool("no-verify", false, "disable presubmits")
+		autoSubmit  = flags.Bool("autosubmit", false, "set autosubmit on the uploaded CLs")
 	)
 	flags.Var(rList, "r", "comma-separated list of reviewers")
 	flags.Var(ccList, "cc", "comma-separated list of people to CC:")
@@ -35,8 +36,9 @@ func cmdMail(args []string) {
 	flags.Usage = func() {
 		fmt.Fprintf(stderr(),
 			"Usage: %s mail %s [-r reviewer,...] [-cc mail,...]\n"+
-				"\t[-f] [-diff] [-hashtag tag,...] [-nokeycheck] [-topic topic]\n"+
-				"\t[-trybot] [-wip] [commit]\n", progName, globalFlags)
+				"\t[-autosubmit] [-f] [-diff] [-hashtag tag,...]\n"+
+				"\t[-nokeycheck] [-topic topic] [-trybot] [-wip]\n"+
+				"\t[commit]\n", progName, globalFlags)
 		exit(2)
 	}
 	flags.Parse(args)
@@ -146,6 +148,9 @@ func cmdMail(args []string) {
 	if *wip {
 		refSpec += start + "wip"
 		start = ","
+	}
+	if *autoSubmit {
+		refSpec += start + "l=Auto-Submit"
 	}
 	args = []string{"push", "-q"}
 	if *noKeyCheck {
