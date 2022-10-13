@@ -92,6 +92,8 @@ func loadGerritOriginInternal(origin, remoteOrigin string) error {
 		if !strings.HasPrefix(origin, "https://") {
 			return fmt.Errorf("git origin must be an https:// URL: %s", origin)
 		}
+		// Remove trailing slash from the origin, if any.
+		origin = strings.TrimRight(origin, "/")
 		// https:// prefix and then one slash between host and top-level name
 		if strings.Count(origin, "/") != 3 {
 			return fmt.Errorf("git origin is malformed: %s", origin)
