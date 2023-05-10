@@ -254,11 +254,17 @@ func mailLookup(short string) string {
 
 	short += "@"
 	for _, r := range reviewers {
-		if strings.HasPrefix(r.addr, short) {
+		if strings.HasPrefix(r.addr, short) && !shortOptOut[r.addr] {
 			return r.addr
 		}
 	}
 	return ""
+}
+
+// shortOptOut lists email addresses whose owners have opted out
+// from consideration for purposes of expanding short user names.
+var shortOptOut = map[string]bool{
+	"dmitshur@google.com": true, // My @golang.org is primary; @google.com is used for +1 only.
 }
 
 // loadReviewers reads the reviewer list from the current git repo

@@ -181,6 +181,10 @@ var reviewerLog = []string{
 	"Reviewer 1 <r1@golang.org>",
 	"Other <other@golang.org>",
 	"<anon@golang.org>",
+	"Reviewer 2 <r2@new.example>",
+	"Reviewer 2 <r2@old.example>",
+	"Reviewer 2 <r2@old.example>",
+	"Reviewer 2 <r2@old.example>",
 }
 
 func TestMailShort(t *testing.T) {
@@ -226,6 +230,15 @@ func TestMailShort(t *testing.T) {
 
 	testMainDied(t, "mail", "-r", "other", "-r", "anon,r1,missing")
 	testPrintedStderr(t, "unknown reviewer: missing")
+
+	// Test shortOptOut.
+	orig := shortOptOut
+	defer func() { shortOptOut = orig }()
+	shortOptOut = map[string]bool{"r2@old.example": true}
+	testMain(t, "mail", "-r", "r2")
+	testRan(t,
+		"git push -q origin HEAD:refs/for/main%r=r2@new.example",
+		"git tag --no-sign -f work.mailed "+h)
 }
 
 func TestWIP(t *testing.T) {
