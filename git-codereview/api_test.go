@@ -36,12 +36,12 @@ var authTests = []struct {
 		password:   "pw",
 	},
 	{
-		cookiefile: "go.googlesource.com	TRUE	/	TRUE	2147483647	o2	git-u2=pw\n",
+		cookiefile:  "go.googlesource.com	TRUE	/	TRUE	2147483647	o2	git-u2=pw\n",
 		cookieName:  "o2",
 		cookieValue: "git-u2=pw",
 	},
 	{
-		cookiefile: ".googlesource.com	TRUE	/	TRUE	2147483647	o3	git-u3=pw\n",
+		cookiefile:  ".googlesource.com	TRUE	/	TRUE	2147483647	o3	git-u3=pw\n",
 		cookieName:  "o3",
 		cookieValue: "git-u3=pw",
 	},
@@ -64,8 +64,8 @@ var authTests = []struct {
 		password:   "pw",
 	},
 	{
-		netrc: "BOGUS",
-		cookiefile: "go.googlesource.com	TRUE	/	TRUE	2147483647	o7	git-u7=pw\n",
+		netrc:       "BOGUS",
+		cookiefile:  "go.googlesource.com	TRUE	/	TRUE	2147483647	o7	git-u7=pw\n",
 		cookieName:  "o7",
 		cookieValue: "git-u7=pw",
 	},
@@ -144,6 +144,22 @@ func TestLoadGerritOrigin(t *testing.T) {
 			host:      "go.googlesource.com",
 			url:       "https://go-review.googlesource.com",
 			project:   "crypto",
+		},
+		{
+			// Clone with sso://go/ (Google-internal but common with Go developers)
+			origin:    "",
+			originUrl: "sso://go/tools",
+			host:      "go.googlesource.com",
+			url:       "https://go-review.googlesource.com",
+			project:   "tools",
+		},
+		{
+			// Clone with rpc://go/ (Google-internal but common with Go developers)
+			origin:    "",
+			originUrl: "rpc://go/tools",
+			host:      "go.googlesource.com",
+			url:       "https://go-review.googlesource.com",
+			project:   "tools",
 		},
 		{
 			// Gerrit origin is set.

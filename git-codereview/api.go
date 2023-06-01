@@ -88,6 +88,15 @@ func loadGerritOriginInternal(origin, remoteOrigin string) error {
 		return fmt.Errorf("git origin must be a Gerrit host, not GitHub: %s", origin)
 	}
 
+	// Google employees are required to use sso://go/ or rpc://go/
+	// instead of https://go.googlesource.com/ for git operations.
+	// Normally that happens with a "insteadOf" in $HOME/.gitconfig,
+	// but in case people do a git clone from these directly, convert to
+	// their real meaning.
+	if strings.HasPrefix(origin, "sso://go/") || strings.HasPrefix(origin, "rpc://go/") {
+		origin = "https://go.googlesource.com/" + origin[len("sso://go/"):]
+	}
+
 	if googlesourceIndex := strings.Index(origin, ".googlesource.com"); googlesourceIndex >= 0 {
 		if !strings.HasPrefix(origin, "https://") {
 			return fmt.Errorf("git origin must be an https:// URL: %s", origin)
@@ -157,7 +166,6 @@ func loadAuth() {
 	if auth.user != "" || auth.cookieName != "" {
 		return
 	}
-
 	loadGerritOrigin()
 
 	// First look in Git's http.cookiefile, which is where Gerrit
