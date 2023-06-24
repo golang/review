@@ -37,7 +37,7 @@ func TestReword(t *testing.T) {
 	testMain(t, "reword", "MSG3", "MSG4")
 	testNoStdout(t)
 	testPrintedStderr(t, "editing messages (new texts logged in",
-		".git/REWORD_MSGS in case of failure)")
+		".git"+string(os.PathSeparator)+"REWORD_MSGS in case of failure)")
 
 	testMain(t, "pending", "-c", "-l", "-s")
 	testNoStderr(t)
@@ -51,7 +51,7 @@ func TestReword(t *testing.T) {
 	testMain(t, "reword") // reword all
 	testNoStdout(t)
 	testPrintedStderr(t, "editing messages (new texts logged in",
-		".git/REWORD_MSGS in case of failure)")
+		".git"+string(os.PathSeparator)+"REWORD_MSGS in case of failure)")
 
 	testMain(t, "pending", "-c", "-l", "-s")
 	testNoStderr(t)
