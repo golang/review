@@ -80,6 +80,7 @@ func TestMessageRE(t *testing.T) {
 		{"math/rand: make randomer", true},
 		{"math/rand, crypto/rand: fix random sources", true},
 		{"cmd/internal/rsc.io/x86: update from external repo", true},
+		{"_content/blog: fix typos", true},
 	} {
 		got := messageRE.MatchString(c.in)
 		if got != c.want {

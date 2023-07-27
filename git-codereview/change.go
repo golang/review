@@ -256,7 +256,7 @@ func parseCL(arg string) (cl, patchset string, ok bool) {
 	return m[1], m[2], true
 }
 
-var messageRE = regexp.MustCompile(`^(\[[a-zA-Z0-9.-]+\] )?[a-zA-Z0-9-/,. ]+: `)
+var messageRE = regexp.MustCompile(`^(\[[a-zA-Z0-9.-]+\] )?[a-zA-Z0-9-_/,. ]+: `)
 
 func commitMessageOK() bool {
 	body := cmdOutput("git", "log", "--format=format:%B", "-n", "1")
