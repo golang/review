@@ -450,8 +450,8 @@ func (b *Branch) GerritChange(c *Commit, extra ...string) (*GerritChange, error)
 	return readGerritChange(id)
 }
 
-// GerritChange returns the change metadata from the Gerrit server
-// for the given changes, which each be be the result of fullChangeID(b, c) for some c.
+// GerritChanges returns the change metadata from the Gerrit server
+// for the given changes, which each be the result of fullChangeID(b, c) for some c.
 // The extra strings are passed to the Gerrit API request as o= parameters,
 // to enable additional information. Typical values include "LABELS" and "CURRENT_REVISION".
 // See https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html for details.
