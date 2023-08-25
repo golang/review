@@ -50,9 +50,9 @@ func cmdMail(args []string) {
 
 	var trybotVotes []string
 	switch os.Getenv("GIT_CODEREVIEW_TRYBOT") {
-	case "luci":
+	case "", "luci":
 		trybotVotes = []string{"Commit-Queue+1"}
-	case "", "farmer":
+	case "farmer":
 		trybotVotes = []string{"Run-TryBot"}
 	case "both":
 		trybotVotes = []string{"Commit-Queue+1", "Run-TryBot"}
