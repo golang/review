@@ -256,6 +256,9 @@ is needed is when checking in test cases for cryptography libraries.)
 
 The -trybot flag sets a Run-TryBot+1 vote on any uploaded changes.
 The Go project uses this vote to start running integration tests on the CL.
+During the transition between two CI systems, the environment variable
+GIT_CODEREVIEW_TRYBOT can be set to one of "luci", "farmer", or "both"
+to explicitly override where the -trybot flag starts integration tests.
 
 The -autosubmit flag sets a Auto-Submit+1 vote on any uploaded changes.
 

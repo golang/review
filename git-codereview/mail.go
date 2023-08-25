@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -44,6 +45,19 @@ func cmdMail(args []string) {
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
 		flags.Usage()
+		exit(2)
+	}
+
+	var trybotVotes []string
+	switch os.Getenv("GIT_CODEREVIEW_TRYBOT") {
+	case "luci":
+		trybotVotes = []string{"Commit-Queue+1"}
+	case "", "farmer":
+		trybotVotes = []string{"Run-TryBot"}
+	case "both":
+		trybotVotes = []string{"Commit-Queue+1", "Run-TryBot"}
+	default:
+		fmt.Fprintf(stderr(), "GIT_CODEREVIEW_TRYBOT must be unset, blank, or one of 'luci', 'farmer', or 'both'\n")
 		exit(2)
 	}
 
@@ -142,8 +156,10 @@ func cmdMail(args []string) {
 		start = ","
 	}
 	if *trybot {
-		refSpec += start + "l=Run-TryBot"
-		start = ","
+		for _, v := range trybotVotes {
+			refSpec += start + "l=" + v
+			start = ","
+		}
 	}
 	if *wip {
 		refSpec += start + "wip"
