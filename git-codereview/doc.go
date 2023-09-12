@@ -201,7 +201,6 @@ not present. It also checks that the message uses the convention established by
 the Go project that the first line has the form, pkg/path: summary.
 
 The hooks command will not overwrite an existing hook.
-If it is not installing hooks, use “git codereview hooks -v” for details.
 This hook installation is also done at startup by all other git codereview
 commands, except “git codereview help”.
 

@@ -475,6 +475,8 @@ func TestHooksOverwriteOldCommitMsg(t *testing.T) {
 	gt := newGitTest(t)
 	defer gt.done()
 
+	gt.removeStubHooks()
+	mkdir(t, gt.client+"/.git/hooks")
 	write(t, gt.client+"/.git/hooks/commit-msg", oldCommitMsgHook, 0755)
 	testMain(t, "hooks") // install hooks
 	data, err := ioutil.ReadFile(gt.client + "/.git/hooks/commit-msg")
@@ -486,6 +488,26 @@ func TestHooksOverwriteOldCommitMsg(t *testing.T) {
 	}
 	if string(data) != "#!/bin/sh\nexec git-codereview hook-invoke commit-msg \"$@\"\n" {
 		t.Fatalf("invalid commit-msg hook:\n%s", string(data))
+	}
+}
+
+// Test that 'git-codereview hooks' reports when it fails to write hooks.
+// See go.dev/issue/16777.
+func TestHooksReportConflictingContent(t *testing.T) {
+	gt := newGitTest(t)
+	defer gt.done()
+
+	const pretendUserHook = "#!/bin/sh\necho 'pretend to be a custom hook'\nexit 1\n"
+	for _, h := range hookFiles {
+		write(t, gt.client+"/.git/hooks/"+h, pretendUserHook, 0755)
+	}
+	testMainDied(t, "hooks") // install hooks
+	testPrintedStderr(t, "Hooks files", "already exist.", "To install git-codereview hooks, delete these files and re-run 'git-codereview hooks'.")
+	for _, h := range hookFiles {
+		data := read(t, gt.client+"/.git/hooks/"+h)
+		if string(data) != pretendUserHook {
+			t.Errorf("existing hook file %s was unexpectedly modified", h)
+		}
 	}
 }
 

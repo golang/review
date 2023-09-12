@@ -94,7 +94,7 @@ func main() {
 		fmt.Fprintf(stdout(), help, progName)
 		return // avoid installing hooks.
 	case "hooks": // in case hooks weren't installed.
-		installHook(args)
+		installHook(args, false)
 		return // avoid invoking installHook twice.
 
 	case "branchpoint":
@@ -135,7 +135,7 @@ func main() {
 				hookArgs = append(hookArgs, arg)
 			}
 		}
-		installHook(hookArgs)
+		installHook(hookArgs, true)
 	}
 
 	cmd(args)

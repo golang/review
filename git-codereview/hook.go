@@ -21,9 +21,15 @@ var hookFiles = []string{
 	"pre-commit",
 }
 
-func installHook(args []string) {
+// installHook installs Git hooks to enforce code review conventions.
+//
+// auto is whether hooks are being installed automatically as part of
+// running another git-codereview command, rather than an explicit
+// invocation of the 'hooks' command itself.
+func installHook(args []string, auto bool) {
 	flags.Parse(args)
 	hooksDir := gitPath("hooks")
+	var existingHooks []string
 	for _, hookFile := range hookFiles {
 		filename := filepath.Join(hooksDir, hookFile)
 		hookContent := fmt.Sprintf(hookScript, hookFile)
@@ -45,15 +51,16 @@ func installHook(args []string) {
 			}
 		}
 
-		// If hook file exists, assume it is okay.
+		// If hook file exists but has different content, let the user know.
 		_, err := os.Stat(filename)
 		if err == nil {
-			if *verbose > 0 {
-				data, err := ioutil.ReadFile(filename)
-				if err != nil {
-					verbosef("reading hook: %v", err)
-				} else if string(data) != hookContent {
-					verbosef("unexpected hook content in %s", filename)
+			data, err := ioutil.ReadFile(filename)
+			if err != nil {
+				verbosef("reading hook: %v", err)
+			} else if string(data) != hookContent {
+				verbosef("unexpected hook content in %s", filename)
+				if !auto {
+					existingHooks = append(existingHooks, filename)
 				}
 			}
 			continue
@@ -73,6 +80,19 @@ func installHook(args []string) {
 		if err := ioutil.WriteFile(filename, []byte(hookContent), 0700); err != nil {
 			dief("writing hook: %v", err)
 		}
+	}
+
+	switch {
+	case len(existingHooks) == 1:
+		dief("Hooks file %s already exists."+
+			"\nTo install git-codereview hooks, delete that"+
+			" file and re-run 'git-codereview hooks'.",
+			existingHooks[0])
+	case len(existingHooks) > 1:
+		dief("Hooks files %s already exist."+
+			"\nTo install git-codereview hooks, delete these"+
+			" files and re-run 'git-codereview hooks'.",
+			strings.Join(existingHooks, ", "))
 	}
 }
 
