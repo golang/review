@@ -250,12 +250,12 @@ func testSubmitMultiple(t *testing.T, gt *gitTest, srv *gerritServer) (*GerritCh
 	cl1 := GerritChange{
 		Status:          "NEW",
 		CurrentRevision: hash1,
-		Labels:          map[string]*GerritLabel{"Code-Review": &GerritLabel{Approved: new(GerritAccount)}},
+		Labels:          map[string]*GerritLabel{"Code-Review": {Approved: new(GerritAccount)}},
 	}
 	cl2 := GerritChange{
 		Status:          "NEW",
 		CurrentRevision: hash2,
-		Labels:          map[string]*GerritLabel{"Code-Review": &GerritLabel{Approved: new(GerritAccount)}},
+		Labels:          map[string]*GerritLabel{"Code-Review": {Approved: new(GerritAccount)}},
 	}
 
 	srv.setReply("/a/changes/proj~main~I0000001", gerritReply{f: func() gerritReply {

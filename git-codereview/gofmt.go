@@ -253,9 +253,7 @@ func runGofmt(flags int) (files []string, stderrText string) {
 		}
 	}
 	if flags&gofmtCommand != 0 {
-		for _, file := range localFiles {
-			args = append(args, file)
-		}
+		args = append(args, localFiles...)
 	}
 
 	if *verbose > 1 {

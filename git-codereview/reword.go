@@ -142,11 +142,11 @@ func cmdReword(args []string) {
 			text = "# " + text // restore split separator
 
 			// Pull out # hash header line and body.
-			hdr, body, _ := cut(text, "\n")
+			hdr, body, _ := strings.Cut(text, "\n")
 
 			// Cut blank lines at start and end of body but keep newline-terminated.
 			for body != "" {
-				line, rest, _ := cut(body, "\n")
+				line, rest, _ := strings.Cut(body, "\n")
 				if line != "" {
 					break
 				}
@@ -219,14 +219,6 @@ func cmdReword(args []string) {
 		dief("cannot reword: branch changed underfoot\n%s", note)
 	}
 	run("git", "reset", "--soft", newHash)
-}
-
-func cut(s, sep string) (before, after string, ok bool) {
-	i := strings.Index(s, sep)
-	if i < 0 {
-		return s, "", false
-	}
-	return s[:i], s[i+len(sep):], true
 }
 
 var rewordProlog = `Rewording multiple commit messages.
