@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,20 +60,18 @@ func haveGerritInternal(gerrit, origin string) bool {
 	if gerrit != "" {
 		return true
 	}
-	if strings.Contains(origin, "github.com") {
+
+	u, err := url.Parse(origin)
+	if err != nil {
 		return false
 	}
-	if strings.HasPrefix(origin, "sso://") || strings.HasPrefix(origin, "rpc://") {
+	if u.Scheme == "sso" || u.Scheme == "rpc" {
 		return true
 	}
-	if !strings.Contains(origin, "https://") {
+	if u.Scheme != "https" {
 		return false
 	}
-	if strings.Count(origin, "/") != 3 {
-		return false
-	}
-	host := origin[:strings.LastIndex(origin, "/")]
-	return strings.HasSuffix(host, ".googlesource.com")
+	return strings.HasSuffix(u.Host, ".googlesource.com")
 }
 
 func haveGitHub() bool {

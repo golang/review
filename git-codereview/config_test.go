@@ -32,3 +32,38 @@ func TestParseConfig(t *testing.T) {
 		}
 	}
 }
+
+func TestHaveGerritInternal(t *testing.T) {
+	tests := []struct {
+		gerrit string
+		origin string
+		want   bool
+	}{
+		{gerrit: "off", want: false},
+		{gerrit: "on", want: true},
+		{origin: "invalid url", want: false},
+		{origin: "https://github.com/golang/go", want: false},
+		{origin: "http://github.com/golang/go", want: false},
+		{origin: "git@github.com:golang/go", want: false},
+		{origin: "git@github.com:golang/go.git", want: false},
+		{origin: "git@github.com:/golang/go", want: false},
+		{origin: "git@github.com:/golang/go.git", want: false},
+		{origin: "ssh://git@github.com/golang/go", want: false},
+		{origin: "ssh://git@github.com/golang/go.git", want: false},
+		{origin: "git+ssh://git@github.com/golang/go", want: false},
+		{origin: "git+ssh://git@github.com/golang/go.git", want: false},
+		{origin: "git://github.com/golang/go", want: false},
+		{origin: "git://github.com/golang/go.git", want: false},
+		{origin: "sso://go/tools", want: true}, // Google-internal
+		{origin: "rpc://go/tools", want: true}, // Google-internal
+		{origin: "http://go.googlesource.com/sys", want: false},
+		{origin: "https://go.googlesource.com/review", want: true},
+		{origin: "https://go.googlesource.com/review/", want: true},
+	}
+
+	for _, test := range tests {
+		if got := haveGerritInternal(test.gerrit, test.origin); got != test.want {
+			t.Errorf("haveGerritInternal(%q, %q) = %t, want %t", test.gerrit, test.origin, got, test.want)
+		}
+	}
+}
