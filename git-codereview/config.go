@@ -6,7 +6,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -26,7 +26,7 @@ func config() map[string]string {
 		return cachedConfig
 	}
 	configPath = filepath.Join(repoRoot(), "codereview.cfg")
-	b, err := ioutil.ReadFile(configPath)
+	b, err := os.ReadFile(configPath)
 	raw := string(b)
 	if err != nil {
 		verbosef("%sfailed to load config from %q: %v", raw, configPath, err)

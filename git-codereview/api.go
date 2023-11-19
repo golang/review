@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -171,7 +170,7 @@ func loadAuth() {
 	// First look in Git's http.cookiefile, which is where Gerrit
 	// now tells users to store this information.
 	if cookieFile, _ := trimErr(cmdOutputErr("git", "config", "--path", "--get-urlmatch", "http.cookiefile", auth.url)); cookieFile != "" {
-		data, _ := ioutil.ReadFile(cookieFile)
+		data, _ := os.ReadFile(cookieFile)
 		maxMatch := -1
 		for _, line := range lines(string(data)) {
 			f := strings.Split(line, "\t")
@@ -200,7 +199,7 @@ func loadAuth() {
 		}
 		homeDir = usr.HomeDir
 	}
-	data, _ := ioutil.ReadFile(filepath.Join(homeDir, netrc))
+	data, _ := os.ReadFile(filepath.Join(homeDir, netrc))
 	for _, line := range lines(string(data)) {
 		if i := strings.Index(line, "#"); i >= 0 {
 			line = line[:i]
@@ -292,7 +291,7 @@ func gerritAPI(path string, requestBody []byte, target interface{}) (err error) 
 	if err != nil {
 		return err
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	respBodyBytes = body

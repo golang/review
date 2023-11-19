@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -90,7 +89,7 @@ func cmdReword(args []string) {
 	var buf bytes.Buffer
 	saveFile := filepath.Join(gitPathDir(), "REWORD_MSGS")
 	saveBuf := func() {
-		if err := ioutil.WriteFile(saveFile, buf.Bytes(), 0666); err != nil {
+		if err := os.WriteFile(saveFile, buf.Bytes(), 0666); err != nil {
 			dief("cannot save messages: %v", err)
 		}
 	}

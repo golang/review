@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -222,7 +221,7 @@ func TestGofmtUnstaged(t *testing.T) {
 
 	// Read files to make sure unstaged did not bleed into staged.
 	for i, file := range allFiles {
-		if data, err := ioutil.ReadFile(gt.client + "/" + file); err != nil {
+		if data, err := os.ReadFile(gt.client + "/" + file); err != nil {
 			t.Errorf("%v", err)
 		} else if want := fixed[i%N]; string(data) != want {
 			t.Errorf("%s: working tree = %q, want %q", file, string(data), want)

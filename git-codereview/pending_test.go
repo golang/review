@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
@@ -505,14 +504,14 @@ func testPendingArgs(t *testing.T, args []string, want string) {
 }
 
 func diff(b1, b2 []byte) (data []byte, err error) {
-	f1, err := ioutil.TempFile("", "gofmt")
+	f1, err := os.CreateTemp("", "gofmt")
 	if err != nil {
 		return
 	}
 	defer os.Remove(f1.Name())
 	defer f1.Close()
 
-	f2, err := ioutil.TempFile("", "gofmt")
+	f2, err := os.CreateTemp("", "gofmt")
 	if err != nil {
 		return
 	}

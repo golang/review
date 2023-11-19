@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -69,7 +68,7 @@ func (b *Branch) Config() map[string]string {
 	}
 	var cfgText string
 	if b.Current {
-		data, _ := ioutil.ReadFile(filepath.Join(repoRoot(), "codereview.cfg"))
+		data, _ := os.ReadFile(filepath.Join(repoRoot(), "codereview.cfg"))
 		cfgText = string(data)
 	} else {
 		out, err := cmdOutputDirErr(repoRoot(), "git", "show", b.Name+":codereview.cfg")

@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -269,7 +268,7 @@ func TestSyncBranchMergeBack(t *testing.T) {
 	// server does not default to having a codereview.cfg on main,
 	// but sync-branch requires one.
 	var mainCfg = []byte("branch: main\n")
-	ioutil.WriteFile(filepath.Join(gt.server, "codereview.cfg"), mainCfg, 0666)
+	os.WriteFile(filepath.Join(gt.server, "codereview.cfg"), mainCfg, 0666)
 	trun(t, gt.server, "git", "add", "codereview.cfg")
 	trun(t, gt.server, "git", "commit", "-m", "config for main", "codereview.cfg")
 
@@ -319,7 +318,7 @@ func TestSyncBranchMergeBack(t *testing.T) {
 	)
 	testPrintedStderr(t, "Merge commit created.")
 
-	data, err := ioutil.ReadFile(filepath.Join(gt.client, "codereview.cfg"))
+	data, err := os.ReadFile(filepath.Join(gt.client, "codereview.cfg"))
 	if err != nil {
 		t.Fatal(err)
 	}

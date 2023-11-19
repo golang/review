@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -132,7 +131,7 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 		t.Skipf("cannot find git in path: %v", err)
 	}
 
-	tmpdir, err := ioutil.TempDir("", "git-codereview-test")
+	tmpdir, err := os.MkdirTemp("", "git-codereview-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,14 +245,14 @@ func chdir(t *testing.T, dir string) {
 }
 
 func write(t *testing.T, file, data string, perm os.FileMode) {
-	if err := ioutil.WriteFile(file, []byte(data), perm); err != nil {
+	if err := os.WriteFile(file, []byte(data), perm); err != nil {
 		t.Helper()
 		t.Fatal(err)
 	}
 }
 
 func read(t *testing.T, file string) []byte {
-	b, err := ioutil.ReadFile(file)
+	b, err := os.ReadFile(file)
 	if err != nil {
 		t.Helper()
 		t.Fatal(err)

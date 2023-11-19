@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -87,11 +86,11 @@ func TestHookCommitMsg(t *testing.T) {
 		testMain(t, "hook-invoke", "commit-msg", gt.client+"/in.txt")
 		write(t, gt.client+"/want.txt", tt.want, 0644)
 		testMain(t, "hook-invoke", "commit-msg", gt.client+"/want.txt")
-		got, err := ioutil.ReadFile(gt.client + "/in.txt")
+		got, err := os.ReadFile(gt.client + "/in.txt")
 		if err != nil {
 			t.Fatal(err)
 		}
-		want, err := ioutil.ReadFile(gt.client + "/want.txt")
+		want, err := os.ReadFile(gt.client + "/want.txt")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -166,7 +165,7 @@ func testHookCommitMsgBranchPrefix(t *testing.T, gerrit bool) {
 	checkPrefix := func(prefix string) {
 		write(t, gt.client+"/msg.txt", "Test message.\n", 0644)
 		testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
-		data, err := ioutil.ReadFile(gt.client + "/msg.txt")
+		data, err := os.ReadFile(gt.client + "/msg.txt")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -179,7 +178,7 @@ func testHookCommitMsgBranchPrefix(t *testing.T, gerrit bool) {
 			for _, magic := range []string{"fixup!", "squash!"} {
 				write(t, gt.client+"/msg.txt", magic+" Test message.\n", 0644)
 				testMain(t, "hook-invoke", "commit-msg", gt.client+"/msg.txt")
-				data, err := ioutil.ReadFile(gt.client + "/msg.txt")
+				data, err := os.ReadFile(gt.client + "/msg.txt")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -411,7 +410,7 @@ func TestHooks(t *testing.T) {
 	gt.removeStubHooks()
 	testMain(t, "hooks") // install hooks
 
-	data, err := ioutil.ReadFile(gt.client + "/.git/hooks/commit-msg")
+	data, err := os.ReadFile(gt.client + "/.git/hooks/commit-msg")
 	if err != nil {
 		t.Fatalf("hooks did not write commit-msg hook: %v", err)
 	}
@@ -441,7 +440,7 @@ func TestHooksInWorktree(t *testing.T) {
 	gt.removeStubHooks()
 	testMain(t, "hooks") // install hooks
 
-	data, err := ioutil.ReadFile(gt.client + "/.git/hooks/commit-msg")
+	data, err := os.ReadFile(gt.client + "/.git/hooks/commit-msg")
 	if err != nil {
 		t.Fatalf("hooks did not write commit-msg hook: %v", err)
 	}
@@ -462,7 +461,7 @@ func TestHooksInSubdir(t *testing.T) {
 
 	testMain(t, "hooks") // install hooks
 
-	data, err := ioutil.ReadFile(gt.client + "/.git/hooks/commit-msg")
+	data, err := os.ReadFile(gt.client + "/.git/hooks/commit-msg")
 	if err != nil {
 		t.Fatalf("hooks did not write commit-msg hook: %v", err)
 	}
@@ -479,7 +478,7 @@ func TestHooksOverwriteOldCommitMsg(t *testing.T) {
 	mkdir(t, gt.client+"/.git/hooks")
 	write(t, gt.client+"/.git/hooks/commit-msg", oldCommitMsgHook, 0755)
 	testMain(t, "hooks") // install hooks
-	data, err := ioutil.ReadFile(gt.client + "/.git/hooks/commit-msg")
+	data, err := os.ReadFile(gt.client + "/.git/hooks/commit-msg")
 	if err != nil {
 		t.Fatalf("hooks did not write commit-msg hook: %v", err)
 	}

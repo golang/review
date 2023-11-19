@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,7 +33,7 @@ func installHook(args []string, auto bool) {
 		filename := filepath.Join(hooksDir, hookFile)
 		hookContent := fmt.Sprintf(hookScript, hookFile)
 
-		if data, err := ioutil.ReadFile(filename); err == nil {
+		if data, err := os.ReadFile(filename); err == nil {
 			// Special case: remove old hooks that use 'git-review'
 			oldHookContent := fmt.Sprintf(oldHookScript, hookFile)
 			if string(data) == oldHookContent {
@@ -54,7 +53,7 @@ func installHook(args []string, auto bool) {
 		// If hook file exists but has different content, let the user know.
 		_, err := os.Stat(filename)
 		if err == nil {
-			data, err := ioutil.ReadFile(filename)
+			data, err := os.ReadFile(filename)
 			if err != nil {
 				verbosef("reading hook: %v", err)
 			} else if string(data) != hookContent {
@@ -77,7 +76,7 @@ func installHook(args []string, auto bool) {
 				dief("creating hooks directory: %v", err)
 			}
 		}
-		if err := ioutil.WriteFile(filename, []byte(hookContent), 0700); err != nil {
+		if err := os.WriteFile(filename, []byte(hookContent), 0700); err != nil {
 			dief("writing hook: %v", err)
 		}
 	}
@@ -185,7 +184,7 @@ func hookCommitMsg(args []string) {
 	*/
 
 	file := args[0]
-	oldData, err := ioutil.ReadFile(file)
+	oldData, err := os.ReadFile(file)
 	if err != nil {
 		dief("%v", err)
 	}
@@ -194,7 +193,7 @@ func hookCommitMsg(args []string) {
 
 	// Write back.
 	if !bytes.Equal(data, oldData) {
-		if err := ioutil.WriteFile(file, data, 0666); err != nil {
+		if err := os.WriteFile(file, data, 0666); err != nil {
 			dief("%v", err)
 		}
 	}

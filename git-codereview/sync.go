@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -107,7 +106,7 @@ func syncBranchStatusFile() string {
 }
 
 func readSyncBranchStatus() *syncBranchStatus {
-	data, err := ioutil.ReadFile(syncBranchStatusFile())
+	data, err := os.ReadFile(syncBranchStatusFile())
 	if err != nil {
 		dief("cannot sync-branch: reading status: %v", err)
 	}
@@ -124,7 +123,7 @@ func writeSyncBranchStatus(status *syncBranchStatus) {
 	if err != nil {
 		dief("cannot sync-branch: writing status: %v", err)
 	}
-	if err := ioutil.WriteFile(syncBranchStatusFile(), js, 0666); err != nil {
+	if err := os.WriteFile(syncBranchStatusFile(), js, 0666); err != nil {
 		dief("cannot sync-branch: writing status: %v", err)
 	}
 }

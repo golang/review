@@ -6,7 +6,6 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 )
@@ -20,7 +19,7 @@ func editor(initial string) string {
 	gitEditor := trim(cmdOutput("git", "var", "GIT_EDITOR"))
 
 	// Create temporary file.
-	temp, err := ioutil.TempFile("", "git-codereview")
+	temp, err := os.CreateTemp("", "git-codereview")
 	if err != nil {
 		dief("creating temp file: %v", err)
 	}
@@ -42,7 +41,7 @@ func editor(initial string) string {
 	}
 
 	// Read the edited file.
-	b, err := ioutil.ReadFile(tempName)
+	b, err := os.ReadFile(tempName)
 	if err != nil {
 		dief("%v", err)
 	}
