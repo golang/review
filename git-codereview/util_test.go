@@ -200,6 +200,7 @@ func newGitTest(t *testing.T) (gt *gitTest) {
 		write(t, client+"/.git/hooks/"+h, "#!/bin/sh\nexit 0\n", 0755)
 	}
 
+	trun(t, client, "git", "config", "commit.gpgsign", "false")
 	trun(t, client, "git", "config", "core.editor", "false")
 	pwd, err := os.Getwd()
 	if err != nil {
