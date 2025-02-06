@@ -64,7 +64,7 @@ Available commands:
 	help
 	hooks
 	mail [-r reviewer,...] [-cc mail,...] [options] [commit]
-	pending [-c] [-l] [-s]
+	pending [-c] [-g] [-l] [-s]
 	rebase-work
 	reword [commit...]
 	submit [-i | commit...]

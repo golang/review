@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ var (
 	pendingLocal       bool // -l flag, use only local operations (no network)
 	pendingCurrentOnly bool // -c flag, show only current branch
 	pendingShort       bool // -s flag, short display
+	pendingGerrit      bool // -g flag, Gerrit based short display
 )
 
 // A pendingBranch collects information about a single pending branch.
@@ -82,10 +84,16 @@ func cmdPending(args []string) {
 	// NOTE: New flags should be added to the usage message below as well as doc.go.
 	flags.BoolVar(&pendingCurrentOnly, "c", false, "show only current branch")
 	flags.BoolVar(&pendingLocal, "l", false, "use only local information - no network operations")
-	flags.BoolVar(&pendingShort, "s", false, "show short listing")
+	flags.BoolVar(&pendingShort, "s", false, "show short listing (may not be used with -g)")
+	flags.BoolVar(&pendingGerrit, "g", false, "show a different Gerrit-based listing (may not be used with -s)")
 	flags.Parse(args)
 	if len(flags.Args()) > 0 {
-		fmt.Fprintf(stderr(), "Usage: %s pending %s [-c] [-l] [-s]\n", progName, globalFlags)
+		fmt.Fprintf(stderr(), "Usage: %s pending %s [-c] [-g] [-l] [-s]\n", progName, globalFlags)
+		exit(2)
+	}
+
+	if pendingShort && pendingGerrit {
+		fmt.Fprintf(stderr(), "%s: using -g and -s together is not supported\n", progName)
 		exit(2)
 	}
 
@@ -149,6 +157,16 @@ func cmdPending(args []string) {
 	}
 	<-doneFetch
 
+	if !pendingGerrit {
+		printPendingStandard(branches)
+	} else {
+		printPendingGerrit(branches)
+	}
+}
+
+// printPendingStandard prints the default output format,
+// as modified by pendingShort.
+func printPendingStandard(branches []*pendingBranch) {
 	// Print output.
 	// If there are multiple changes in the current branch, the output splits them out into separate sections,
 	// in reverse commit order, to match git log output.
@@ -409,6 +427,85 @@ func codeReviewScores(g *GerritChange) string {
 	return scores
 }
 
+// printPendingGerrit prints the Gerrit-based format.
+// This prints only CLs that have been fully sent to Gerrit,
+// with their CL number and the topic line.
+func printPendingGerrit(branches []*pendingBranch) {
+	type branchBuf struct {
+		name    string
+		buf     bytes.Buffer
+		updated time.Time
+	}
+	var branchBufs []*branchBuf
+
+	for _, b := range branches {
+		if b.commitsAhead == 0 {
+			continue
+		}
+
+		work := b.Pending()
+
+		if len(work) == 0 {
+			continue
+		}
+
+		var updatedStr string
+		for _, c := range work {
+			if c.g.Updated != "" {
+				updatedStr = c.g.Updated
+				break
+			}
+			if c.g.Created != "" {
+				updatedStr = c.g.Created
+				break
+			}
+		}
+
+		var updated time.Time
+		if updatedStr != "" {
+			var err error
+			updated, err = time.Parse("2006-01-02 15:04:05.999999999", updatedStr)
+			if err != nil {
+				fmt.Fprintf(stderr(), "failed to parse gerrit timestamp %q: %v\n", updatedStr, err)
+			}
+		}
+
+		bb := &branchBuf{
+			name:    b.Name,
+			updated: updated,
+		}
+		branchBufs = append(branchBufs, bb)
+
+		if allSubmitted(work) {
+			fmt.Fprintf(&bb.buf, "- branch %s submitted\n", b.Name)
+			continue
+		}
+		if allAbandoned(work) {
+			fmt.Fprintf(&bb.buf, "- branch %s abandoned\n", b.Name)
+			continue
+		}
+
+		fmt.Fprintf(&bb.buf, "- branch %s updated %s\n", b.Name, updated)
+		for _, c := range work {
+			if c.g.Number == 0 {
+				continue
+			}
+			fmt.Fprintf(&bb.buf, "  https://go.dev/cl/%d %s\n", c.g.Number, c.g.Subject)
+		}
+	}
+
+	slices.SortFunc(branchBufs, func(a, b *branchBuf) int {
+		if r := a.updated.Compare(b.updated); r != 0 {
+			return r
+		}
+		return strings.Compare(a.name, b.name)
+	})
+
+	for _, bb := range branchBufs {
+		stdout().Write(bb.buf.Bytes())
+	}
+}
+
 // allMailed reports whether all commits in work have been posted to Gerrit.
 func allMailed(work []*Commit) bool {
 	for _, c := range work {
@@ -423,6 +520,16 @@ func allMailed(work []*Commit) bool {
 func allSubmitted(work []*Commit) bool {
 	for _, c := range work {
 		if c.g.Status != "MERGED" {
+			return false
+		}
+	}
+	return true
+}
+
+// allAbandoned reports whether all commits in work have been abandoned.
+func allAbandoned(work []*Commit) bool {
+	for _, c := range work {
+		if c.g.Status != "ABANDONED" {
 			return false
 		}
 	}

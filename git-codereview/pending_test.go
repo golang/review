@@ -148,6 +148,11 @@ func TestPendingComplex(t *testing.T) {
 		+ REVHASH some changes
 
 	`)
+
+	testPendingArgs(t, []string{"-g"}, `
+		- branch work updated 0001-01-01 00:00:00 +0000 UTC
+		- branch work2 updated 0001-01-01 00:00:00 +0000 UTC
+	`)
 }
 
 func TestPendingMultiChange(t *testing.T) {
@@ -202,6 +207,10 @@ func TestPendingMultiChange(t *testing.T) {
 		+ REVHASH v2
 		+ REVHASH msg
 
+	`)
+
+	testPendingArgs(t, []string{"-g"}, `
+		- branch work updated 0001-01-01 00:00:00 +0000 UTC
 	`)
 }
 
@@ -294,6 +303,10 @@ func TestPendingGerrit(t *testing.T) {
 		+ REVHASH msg
 
 	`)
+
+	testPendingArgs(t, []string{"-g"}, `
+		- branch work submitted
+	`)
 }
 
 func TestPendingGerritMultiChange(t *testing.T) {
@@ -370,6 +383,12 @@ func TestPendingGerritMultiChange(t *testing.T) {
 		+ REVHASH msg (CL 1234 -2 +1, mailed, submitted)
 
 	`)
+
+	testPendingArgs(t, []string{"-g"}, `
+		- branch work updated 2025-02-06 00:00:00 +0000 UTC
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+	`)
 }
 
 func TestPendingGerritMultiChange15(t *testing.T) {
@@ -408,6 +427,25 @@ func TestPendingGerritMultiChange15(t *testing.T) {
 		+ REVHASH msg (CL 1234 -2 +1, mailed, submitted)
 
 	`)
+
+	testPendingArgs(t, []string{"-g"}, `
+		- branch work updated 2025-02-06 00:00:00 +0000 UTC
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+		  https://go.dev/cl/1234
+	`)
 }
 
 func testPendingReply(srv *gerritServer, id, rev, status string, unresolved int) {
@@ -419,6 +457,7 @@ func testPendingReply(srv *gerritServer, id, rev, status string, unresolved int)
 		"unresolved_comment_count":`+fmt.Sprint(unresolved)+`,
 		"_number": 1234,
 		"owner": {"_id": 42},
+		"created": "2025-02-06 00:00:00.000000000",
 		"labels": {
 			"Code-Review": {
 				"all": [

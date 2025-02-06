@@ -272,15 +272,20 @@ shows diffs between what is on the Gerrit server and the current directory.
 The pending command prints to standard output the status of all pending changes
 and staged, unstaged, and untracked files in the local repository.
 
-	git codereview pending [-c] [-l] [-s]
+	git codereview pending [-c] [-g] [-l] [-s]
 
 The -c flag causes the command to show pending changes only on the current branch.
+
+The -g flag causes the command to print a different format in which
+each Gerrit CL number is listed on a separate line.
+May not be used with the -s flag.
 
 The -l flag causes the command to use only locally available information.
 By default, it fetches recent commits and code review information from the
 Gerrit server.
 
 The -s flag causes the command to print abbreviated (short) output.
+May not be used with the -g flag.
 
 Useful aliases include “git p” for “git pending” and “git pl” for “git pending -l”
 (notably faster but without Gerrit information).
