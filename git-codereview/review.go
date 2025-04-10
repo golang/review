@@ -29,6 +29,11 @@ var (
 
 const progName = "git-codereview"
 
+// makeChange returns inverse of noRun for readability.
+func makeChange() bool {
+	return !*noRun
+}
+
 func initFlags() {
 	flags = flag.NewFlagSet("", flag.ExitOnError)
 	flags.Usage = func() {

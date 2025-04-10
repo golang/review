@@ -38,7 +38,9 @@ func installHook(args []string, auto bool) {
 			oldHookContent := fmt.Sprintf(oldHookScript, hookFile)
 			if string(data) == oldHookContent {
 				verbosef("removing old %v hook", hookFile)
-				os.Remove(filename)
+				if makeChange() {
+					os.Remove(filename)
+				}
 			}
 			// Special case: remove old commit-msg shell script
 			// in favor of invoking the git-codereview hook
@@ -46,7 +48,9 @@ func installHook(args []string, auto bool) {
 			// the future.
 			if hookFile == "commit-msg" && string(data) == oldCommitMsgHook {
 				verbosef("removing old commit-msg hook")
-				os.Remove(filename)
+				if makeChange() {
+					os.Remove(filename)
+				}
 			}
 		}
 
@@ -72,12 +76,16 @@ func installHook(args []string, auto bool) {
 		verbosef("installing %s hook", hookFile)
 		if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
 			verbosef("creating hooks directory %s", hooksDir)
-			if err := os.Mkdir(hooksDir, 0777); err != nil {
-				dief("creating hooks directory: %v", err)
+			if makeChange() {
+				if err := os.Mkdir(hooksDir, 0777); err != nil {
+					dief("creating hooks directory: %v", err)
+				}
 			}
 		}
-		if err := os.WriteFile(filename, []byte(hookContent), 0700); err != nil {
-			dief("writing hook: %v", err)
+		if makeChange() {
+			if err := os.WriteFile(filename, []byte(hookContent), 0700); err != nil {
+				dief("writing hook: %v", err)
+			}
 		}
 	}
 
