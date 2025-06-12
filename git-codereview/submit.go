@@ -64,11 +64,11 @@ func cmdSubmit(args []string) {
 	if len(cs) == 1 && len(b.Pending()) == 1 {
 		if err := runErr("git", "checkout", "-q", "-B", b.Name, g.CurrentRevision, "--"); err != nil {
 			dief("submit succeeded, but cannot sync local branch\n"+
-				"\trun 'git sync' to sync, or\n"+
-				"\trun 'git branch -D %s; git change master; git sync' to discard local branch", b.Name)
+				"\trun 'git codereview sync' to sync, or\n"+
+				"\trun 'git branch -D %s; git change master; git codereview sync' to discard local branch", b.Name)
 		}
 	} else {
-		printf("submit succeeded; run 'git sync' to sync")
+		printf("submit succeeded; run 'git codereview sync' to sync")
 	}
 
 	// Done! Change is submitted, branch is up to date, ready for new work.
@@ -171,7 +171,7 @@ func submitCheck(g *GerritChange) error {
 
 	case "MERGED":
 		// Can happen if moving between different clients.
-		return fmt.Errorf("change already submitted, run 'git sync'")
+		return fmt.Errorf("change already submitted, run 'git codereview sync'")
 
 	case "ABANDONED":
 		return fmt.Errorf("change abandoned")

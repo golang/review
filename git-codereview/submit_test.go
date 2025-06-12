@@ -71,7 +71,7 @@ func TestSubmitErrors(t *testing.T) {
 	srv.setJSON(id, `{"status": "MERGED"}`)
 	testMainDied(t, "submit")
 	testRan(t) // nothing
-	testPrintedStderr(t, "cannot submit: change already submitted, run 'git sync'")
+	testPrintedStderr(t, "cannot submit: change already submitted, run 'git codereview sync'")
 
 	t.Logf("> abandoned")
 	srv.setJSON(id, `{"status": "ABANDONED"}`)

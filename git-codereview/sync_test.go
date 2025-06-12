@@ -364,7 +364,7 @@ func TestSyncBranchConflict(t *testing.T) {
 		"	- file",
 		"Please fix them (use 'git status' to see the list again),",
 		"then 'git add' or 'git rm' to resolve them,",
-		"and then 'git sync-branch -continue' to continue.",
+		"and then 'git codereview sync-branch -continue' to continue.",
 		"Or run 'git merge --abort' to give up on this sync-branch.",
 	)
 

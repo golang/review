@@ -355,7 +355,7 @@ func hookGofmt() {
 		return
 	}
 
-	dief("gofmt needs to format these files (run 'git gofmt'):\n\t%s",
+	dief("gofmt needs to format these files (run 'git codereview gofmt'):\n\t%s",
 		strings.Join(files, "\n\t"))
 }
 

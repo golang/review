@@ -224,7 +224,7 @@ func cmdSyncBranch(args []string) {
 		other := cmdOutput("git", "log", "--format=format:+ %cd %h %s", "--date=short", "origin/"+branch+"..origin/"+parent)
 		if other != "" {
 			dief("cannot sync-branch --merge-back-to-parent: parent has new commits.\n"+
-				"\trun 'git sync-branch' to bring them into this branch first:\n%s",
+				"\trun 'git codereview sync-branch' to bring them into this branch first:\n%s",
 				other)
 		}
 	}
@@ -293,7 +293,7 @@ func cmdSyncBranch(args []string) {
 		dief("sync-branch: merge conflicts in:\n\t- %s\n\n"+
 			"Please fix them (use 'git status' to see the list again),\n"+
 			"then 'git add' or 'git rm' to resolve them,\n"+
-			"and then 'git sync-branch -continue' to continue.\n"+
+			"and then 'git codereview sync-branch -continue' to continue.\n"+
 			"Or run 'git merge --abort' to give up on this sync-branch.\n",
 			strings.Join(status.Conflicts, "\n\t- "))
 	}
@@ -374,7 +374,7 @@ func syncBranchContinue(flag string, b *Branch, status *syncBranchStatus) {
 		if HasUnstagedChanges() {
 			dief("cannot sync-branch%s: unstaged changes (unresolved conflicts)\n"+
 				"\tUse 'git status' to see them, 'git add' or 'git rm' to resolve them,\n"+
-				"\tand then run 'git sync-branch -continue' again.\n", flag)
+				"\tand then run 'git codereview sync-branch -continue' again.\n", flag)
 		}
 
 		run("git", "commit", "-m", msg)

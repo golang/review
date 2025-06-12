@@ -239,13 +239,13 @@ func TestHookPreCommit(t *testing.T) {
 	trun(t, gt.client, "git", "add", ".")
 
 	testMainDied(t, "hook-invoke", "pre-commit")
-	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):",
+	testPrintedStderr(t, "gofmt needs to format these files (run 'git codereview gofmt'):",
 		"bad.go", "!good.go", fromSlash("!test/bad"), fromSlash("test/bench/bad.go"))
 
 	write(t, gt.client+"/broken.go", brokenGo, 0644)
 	trun(t, gt.client, "git", "add", "broken.go")
 	testMainDied(t, "hook-invoke", "pre-commit")
-	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):",
+	testPrintedStderr(t, "gofmt needs to format these files (run 'git codereview gofmt'):",
 		"bad.go", "!good.go", fromSlash("!test/bad"), fromSlash("test/bench/bad.go"),
 		"gofmt reported errors:", "broken.go")
 }
@@ -265,19 +265,19 @@ func TestHookChangeGofmt(t *testing.T) {
 
 	t.Logf("invoking commit hook explicitly")
 	testMainDied(t, "hook-invoke", "pre-commit")
-	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):", "bad.go")
+	testPrintedStderr(t, "gofmt needs to format these files (run 'git codereview gofmt'):", "bad.go")
 
 	t.Logf("change without hook installed")
 	testCommitMsg = "foo: msg"
 	testMainDied(t, "change")
-	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):", "bad.go", "!running: git")
+	testPrintedStderr(t, "gofmt needs to format these files (run 'git codereview gofmt'):", "bad.go", "!running: git")
 
 	t.Logf("change with hook installed")
 	restore := testInstallHook(t, gt)
 	defer restore()
 	testCommitMsg = "foo: msg"
 	testMainDied(t, "change")
-	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):", "bad.go", "!running: git")
+	testPrintedStderr(t, "gofmt needs to format these files (run 'git codereview gofmt'):", "bad.go", "!running: git")
 }
 
 func TestHookPreCommitDetachedHead(t *testing.T) {
@@ -295,7 +295,7 @@ func TestHookPreCommitDetachedHead(t *testing.T) {
 	trun(t, gt.client, "git", "checkout", "HEAD^0")
 
 	testMainDied(t, "hook-invoke", "pre-commit")
-	testPrintedStderr(t, "gofmt needs to format these files (run 'git gofmt'):", "bad.go")
+	testPrintedStderr(t, "gofmt needs to format these files (run 'git codereview gofmt'):", "bad.go")
 
 	/*
 		OLD TEST, back when we disabled gofmt in detached head,
