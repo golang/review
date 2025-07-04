@@ -59,7 +59,7 @@ func cmdSubmit(args []string) {
 	}
 
 	// Sync client to revision that Gerrit committed, but only if we can do it cleanly.
-	// Otherwise require user to run 'git sync' themselves (if they care).
+	// Otherwise require user to run 'git codereview sync' themselves (if they care).
 	run("git", "fetch", "-q")
 	if len(cs) == 1 && len(b.Pending()) == 1 {
 		if err := runErr("git", "checkout", "-q", "-B", b.Name, g.CurrentRevision, "--"); err != nil {
@@ -166,7 +166,7 @@ func submitCheck(g *GerritChange) error {
 		// Not yet "MERGED", so try the submit.
 		// "SUBMITTED" is a weird state. It means that Submit has been clicked once,
 		// but it hasn't happened yet, usually because of a merge failure.
-		// The user may have done git sync and may now have a mergable
+		// The user may have done git codereview sync and may now have a mergable
 		// copy waiting to be uploaded, so continue on as if it were "NEW".
 
 	case "MERGED":

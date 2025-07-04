@@ -184,10 +184,10 @@ func checkoutOrCreate(target string) {
 	origin := b.OriginBranch()
 
 	// NOTE: This is different from git checkout -q -t -b origin,
-	// because the -t wold use the origin directly, and that may be
+	// because the -t would use the origin directly, and that may be
 	// ahead of the current directory. The goal of this command is
 	// to create a new branch for work on the current directory,
-	// not to incorporate new commits at the same time (use 'git sync' for that).
+	// not to incorporate new commits at the same time (use 'git codereview sync' for that).
 	// The ideal is that HEAD doesn't change at all.
 	// In the absence of pending commits, that ideal is achieved.
 	// But if there are pending commits, it'd be too confusing to have them

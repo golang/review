@@ -49,7 +49,7 @@ func cmdSync(args []string) {
 	checkUnstaged("sync")
 
 	// Pull remote changes into local branch.
-	// We do this in one command so that people following along with 'git sync -v'
+	// We do this in one command so that people following along with 'git codereview sync -v'
 	// see fewer commands to understand.
 	// We want to pull in the remote changes from the upstream branch
 	// and rebase the current pending commit (if any) on top of them.

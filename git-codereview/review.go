@@ -251,9 +251,9 @@ func cmdOutputErr(command string, args ...string) (string, error) {
 // should be run using runDirErr so that the -v and -n flags apply to them.
 func cmdOutputDirErr(dir, command string, args ...string) (string, error) {
 	// NOTE: We only show these non-state-modifying commands with -v -v.
-	// Otherwise things like 'git sync -v' show all our internal "find out about
+	// Otherwise things like 'git codereview sync -v' show all our internal "find out about
 	// the git repo" commands, which is confusing if you are just trying to find
-	// out what git sync means.
+	// out what git codereview sync means.
 	if *verbose > 1 {
 		start := time.Now()
 		defer func() {
