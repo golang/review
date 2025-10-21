@@ -166,7 +166,7 @@ func submitCheck(g *GerritChange) error {
 		// Not yet "MERGED", so try the submit.
 		// "SUBMITTED" is a weird state. It means that Submit has been clicked once,
 		// but it hasn't happened yet, usually because of a merge failure.
-		// The user may have done git codereview sync and may now have a mergable
+		// The user may have done git codereview sync and may now have a mergeable
 		// copy waiting to be uploaded, so continue on as if it were "NEW".
 
 	case "MERGED":

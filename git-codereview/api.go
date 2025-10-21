@@ -316,7 +316,7 @@ func gerritAPI(path string, requestBody []byte, target interface{}) (err error) 
 	return nil
 }
 
-// fullChangeID returns the unambigous Gerrit change ID for the commit c on branch b.
+// fullChangeID returns the unambiguous Gerrit change ID for the commit c on branch b.
 // The returned ID has the form project~originbranch~Ihexhexhexhexhex.
 // See https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#change-id for details.
 func fullChangeID(b *Branch, c *Commit) string {
