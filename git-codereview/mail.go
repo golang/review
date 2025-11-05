@@ -281,6 +281,7 @@ func mailLookup(short string) string {
 // from consideration for purposes of expanding short user names.
 var shortOptOut = map[string]bool{
 	"dmitshur@google.com": true, // My @golang.org is primary; @google.com is used for +1 only.
+	"matloob@google.com":  true, // My @golang.org is primary; @google.com is used for +1 only.
 }
 
 // loadReviewers reads the reviewer list from the current git repo
