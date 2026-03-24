@@ -24,6 +24,7 @@ func cmdMail(args []string) {
 		force       = flags.Bool("f", false, "mail even if there are staged changes")
 		hashtagList = new(stringList) // installed below
 		noKeyCheck  = flags.Bool("nokeycheck", false, "set 'git push -o nokeycheck', to prevent Gerrit from checking for private keys")
+		ready       = flags.Bool("ready", false, "set the status of a change to ready for review")
 		topic       = flags.String("topic", "", "set Gerrit topic")
 		trybot      = flags.Bool("trybot", false, "run trybots on the uploaded CLs")
 		wip         = flags.Bool("wip", false, "set the status of a change to Work-in-Progress")
@@ -38,13 +39,17 @@ func cmdMail(args []string) {
 		fmt.Fprintf(stderr(),
 			"Usage: %s mail %s [-r reviewer,...] [-cc mail,...]\n"+
 				"\t[-autosubmit] [-f] [-diff] [-hashtag tag,...]\n"+
-				"\t[-nokeycheck] [-topic topic] [-trybot] [-wip]\n"+
-				"\t[commit]\n", progName, globalFlags)
+				"\t[-nokeycheck] [-ready] [-topic topic] [-trybot]\n"+
+				"\t[-wip] [commit]\n", progName, globalFlags)
 		exit(2)
 	}
 	flags.Parse(args)
 	if len(flags.Args()) > 1 {
 		flags.Usage()
+		exit(2)
+	}
+	if *ready && *wip {
+		fmt.Fprintln(stderr(), "-ready and -wip flags are mutually exclusive; must use at most one at a time")
 		exit(2)
 	}
 
@@ -57,7 +62,7 @@ func cmdMail(args []string) {
 	case "both":
 		trybotVotes = []string{"Commit-Queue+1", "Run-TryBot"}
 	default:
-		fmt.Fprintf(stderr(), "GIT_CODEREVIEW_TRYBOT must be unset, blank, or one of 'luci', 'farmer', or 'both'\n")
+		fmt.Fprintln(stderr(), "GIT_CODEREVIEW_TRYBOT must be unset, blank, or one of 'luci', 'farmer', or 'both'")
 		exit(2)
 	}
 
@@ -144,6 +149,10 @@ func cmdMail(args []string) {
 			refSpec += start + "hashtag=" + tag
 			start = ","
 		}
+	}
+	if *ready {
+		refSpec += start + "ready"
+		start = ","
 	}
 	if *topic != "" {
 		// There's no way to escape the topic, but the only

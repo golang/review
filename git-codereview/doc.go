@@ -218,8 +218,8 @@ The mail command starts the code review process for the pending change.
 
 	git codereview mail [-r email,...] [-cc email,...]
 		[-autosubmit] [-diff] [-f] [-hashtag tag,...]
-		[-nokeycheck] [-topic topic] [-trybot] [-wip]
-		[revision]
+		[-nokeycheck] [-ready] [-topic topic] [-trybot]
+		[-wip] [revision]
 
 It pushes the pending change commit in the current branch to the Gerrit code
 review server and prints the URL for the change on the server.
@@ -260,6 +260,8 @@ GIT_CODEREVIEW_TRYBOT can be set to one of "luci", "farmer", or "both"
 to explicitly override where the -trybot flag starts integration tests.
 
 The -autosubmit flag sets a Auto-Submit+1 vote on any uploaded changes.
+
+The -ready flag marks any uploaded changes as ready for review.
 
 The -wip flag marks any uploaded changes as work-in-progress.
 
