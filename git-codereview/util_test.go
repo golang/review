@@ -271,6 +271,10 @@ func trun(t *testing.T, dir string, cmdline ...string) string {
 	cmd := exec.Command(cmdline[0], cmdline[1:]...)
 	cmd.Dir = dir
 	setEnglishLocale(cmd)
+	// Isolate test git invocations from the user's global and system git
+	// config so settings like commit.gpgsign or init.defaultBranch can't
+	// leak in and break tests. Requires git 2.32+ (June 2021).
+	cmd.Env = append(cmd.Env, "GIT_CONFIG_GLOBAL="+os.DevNull, "GIT_CONFIG_SYSTEM="+os.DevNull)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Helper()
