@@ -1,3 +1,3 @@
 module golang.org/x/review
 
-go 1.25.0
+go 1.26.0
