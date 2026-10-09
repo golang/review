@@ -230,6 +230,13 @@ func (gt *gitTest) removeStubHooks() {
 	os.RemoveAll(gt.client + "/.git/hooks/")
 }
 
+func mustHaveGofmt(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("gofmt"); err != nil {
+		t.Skip("gofmt not found in $PATH")
+	}
+}
+
 func mkdir(t *testing.T, dir string) {
 	if err := os.Mkdir(dir, 0777); err != nil {
 		t.Helper()

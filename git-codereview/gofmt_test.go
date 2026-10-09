@@ -21,6 +21,7 @@ const (
 )
 
 func TestGofmt(t *testing.T) {
+	mustHaveGofmt(t)
 	// Test of basic operations.
 	gt := newGitTest(t)
 	defer gt.done()
@@ -62,6 +63,7 @@ func TestGofmt(t *testing.T) {
 }
 
 func TestGofmtSubdir(t *testing.T) {
+	mustHaveGofmt(t)
 	// Check that gofmt prints relative paths for files in or below the current directory.
 	gt := newGitTest(t)
 	defer gt.done()
@@ -93,6 +95,7 @@ func TestGofmtSubdir(t *testing.T) {
 }
 
 func TestGofmtSubdirIndexCheckout(t *testing.T) {
+	mustHaveGofmt(t)
 	// Like TestGofmtSubdir but bad Go files are only in index, not working copy.
 	// Check also that prints a correct path (relative or absolute) for files outside the
 	// current directory, even when running with Git before 2.3.0 which doesn't
@@ -130,6 +133,7 @@ func TestGofmtSubdirIndexCheckout(t *testing.T) {
 }
 
 func TestGofmtUnstaged(t *testing.T) {
+	mustHaveGofmt(t)
 	// Test when unstaged files are different from staged ones.
 	// See TestHookPreCommitUnstaged for an explanation.
 	// In this test we use two different kinds of bad files, so that
